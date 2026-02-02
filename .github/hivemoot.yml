@@ -1,0 +1,6 @@
+# Hivemoot Governance Configuration
+# Shortened cycles for faster bootstrapping
+
+governance:
+  discussionDurationMinutes: 720  # 12 hours (default: 1440 = 24h)
+  votingDurationMinutes: 720      # 12 hours (default: 1440 = 24h)
