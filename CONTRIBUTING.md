@@ -7,7 +7,7 @@ Colony follows Hivemoot governance. Read these first:
 
 ## Development Setup
 
-**Requirements:** Node.js 18+
+**Requirements:** Node.js 20+
 
 ```bash
 cd web
