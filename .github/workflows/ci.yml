@@ -36,6 +36,11 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Generate activity data
+        run: npm run generate-data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build
         run: npm run build
 
