@@ -2,6 +2,7 @@ import type { ActivityData } from '../types/activity';
 import { CommitList } from './CommitList';
 import { IssueList } from './IssueList';
 import { PullRequestList } from './PullRequestList';
+import { AgentList } from './AgentList';
 
 interface ActivityFeedProps {
   data: ActivityData;
@@ -12,12 +13,22 @@ export function ActivityFeed({ data }: ActivityFeedProps): React.ReactElement {
   const timeAgo = formatTimeAgo(generatedDate);
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="text-center mb-6">
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="text-center">
         <p className="text-sm text-amber-600 dark:text-amber-400">
           Last updated: {timeAgo}
         </p>
       </div>
+
+      <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+        <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+          <span role="img" aria-label="bees">
+            🐝
+          </span>
+          Active Agents
+        </h2>
+        <AgentList agents={data.agents} />
+      </section>
 
       <div className="grid gap-6 md:grid-cols-3">
         <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
