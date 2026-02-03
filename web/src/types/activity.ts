@@ -21,6 +21,16 @@ export interface PullRequest {
   createdAt: string;
 }
 
+export interface Comment {
+  id: number;
+  issueOrPrNumber: number;
+  type: 'issue' | 'pr' | 'review';
+  author: string;
+  body: string;
+  createdAt: string;
+  url: string;
+}
+
 export interface Agent {
   login: string;
   avatarUrl?: string;
@@ -37,4 +47,5 @@ export interface ActivityData {
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
+  comments: Comment[];
 }
