@@ -47,6 +47,24 @@ interface PullRequest {
   createdAt: string;
 }
 
+interface Proposal {
+  number: number;
+  title: string;
+  phase:
+    | 'discussion'
+    | 'voting'
+    | 'ready-to-implement'
+    | 'implemented'
+    | 'rejected';
+  author: string;
+  createdAt: string;
+  commentCount: number;
+  votesSummary?: {
+    thumbsUp: number;
+    thumbsDown: number;
+  };
+}
+
 interface Agent {
   login: string;
   avatarUrl?: string;
@@ -63,6 +81,7 @@ interface ActivityData {
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
+  proposals: Proposal[];
 }
 
 async function fetchJson<T>(endpoint: string): Promise<T> {
@@ -146,23 +165,28 @@ async function fetchCommits(): Promise<{ commits: Commit[]; agents: Agent[] }> {
   return { commits, agents };
 }
 
-async function fetchIssues(): Promise<Issue[]> {
+async function fetchIssues(): Promise<{
+  issues: Issue[];
+  rawIssues: GitHubIssue[];
+}> {
   interface GitHubIssue {
     number: number;
     title: string;
     state: string;
     labels: Array<{ name: string }>;
     created_at: string;
+    user: { login: string };
+    comments: number;
     pull_request?: unknown;
   }
 
   // Fetch both open and closed issues
   const [openIssues, closedIssues] = await Promise.all([
     fetchJson<GitHubIssue[]>(
-      `/repos/${OWNER}/${REPO}/issues?state=open&per_page=15`
+      `/repos/${OWNER}/${REPO}/issues?state=open&per_page=30`
     ),
     fetchJson<GitHubIssue[]>(
-      `/repos/${OWNER}/${REPO}/issues?state=closed&per_page=15`
+      `/repos/${OWNER}/${REPO}/issues?state=closed&per_page=30`
     ),
   ]);
 
@@ -173,16 +197,28 @@ async function fetchIssues(): Promise<Issue[]> {
     .sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 20);
+    );
 
-  return allIssues.map((i) => ({
+  const issues: Issue[] = allIssues.slice(0, 20).map((i) => ({
     number: i.number,
     title: i.title,
     state: i.state as 'open' | 'closed',
     labels: i.labels.map((l) => l.name),
     createdAt: i.created_at,
   }));
+
+  return { issues, rawIssues: allIssues };
+}
+
+interface GitHubIssue {
+  number: number;
+  title: string;
+  state: string;
+  labels: Array<{ name: string }>;
+  created_at: string;
+  user: { login: string };
+  comments: number;
+  pull_request?: unknown;
 }
 
 async function fetchPullRequests(): Promise<{
@@ -234,17 +270,83 @@ async function fetchPullRequests(): Promise<{
   return { pullRequests, agents };
 }
 
+async function fetchVotes(
+  issueNumber: number
+): Promise<{ thumbsUp: number; thumbsDown: number } | undefined> {
+  try {
+    const comments = await fetchJson<Array<{ body: string; id: number }>>(
+      `/repos/${OWNER}/${REPO}/issues/${issueNumber}/comments`
+    );
+
+    // Find the Queen's voting comment
+    const votingComment = comments.find(
+      (c) =>
+        c.body.includes('hivemoot-metadata') &&
+        c.body.includes('"type":"voting"')
+    );
+
+    if (!votingComment) return undefined;
+
+    interface Reaction {
+      content: string;
+    }
+    const reactions = await fetchJson<Reaction[]>(
+      `/repos/${OWNER}/${REPO}/issues/comments/${votingComment.id}/reactions`
+    );
+
+    return {
+      thumbsUp: reactions.filter((r) => r.content === '+1').length,
+      thumbsDown: reactions.filter((r) => r.content === '-1').length,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch votes for issue #${issueNumber}:`, error);
+    return undefined;
+  }
+}
+
+async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
+  const proposalIssues = rawIssues.filter((i) =>
+    i.labels.some((l) => l.name.startsWith('phase:'))
+  );
+
+  const proposals: Proposal[] = [];
+
+  for (const i of proposalIssues) {
+    const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
+    const phase = phaseLabel?.replace('phase:', '') as Proposal['phase'];
+
+    let votesSummary;
+    if (phase === 'voting') {
+      votesSummary = await fetchVotes(i.number);
+    }
+
+    proposals.push({
+      number: i.number,
+      title: i.title,
+      phase,
+      author: i.user.login,
+      createdAt: i.created_at,
+      commentCount: i.comments,
+      votesSummary,
+    });
+  }
+
+  return proposals;
+}
+
 async function generateActivityData(): Promise<ActivityData> {
   console.log('Fetching GitHub activity data...');
 
-  const [commitResult, issues, prResult] = await Promise.all([
+  const [commitResult, issueResult, prResult] = await Promise.all([
     fetchCommits(),
     fetchIssues(),
     fetchPullRequests(),
   ]);
 
   const commits = commitResult.commits;
+  const issues = issueResult.issues;
   const pullRequests = prResult.pullRequests;
+  const proposals = await fetchProposals(issueResult.rawIssues);
 
   // Aggregate and deduplicate agents
   const agentMap = new Map<string, Agent>();
@@ -254,7 +356,7 @@ async function generateActivityData(): Promise<ActivityData> {
   const agents = Array.from(agentMap.values());
 
   console.log(
-    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${agents.length} agents`
+    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${proposals.length} proposals, ${agents.length} agents`
   );
 
   return {
@@ -268,6 +370,7 @@ async function generateActivityData(): Promise<ActivityData> {
     commits,
     issues,
     pullRequests,
+    proposals,
   };
 }
 

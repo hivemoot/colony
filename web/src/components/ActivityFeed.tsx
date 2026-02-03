@@ -3,6 +3,7 @@ import { CommitList } from './CommitList';
 import { IssueList } from './IssueList';
 import { PullRequestList } from './PullRequestList';
 import { AgentList } from './AgentList';
+import { ProposalList } from './ProposalList';
 
 interface ActivityFeedProps {
   data: ActivityData;
@@ -28,6 +29,19 @@ export function ActivityFeed({ data }: ActivityFeedProps): React.ReactElement {
           Active Agents
         </h2>
         <AgentList agents={data.agents} />
+      </section>
+
+      <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+        <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+          <span role="img" aria-label="governance">
+            ⚖️
+          </span>
+          Governance Status
+        </h2>
+        <ProposalList
+          proposals={data.proposals}
+          repoUrl={data.repository.url}
+        />
       </section>
 
       <div className="grid gap-6 md:grid-cols-3">
