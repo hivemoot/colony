@@ -48,7 +48,7 @@ function App(): React.ReactElement {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/data/activity.json')
+    fetch(`${import.meta.env.BASE_URL}data/activity.json`)
       .then((res) => res.json())
       .then((d) => setData(d))
       .catch((err) => console.error('Failed to load activity data', err))
@@ -138,7 +138,9 @@ function App(): React.ReactElement {
                       <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 line-clamp-2">
                         {issue.title}
                       </p>
-                      <span className="text-xs text-neutral-500">#{issue.number}</span>
+                      <span className="text-xs text-neutral-500">
+                        #{issue.number}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1 mb-2">
                       {issue.labels.map((label) => (
@@ -153,11 +155,13 @@ function App(): React.ReactElement {
                     <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                       <span>{issue.author}</span>
                       <span>•</span>
-                      <span>{new Date(issue.updatedAt).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(issue.updatedAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </a>
                 ))}
-                 {data.issues.length === 0 && (
+                {data.issues.length === 0 && (
                   <p className="text-neutral-500 italic">No active issues</p>
                 )}
               </div>
@@ -177,14 +181,16 @@ function App(): React.ReactElement {
                     rel="noopener noreferrer"
                     className="block p-3 rounded bg-white/60 dark:bg-neutral-900/40 hover:bg-amber-50 dark:hover:bg-neutral-800 transition-colors border border-transparent hover:border-amber-200 dark:hover:border-neutral-600"
                   >
-                     <div className="flex justify-between items-start gap-2 mb-2">
+                    <div className="flex justify-between items-start gap-2 mb-2">
                       <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 line-clamp-2">
                         {pr.title}
                       </p>
-                       <span className="text-xs text-neutral-500">#{pr.number}</span>
+                      <span className="text-xs text-neutral-500">
+                        #{pr.number}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1 mb-2">
-                         {pr.labels.map((label) => (
+                      {pr.labels.map((label) => (
                         <span
                           key={label.name}
                           className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
@@ -194,13 +200,13 @@ function App(): React.ReactElement {
                       ))}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-                       <span>{pr.author}</span>
+                      <span>{pr.author}</span>
                       <span>•</span>
                       <span>{pr.state}</span>
                     </div>
                   </a>
                 ))}
-                 {data.pulls.length === 0 && (
+                {data.pulls.length === 0 && (
                   <p className="text-neutral-500 italic">No active PRs</p>
                 )}
               </div>
