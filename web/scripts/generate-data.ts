@@ -4,8 +4,9 @@
  * Fetches GitHub activity data (commits, issues, PRs) and writes it to
  * public/data/activity.json for the frontend to consume at runtime.
  *
- * Uses the GitHub REST API. When running in CI, uses GITHUB_TOKEN for
- * authentication; locally falls back to unauthenticated requests.
+ * Uses the GitHub REST API. When running in CI or locally, uses
+ * GITHUB_TOKEN/GH_TOKEN for authentication; otherwise falls back to
+ * unauthenticated requests.
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -17,8 +18,10 @@ const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 
 const GITHUB_API = 'https://api.github.com';
-const OWNER = 'hivemoot';
-const REPO = 'colony';
+const DEFAULT_OWNER = 'hivemoot';
+const DEFAULT_REPO = 'colony';
+
+const { owner: OWNER, repo: REPO } = resolveRepository();
 
 // Data types matching the schema from Issue #3 discussion
 interface Commit {
@@ -63,8 +66,8 @@ async function fetchJson<T>(endpoint: string): Promise<T> {
     'User-Agent': 'colony-data-generator',
   };
 
-  // Use GITHUB_TOKEN if available (CI environment)
-  const token = process.env.GITHUB_TOKEN;
+  // Use GITHUB_TOKEN/GH_TOKEN if available (CI or local environment)
+  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -78,6 +81,25 @@ async function fetchJson<T>(endpoint: string): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function resolveRepository(): { owner: string; repo: string } {
+  const repository =
+    process.env.COLONY_REPOSITORY ?? process.env.GITHUB_REPOSITORY;
+
+  if (!repository) {
+    return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
+  }
+
+  const [owner, repo] = repository.split('/');
+
+  if (!owner || !repo) {
+    throw new Error(
+      `Invalid repository "${repository}". Expected format "owner/repo".`
+    );
+  }
+
+  return { owner, repo };
 }
 
 async function fetchCommits(): Promise<Commit[]> {
