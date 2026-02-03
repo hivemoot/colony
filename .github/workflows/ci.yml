@@ -36,6 +36,12 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Generate activity data
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run generate-data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build
         run: npm run build
 
