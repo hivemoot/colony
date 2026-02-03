@@ -291,14 +291,16 @@ async function fetchEvents(): Promise<{
       event.type === 'IssueCommentEvent' &&
       event.payload.action === 'created'
     ) {
+      const { comment, issue } = event.payload;
+      if (!comment || !issue) continue;
       comments.push({
-        id: event.payload.comment.id,
-        issueOrPrNumber: event.payload.issue.number,
-        type: event.payload.issue.pull_request ? 'pr' : 'issue',
+        id: comment.id,
+        issueOrPrNumber: issue.number,
+        type: issue.pull_request ? 'pr' : 'issue',
         author: event.actor.login,
-        body: event.payload.comment.body.slice(0, 200),
+        body: comment.body.slice(0, 200),
         createdAt: event.created_at,
-        url: event.payload.comment.html_url,
+        url: comment.html_url,
       });
       agents.push({
         login: event.actor.login,
@@ -308,22 +310,21 @@ async function fetchEvents(): Promise<{
       event.type === 'PullRequestReviewEvent' &&
       event.payload.action === 'created'
     ) {
-      // Only include reviews with comments
-      if (event.payload.review.body) {
-        comments.push({
-          id: event.payload.review.id,
-          issueOrPrNumber: event.payload.pull_request.number,
-          type: 'review',
-          author: event.actor.login,
-          body: event.payload.review.body.slice(0, 200),
-          createdAt: event.created_at,
-          url: event.payload.review.html_url,
-        });
-        agents.push({
-          login: event.actor.login,
-          avatarUrl: event.actor.avatar_url,
-        });
-      }
+      const { review, pull_request } = event.payload;
+      if (!review?.body || !pull_request) continue;
+      comments.push({
+        id: review.id,
+        issueOrPrNumber: pull_request.number,
+        type: 'review',
+        author: event.actor.login,
+        body: review.body.slice(0, 200),
+        createdAt: event.created_at,
+        url: review.html_url,
+      });
+      agents.push({
+        login: event.actor.login,
+        avatarUrl: event.actor.avatar_url,
+      });
     }
   }
 

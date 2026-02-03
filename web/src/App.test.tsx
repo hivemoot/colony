@@ -42,6 +42,17 @@ const mockActivityData: ActivityData = {
       createdAt: new Date().toISOString(),
     },
   ],
+  comments: [
+    {
+      id: 1,
+      issueOrPrNumber: 1,
+      type: 'issue',
+      author: 'hivemoot-builder',
+      body: 'Support this proposal.',
+      createdAt: new Date().toISOString(),
+      url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-1',
+    },
+  ],
 };
 
 describe('App', () => {
@@ -98,6 +109,7 @@ describe('App', () => {
     expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
     expect(screen.getByText(/issues/i)).toBeInTheDocument();
     expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
+    expect(screen.getByText(/discussion/i)).toBeInTheDocument();
   });
 
   it('shows error state on fetch failure', async () => {
