@@ -10,6 +10,12 @@ const mockActivityData: ActivityData = {
     name: 'colony',
     url: 'https://github.com/hivemoot/colony',
   },
+  agents: [
+    {
+      login: 'hivemoot-builder',
+      avatarUrl: 'https://github.com/hivemoot-builder.png',
+    },
+  ],
   commits: [
     {
       sha: 'abc1234',

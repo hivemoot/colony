@@ -47,6 +47,11 @@ interface PullRequest {
   createdAt: string;
 }
 
+interface Agent {
+  login: string;
+  avatarUrl?: string;
+}
+
 interface ActivityData {
   generatedAt: string;
   repository: {
@@ -54,6 +59,7 @@ interface ActivityData {
     name: string;
     url: string;
   };
+  agents: Agent[];
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
@@ -102,7 +108,7 @@ function resolveRepository(): { owner: string; repo: string } {
   return { owner, repo };
 }
 
-async function fetchCommits(): Promise<Commit[]> {
+async function fetchCommits(): Promise<{ commits: Commit[]; agents: Agent[] }> {
   interface GitHubCommit {
     sha: string;
     commit: {
@@ -112,18 +118,32 @@ async function fetchCommits(): Promise<Commit[]> {
         date: string;
       };
     };
+    author: {
+      login: string;
+      avatar_url: string;
+    } | null;
   }
 
-  const commits = await fetchJson<GitHubCommit[]>(
+  const ghCommits = await fetchJson<GitHubCommit[]>(
     `/repos/${OWNER}/${REPO}/commits?per_page=20`
   );
 
-  return commits.map((c) => ({
+  const commits: Commit[] = ghCommits.map((c) => ({
     sha: c.sha.slice(0, 7),
-    message: c.commit.message.split('\n')[0], // First line only
-    author: c.commit.author.name,
+    message: c.commit.message.split('\n')[0],
+    author: c.author?.login ?? c.commit.author.name,
     date: c.commit.author.date,
   }));
+
+  const agents: Agent[] = ghCommits
+    .map((c) => c.author)
+    .filter((a): a is { login: string; avatar_url: string } => a !== null)
+    .map((a) => ({
+      login: a.login,
+      avatarUrl: a.avatar_url,
+    }));
+
+  return { commits, agents };
 }
 
 async function fetchIssues(): Promise<Issue[]> {
@@ -165,13 +185,19 @@ async function fetchIssues(): Promise<Issue[]> {
   }));
 }
 
-async function fetchPullRequests(): Promise<PullRequest[]> {
+async function fetchPullRequests(): Promise<{
+  pullRequests: PullRequest[];
+  agents: Agent[];
+}> {
   interface GitHubPR {
     number: number;
     title: string;
     state: string;
     merged_at: string | null;
-    user: { login: string };
+    user: {
+      login: string;
+      avatar_url: string;
+    };
     created_at: string;
   }
 
@@ -192,26 +218,43 @@ async function fetchPullRequests(): Promise<PullRequest[]> {
     )
     .slice(0, 15);
 
-  return allPRs.map((pr) => ({
+  const pullRequests: PullRequest[] = allPRs.map((pr) => ({
     number: pr.number,
     title: pr.title,
     state: pr.merged_at ? 'merged' : (pr.state as 'open' | 'closed'),
     author: pr.user.login,
     createdAt: pr.created_at,
   }));
+
+  const agents: Agent[] = allPRs.map((pr) => ({
+    login: pr.user.login,
+    avatarUrl: pr.user.avatar_url,
+  }));
+
+  return { pullRequests, agents };
 }
 
 async function generateActivityData(): Promise<ActivityData> {
   console.log('Fetching GitHub activity data...');
 
-  const [commits, issues, pullRequests] = await Promise.all([
+  const [commitResult, issues, prResult] = await Promise.all([
     fetchCommits(),
     fetchIssues(),
     fetchPullRequests(),
   ]);
 
+  const commits = commitResult.commits;
+  const pullRequests = prResult.pullRequests;
+
+  // Aggregate and deduplicate agents
+  const agentMap = new Map<string, Agent>();
+  [...commitResult.agents, ...prResult.agents].forEach((agent) => {
+    agentMap.set(agent.login, agent);
+  });
+  const agents = Array.from(agentMap.values());
+
   console.log(
-    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs`
+    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${agents.length} agents`
   );
 
   return {
@@ -221,6 +264,7 @@ async function generateActivityData(): Promise<ActivityData> {
       name: REPO,
       url: `https://github.com/${OWNER}/${REPO}`,
     },
+    agents,
     commits,
     issues,
     pullRequests,

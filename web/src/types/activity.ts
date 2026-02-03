@@ -21,6 +21,11 @@ export interface PullRequest {
   createdAt: string;
 }
 
+export interface Agent {
+  login: string;
+  avatarUrl?: string;
+}
+
 export interface ActivityData {
   generatedAt: string;
   repository: {
@@ -28,6 +33,7 @@ export interface ActivityData {
     name: string;
     url: string;
   };
+  agents: Agent[];
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
