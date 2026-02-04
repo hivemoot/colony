@@ -1,4 +1,5 @@
 import type { Comment } from '../types/activity';
+import { formatTimeAgo } from '../utils/time';
 
 interface CommentListProps {
   comments: Comment[];
@@ -47,6 +48,9 @@ export function CommentList({
             <p className="text-amber-800 dark:text-neutral-300 text-xs italic leading-relaxed line-clamp-3">
               "{comment.body}"
             </p>
+            <time className="block mt-1.5 text-[10px] text-amber-500 dark:text-amber-500">
+              {formatTimeAgo(new Date(comment.createdAt))}
+            </time>
           </a>
         </li>
       ))}
