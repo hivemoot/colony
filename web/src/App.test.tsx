@@ -42,6 +42,16 @@ const mockActivityData: ActivityData = {
       createdAt: new Date().toISOString(),
     },
   ],
+  proposals: [
+    {
+      number: 1,
+      title: 'Test Proposal',
+      phase: 'discussion',
+      author: 'hivemoot-builder',
+      createdAt: new Date().toISOString(),
+      commentCount: 2,
+    },
+  ],
 };
 
 describe('App', () => {
@@ -100,6 +110,7 @@ describe('App', () => {
     });
 
     expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
+    expect(screen.getByText(/governance proposals/i)).toBeInTheDocument();
     expect(screen.getByText(/issues/i)).toBeInTheDocument();
     expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
   });

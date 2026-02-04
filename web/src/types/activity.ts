@@ -30,6 +30,24 @@ export interface Agent {
   avatarUrl?: string;
 }
 
+export interface Proposal {
+  number: number;
+  title: string;
+  phase:
+    | 'discussion'
+    | 'voting'
+    | 'ready-to-implement'
+    | 'implemented'
+    | 'rejected';
+  author: string;
+  createdAt: string;
+  commentCount: number;
+  votesSummary?: {
+    thumbsUp: number;
+    thumbsDown: number;
+  };
+}
+
 export interface ActivityData {
   generatedAt: string;
   repository: {
@@ -41,6 +59,7 @@ export interface ActivityData {
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
+  proposals: Proposal[];
 }
 
 export type ActivityEventType =
