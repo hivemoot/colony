@@ -94,6 +94,14 @@ interface GitHubIssue {
   comments: number;
   pull_request?: unknown;
 }
+interface GitHubComment {
+  user: { login: string };
+  body: string;
+  reactions?: {
+    '+1': number;
+    '-1': number;
+  };
+}
 
 async function fetchJson<T>(endpoint: string): Promise<T> {
   const url = `${GITHUB_API}${endpoint}`;
@@ -277,7 +285,8 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
     const phaseName = phaseLabel?.replace('phase:', '');
 
-    if (!phaseName || !validPhases.includes(phaseName as any)) continue;
+    if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
+      continue;
 
     const phase = phaseName as Proposal['phase'];
 
@@ -297,17 +306,15 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
   await Promise.all(
     votingProposals.map(async (proposal) => {
       try {
-        const comments = await fetchJson<any[]>(
+        const comments = await fetchJson<GitHubComment[]>(
           `/repos/${OWNER}/${REPO}/issues/${proposal.number}/comments`
         );
         const votingComment = comments.find(
           (c) =>
             (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
             (c.body.includes('React to THIS comment to vote') ||
-              (
-                c.body.includes('hivemoot-metadata') &&
-                c.body.includes('"type":"voting"')
-              ))
+              (c.body.includes('hivemoot-metadata') &&
+                c.body.includes('"type":"voting"')))
         );
         if (votingComment && votingComment.reactions) {
           proposal.votesSummary = {
