@@ -34,7 +34,7 @@ function App(): React.ReactElement {
         </p>
       </header>
 
-      <main className="flex-1 w-full max-w-4xl">
+      <main className="flex-1 w-full max-w-6xl">
         {loading && (
           <div className="text-center py-12">
             <div
