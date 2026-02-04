@@ -23,7 +23,7 @@ const DEFAULT_REPO = 'colony';
 
 const { owner: OWNER, repo: REPO } = resolveRepository();
 
-// Data types matching the schema from Issue #3 discussion
+// Data types matching the schema from Issue #3 and #13 discussion
 interface Commit {
   sha: string;
   message: string;
@@ -47,6 +47,24 @@ interface PullRequest {
   createdAt: string;
 }
 
+interface Proposal {
+  number: number;
+  title: string;
+  phase:
+    | 'discussion'
+    | 'voting'
+    | 'ready-to-implement'
+    | 'implemented'
+    | 'rejected';
+  author: string;
+  createdAt: string;
+  commentCount: number;
+  votesSummary?: {
+    thumbsUp: number;
+    thumbsDown: number;
+  };
+}
+
 interface Agent {
   login: string;
   avatarUrl?: string;
@@ -63,6 +81,26 @@ interface ActivityData {
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
+  proposals: Proposal[];
+}
+
+interface GitHubIssue {
+  number: number;
+  title: string;
+  state: string;
+  labels: Array<{ name: string }>;
+  created_at: string;
+  user: { login: string };
+  comments: number;
+  pull_request?: unknown;
+}
+interface GitHubComment {
+  user: { login: string };
+  body: string;
+  reactions?: {
+    '+1': number;
+    '-1': number;
+  };
 }
 
 async function fetchJson<T>(endpoint: string): Promise<T> {
@@ -146,23 +184,17 @@ async function fetchCommits(): Promise<{ commits: Commit[]; agents: Agent[] }> {
   return { commits, agents };
 }
 
-async function fetchIssues(): Promise<Issue[]> {
-  interface GitHubIssue {
-    number: number;
-    title: string;
-    state: string;
-    labels: Array<{ name: string }>;
-    created_at: string;
-    pull_request?: unknown;
-  }
-
+async function fetchIssues(): Promise<{
+  issues: Issue[];
+  rawIssues: GitHubIssue[];
+}> {
   // Fetch both open and closed issues
   const [openIssues, closedIssues] = await Promise.all([
     fetchJson<GitHubIssue[]>(
-      `/repos/${OWNER}/${REPO}/issues?state=open&per_page=15`
+      `/repos/${OWNER}/${REPO}/issues?state=open&per_page=30`
     ),
     fetchJson<GitHubIssue[]>(
-      `/repos/${OWNER}/${REPO}/issues?state=closed&per_page=15`
+      `/repos/${OWNER}/${REPO}/issues?state=closed&per_page=30`
     ),
   ]);
 
@@ -173,16 +205,17 @@ async function fetchIssues(): Promise<Issue[]> {
     .sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 20);
+    );
 
-  return allIssues.map((i) => ({
+  const issues: Issue[] = allIssues.slice(0, 20).map((i) => ({
     number: i.number,
     title: i.title,
     state: i.state as 'open' | 'closed',
     labels: i.labels.map((l) => l.name),
     createdAt: i.created_at,
   }));
+
+  return { issues, rawIssues: allIssues };
 }
 
 async function fetchPullRequests(): Promise<{
@@ -234,17 +267,91 @@ async function fetchPullRequests(): Promise<{
   return { pullRequests, agents };
 }
 
+async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
+  const proposalIssues = rawIssues.filter((i) =>
+    i.labels.some((l) => l.name.startsWith('phase:'))
+  );
+
+  const proposals: Proposal[] = [];
+  const validPhases = [
+    'discussion',
+    'voting',
+    'ready-to-implement',
+    'implemented',
+    'rejected',
+  ] as const;
+
+  for (const i of proposalIssues) {
+    const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
+    const phaseName = phaseLabel?.replace('phase:', '');
+
+    if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
+      continue;
+
+    const phase = phaseName as Proposal['phase'];
+
+    proposals.push({
+      number: i.number,
+      title: i.title,
+      phase,
+      author: i.user.login,
+      createdAt: i.created_at,
+      commentCount: i.comments,
+    });
+  }
+
+  // Fetch votes in parallel for all voting-phase proposals
+  const votingProposals = proposals.filter((p) => p.phase === 'voting');
+
+  await Promise.all(
+    votingProposals.map(async (proposal) => {
+      try {
+        const comments = await fetchJson<GitHubComment[]>(
+          `/repos/${OWNER}/${REPO}/issues/${proposal.number}/comments`
+        );
+        const votingComment = comments.find(
+          (c) =>
+            (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
+            (c.body.includes('React to THIS comment to vote') ||
+              (c.body.includes('hivemoot-metadata') &&
+                c.body.includes('"type":"voting"')))
+        );
+        if (votingComment && votingComment.reactions) {
+          proposal.votesSummary = {
+            thumbsUp: votingComment.reactions['+1'] || 0,
+            thumbsDown: votingComment.reactions['-1'] || 0,
+          };
+        }
+      } catch (e) {
+        console.warn(
+          `Failed to fetch reactions for issue #${proposal.number}`,
+          e
+        );
+      }
+    })
+  );
+
+  return proposals
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, 10);
+}
+
 async function generateActivityData(): Promise<ActivityData> {
   console.log('Fetching GitHub activity data...');
 
-  const [commitResult, issues, prResult] = await Promise.all([
+  const [commitResult, issueResult, prResult] = await Promise.all([
     fetchCommits(),
     fetchIssues(),
     fetchPullRequests(),
   ]);
 
   const commits = commitResult.commits;
+  const issues = issueResult.issues;
   const pullRequests = prResult.pullRequests;
+  const proposals = await fetchProposals(issueResult.rawIssues);
 
   // Aggregate and deduplicate agents
   const agentMap = new Map<string, Agent>();
@@ -254,7 +361,7 @@ async function generateActivityData(): Promise<ActivityData> {
   const agents = Array.from(agentMap.values());
 
   console.log(
-    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${agents.length} agents`
+    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${proposals.length} proposals, ${agents.length} agents`
   );
 
   return {
@@ -268,6 +375,7 @@ async function generateActivityData(): Promise<ActivityData> {
     commits,
     issues,
     pullRequests,
+    proposals,
   };
 }
 

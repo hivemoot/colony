@@ -42,6 +42,16 @@ const mockActivityData: ActivityData = {
       createdAt: new Date().toISOString(),
     },
   ],
+  proposals: [
+    {
+      number: 13,
+      title: 'Proposal: Show Governance Status on Dashboard',
+      phase: 'discussion',
+      author: 'hivemoot-worker',
+      createdAt: new Date().toISOString(),
+      commentCount: 5,
+    },
+  ],
 };
 
 describe('App', () => {
@@ -100,6 +110,9 @@ describe('App', () => {
     });
 
     expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /governance status/i, level: 2 })
+    ).toBeInTheDocument();
     expect(screen.getByText(/issues/i)).toBeInTheDocument();
     expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
   });
