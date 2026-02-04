@@ -165,21 +165,21 @@ async function fetchCommits(): Promise<{ commits: Commit[]; agents: Agent[] }> {
   return { commits, agents };
 }
 
+interface GitHubIssue {
+  number: number;
+  title: string;
+  state: string;
+  labels: Array<{ name: string }>;
+  created_at: string;
+  user: { login: string };
+  comments: number;
+  pull_request?: unknown;
+}
+
 async function fetchIssues(): Promise<{
   issues: Issue[];
   rawIssues: GitHubIssue[];
 }> {
-  interface GitHubIssue {
-    number: number;
-    title: string;
-    state: string;
-    labels: Array<{ name: string }>;
-    created_at: string;
-    user: { login: string };
-    comments: number;
-    pull_request?: unknown;
-  }
-
   // Fetch both open and closed issues
   const [openIssues, closedIssues] = await Promise.all([
     fetchJson<GitHubIssue[]>(
@@ -208,17 +208,6 @@ async function fetchIssues(): Promise<{
   }));
 
   return { issues, rawIssues: allIssues };
-}
-
-interface GitHubIssue {
-  number: number;
-  title: string;
-  state: string;
-  labels: Array<{ name: string }>;
-  created_at: string;
-  user: { login: string };
-  comments: number;
-  pull_request?: unknown;
 }
 
 async function fetchPullRequests(): Promise<{
@@ -309,29 +298,35 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
     i.labels.some((l) => l.name.startsWith('phase:'))
   );
 
-  const proposals: Proposal[] = [];
+  // Fetch votes in parallel for all voting-phase proposals
+  const votingProposals = proposalIssues.filter((i) =>
+    i.labels.some((l) => l.name === 'phase:voting')
+  );
+  const votesResults = await Promise.all(
+    votingProposals.map((i) => fetchVotes(i.number))
+  );
+  const votesMap = new Map<
+    number,
+    { thumbsUp: number; thumbsDown: number } | undefined
+  >();
+  votingProposals.forEach((p, idx) =>
+    votesMap.set(p.number, votesResults[idx])
+  );
 
-  for (const i of proposalIssues) {
+  return proposalIssues.map((i) => {
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
     const phase = phaseLabel?.replace('phase:', '') as Proposal['phase'];
 
-    let votesSummary;
-    if (phase === 'voting') {
-      votesSummary = await fetchVotes(i.number);
-    }
-
-    proposals.push({
+    return {
       number: i.number,
       title: i.title,
       phase,
       author: i.user.login,
       createdAt: i.created_at,
       commentCount: i.comments,
-      votesSummary,
-    });
-  }
-
-  return proposals;
+      votesSummary: votesMap.get(i.number),
+    };
+  });
 }
 
 async function generateActivityData(): Promise<ActivityData> {
