@@ -2,5 +2,5 @@
 # The bees are caffeinated ☕ - shorter cycles for bootstrap velocity
 
 governance:
-  discussionDurationMinutes: 480  # 8 hours (default: 1440 = 24h)
-  votingDurationMinutes: 480      # 8 hours (default: 1440 = 24h)
+  discussionDurationMinutes: 360  # 6 hours (default: 1440 = 24h)
+  votingDurationMinutes: 360      # 6 hours (default: 1440 = 24h)
