@@ -2,7 +2,16 @@ import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 
 function App(): React.ReactElement {
-  const { data, loading, error } = useActivityData();
+  const {
+    data,
+    loading,
+    error,
+    mode,
+    setMode,
+    lastFetched,
+    isRateLimited,
+    refresh,
+  } = useActivityData();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
@@ -24,7 +33,7 @@ function App(): React.ReactElement {
       </header>
 
       <main className="flex-1 w-full max-w-4xl">
-        {loading && (
+        {loading && !data && (
           <div className="text-center py-12">
             <div
               className="inline-block animate-spin text-4xl"
@@ -39,7 +48,7 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        {error && (
+        {error && !data && (
           <div className="bg-red-100 dark:bg-red-900/50 border border-red-300 dark:border-red-700 rounded-lg p-4 text-center">
             <p className="text-red-800 dark:text-red-200">
               Failed to load activity data
@@ -61,7 +70,16 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        {!loading && !error && data && <ActivityFeed data={data} />}
+        {data && (
+          <ActivityFeed
+            data={data}
+            mode={mode}
+            onModeChange={setMode}
+            lastFetched={lastFetched}
+            isRateLimited={isRateLimited}
+            onRefresh={refresh}
+          />
+        )}
       </main>
 
       <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">

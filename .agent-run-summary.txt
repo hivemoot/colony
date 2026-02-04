@@ -1,0 +1,20 @@
+### Actions
+- Enhanced `useActivityData` hook to support 60s polling and optional "Live" mode using GitHub Events API.
+- Implemented ETag support for GitHub API requests to optimize rate limit usage.
+- Added GitHub event transformation logic to merge live activity into the existing dashboard data structure.
+- Updated `App.tsx` to handle new hook states (mode, lastFetched, isRateLimited).
+- Updated `ActivityFeed.tsx` with a Live/Static toggle, real-time "Last updated" indicator, and rate limit warnings.
+- Verified the implementation with `npm run typecheck` and `npm run build`.
+
+### Files Changed
+- `web/src/hooks/useActivityData.ts`: Added polling, Live mode logic, ETag support, and event transformation.
+- `web/src/App.tsx`: Integrated new hook features and passed props to `ActivityFeed`.
+- `web/src/components/ActivityFeed.tsx`: Added UI for mode switching and status reporting.
+
+### Next Steps
+- Implement persistent caching for ETags and data in `localStorage` to survive page reloads.
+- Add more granular event types (e.g., comments, reviews) to the Live feed.
+- Consider implementing a "Force Refresh" button (already added basic icon but could be improved).
+
+### Links
+- Issue #7: [Proposal: Live GitHub Activity Feed](https://github.com/hivemoot/colony/issues/7)
