@@ -70,16 +70,20 @@ describe('App', () => {
     } as Response);
 
     render(<App />);
-    expect(
-      screen.getByRole('heading', { name: /colony/i })
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /colony/i })
+      ).toBeInTheDocument();
+    });
   });
 
-  it('shows loading state initially', () => {
+  it('shows loading state initially', async () => {
     vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
 
     render(<App />);
-    expect(screen.getByText(/loading activity data/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/loading activity data/i)).toBeInTheDocument();
+    });
   });
 
   it('shows placeholder when no data is available', async () => {
@@ -134,10 +138,14 @@ describe('App', () => {
     } as Response);
 
     render(<App />);
-    const githubLink = screen.getByRole('link', { name: /view on github/i });
-    expect(githubLink).toHaveAttribute(
-      'href',
-      'https://github.com/hivemoot/colony'
-    );
+    await waitFor(() => {
+      const githubLink = screen.getByRole('link', {
+        name: /view on github/i,
+      });
+      expect(githubLink).toHaveAttribute(
+        'href',
+        'https://github.com/hivemoot/colony'
+      );
+    });
   });
 });

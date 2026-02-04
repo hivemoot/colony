@@ -10,7 +10,9 @@ export interface Issue {
   title: string;
   state: 'open' | 'closed';
   labels: string[];
+  author?: string;
   createdAt: string;
+  closedAt?: string | null;
 }
 
 export interface PullRequest {
@@ -19,6 +21,8 @@ export interface PullRequest {
   state: 'open' | 'closed' | 'merged';
   author: string;
   createdAt: string;
+  closedAt?: string | null;
+  mergedAt?: string | null;
 }
 
 export interface Proposal {
@@ -56,4 +60,24 @@ export interface ActivityData {
   issues: Issue[];
   pullRequests: PullRequest[];
   proposals: Proposal[];
+}
+
+export type ActivityEventType =
+  | 'commit'
+  | 'issue'
+  | 'pull_request'
+  | 'comment'
+  | 'merge'
+  | 'review';
+
+export type ActivityMode = 'static' | 'connecting' | 'live' | 'fallback';
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityEventType;
+  summary: string;
+  title: string;
+  url?: string;
+  actor: string;
+  createdAt: string;
 }
