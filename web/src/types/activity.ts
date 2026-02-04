@@ -77,7 +77,7 @@ export interface ActivityData {
     url: string;
   };
   agents: Agent[];
-  agentStats?: AgentStats[];
+  agentStats: AgentStats[];
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];

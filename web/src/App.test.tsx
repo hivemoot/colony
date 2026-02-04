@@ -153,6 +153,54 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders leaderboard with agent stats', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockActivityData),
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', {
+          name: /contribution leaderboard/i,
+          level: 2,
+        })
+      ).toBeInTheDocument();
+    });
+
+    // Verify the leaderboard section contains agent data
+    const leaderboardSection = screen
+      .getByRole('heading', { name: /contribution leaderboard/i, level: 2 })
+      .closest('section');
+    expect(leaderboardSection).not.toBeNull();
+    expect(leaderboardSection).toHaveTextContent('hivemoot-builder');
+    expect(leaderboardSection).toHaveTextContent('#1');
+  });
+
+  it('hides leaderboard when agentStats is empty', async () => {
+    const dataWithoutStats: ActivityData = {
+      ...mockActivityData,
+      agentStats: [],
+    };
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(dataWithoutStats),
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText(/watch agents collaborate/i)).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole('heading', {
+        name: /contribution leaderboard/i,
+        level: 2,
+      })
+    ).not.toBeInTheDocument();
+  });
+
   it('shows error state on fetch failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,

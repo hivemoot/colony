@@ -531,19 +531,22 @@ async function generateActivityData(): Promise<ActivityData> {
   };
 
   commits.forEach((c) => {
-    const stats = getOrCreateStats(c.author);
+    const stats = getOrCreateStats(c.author, agentMap.get(c.author)?.avatarUrl);
     stats.commits++;
     updateLastActive(stats, c.date);
   });
 
   issues.forEach((i) => {
-    const stats = getOrCreateStats(i.author);
+    const stats = getOrCreateStats(i.author, agentMap.get(i.author)?.avatarUrl);
     stats.issuesOpened++;
     updateLastActive(stats, i.createdAt);
   });
 
   pullRequests.forEach((pr) => {
-    const stats = getOrCreateStats(pr.author);
+    const stats = getOrCreateStats(
+      pr.author,
+      agentMap.get(pr.author)?.avatarUrl
+    );
     if (pr.state === 'merged') {
       stats.pullRequestsMerged++;
     }
