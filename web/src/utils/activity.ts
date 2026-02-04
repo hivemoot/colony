@@ -71,8 +71,24 @@ export function buildStaticEvents(
     };
   });
 
+  const commentEvents = (data.comments ?? []).map((comment) => {
+    const isReview = comment.type === 'review';
+    const targetLabel = comment.type === 'issue' ? 'issue' : 'PR';
+    return {
+      id: `comment-${comment.id}`,
+      type: isReview ? ('review' as const) : ('comment' as const),
+      summary: isReview
+        ? `Reviewed PR #${comment.issueOrPrNumber}`
+        : `Commented on ${targetLabel} #${comment.issueOrPrNumber}`,
+      title: `#${comment.issueOrPrNumber}`,
+      url: comment.url,
+      actor: comment.author,
+      createdAt: comment.createdAt,
+    };
+  });
+
   return sortAndLimit(
-    [...commitEvents, ...issueEvents, ...pullRequestEvents],
+    [...commitEvents, ...issueEvents, ...pullRequestEvents, ...commentEvents],
     maxEvents
   );
 }
