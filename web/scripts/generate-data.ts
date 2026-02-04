@@ -93,7 +93,6 @@ interface ActivityData {
   pullRequests: PullRequest[];
   proposals: Proposal[];
   comments: Comment[];
-  proposals: Proposal[];
 }
 
 interface GitHubIssue {
