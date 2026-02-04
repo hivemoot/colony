@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '*/15 * * * *'
 
 jobs:
   lint-typecheck-test-build:
@@ -28,16 +30,19 @@ jobs:
         run: npm ci
 
       - name: Lint
+        if: github.event_name != 'schedule'
         run: npm run lint
 
       - name: Type check
+        if: github.event_name != 'schedule'
         run: npm run typecheck
 
       - name: Test
+        if: github.event_name != 'schedule'
         run: npm run test
 
       - name: Generate activity data
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         run: npm run generate-data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,14 +51,14 @@ jobs:
         run: npm run build
 
       - name: Upload build artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist
 
   deploy:
     needs: lint-typecheck-test-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       pages: write

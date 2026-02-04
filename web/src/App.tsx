@@ -2,7 +2,7 @@ import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 
 function App(): React.ReactElement {
-  const { data, loading, error } = useActivityData();
+  const { data, loading, error, lastFetchedAt } = useActivityData();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
@@ -61,7 +61,9 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        {!loading && !error && data && <ActivityFeed data={data} />}
+        {!loading && !error && data && (
+          <ActivityFeed data={data} lastFetchedAt={lastFetchedAt} />
+        )}
       </main>
 
       <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
