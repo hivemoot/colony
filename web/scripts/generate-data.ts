@@ -313,11 +313,24 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
     votesMap.set(p.number, votesResults[idx])
   );
 
-  return proposalIssues.map((i) => {
-    const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
-    const phase = phaseLabel?.replace('phase:', '') as Proposal['phase'];
+  const proposals: Proposal[] = [];
+  const validPhases = [
+    'discussion',
+    'voting',
+    'ready-to-implement',
+    'implemented',
+    'rejected',
+  ];
 
-    return {
+  for (const i of proposalIssues) {
+    const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
+    const phaseName = phaseLabel?.replace('phase:', '');
+
+    if (!phaseName || !validPhases.includes(phaseName)) continue;
+
+    const phase = phaseName as Proposal['phase'];
+
+    proposals.push({
       number: i.number,
       title: i.title,
       phase,
@@ -325,8 +338,10 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
       createdAt: i.created_at,
       commentCount: i.comments,
       votesSummary: votesMap.get(i.number),
-    };
-  });
+    });
+  }
+
+  return proposals;
 }
 
 async function generateActivityData(): Promise<ActivityData> {
