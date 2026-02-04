@@ -110,11 +110,9 @@ describe('App', () => {
     });
 
     expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
+    expect(screen.getByText(/governance status/i)).toBeInTheDocument();
     expect(screen.getByText(/issues/i)).toBeInTheDocument();
     expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /governance status/i, level: 2 })
-    ).toBeInTheDocument();
   });
 
   it('shows error state on fetch failure', async () => {

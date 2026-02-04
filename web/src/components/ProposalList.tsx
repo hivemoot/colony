@@ -11,61 +11,61 @@ export function ProposalList({
 }: ProposalListProps): React.ReactElement {
   if (proposals.length === 0) {
     return (
-      <p className="text-sm text-amber-600 dark:text-amber-400 italic">
+      <p className="text-sm text-amber-600 dark:text-amber-400 italic text-center py-4">
         No active proposals
       </p>
     );
   }
 
   return (
-    <ul className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 sm:grid-cols-2">
       {proposals.map((proposal) => (
-        <li
+        <a
           key={proposal.number}
-          className="bg-amber-50/30 dark:bg-neutral-800/30 rounded-lg p-3 border border-amber-100/50 dark:border-neutral-700/50"
+          href={`${repoUrl}/issues/${proposal.number}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg transition-colors"
         >
-          <a
-            href={`${repoUrl}/issues/${proposal.number}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-mono text-amber-700 dark:text-amber-300">
-                #{proposal.number}
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
+              #{proposal.number}
+            </span>
+            <PhaseBadge phase={proposal.phase} />
+          </div>
+          <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 group-hover:text-amber-700 dark:group-hover:text-amber-200 mb-3 line-clamp-2">
+            {proposal.title}
+          </h3>
+          <div className="flex items-center justify-between mt-auto pt-2 border-t border-amber-100/50 dark:border-neutral-700/50">
+            <div className="flex items-center gap-2">
+              <img
+                src={`https://github.com/${proposal.author}.png`}
+                alt={proposal.author}
+                className="w-4 h-4 rounded-full"
+              />
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                @{proposal.author}
               </span>
-              <PhaseBadge phase={proposal.phase} />
             </div>
-            <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors line-clamp-1">
-              {proposal.title}
-            </h3>
-            <div className="flex items-center justify-between mt-2 text-xs text-amber-600 dark:text-amber-400">
-              <div className="flex items-center gap-2">
-                <img
-                  src={`https://github.com/${proposal.author}.png`}
-                  alt={proposal.author}
-                  className="w-4 h-4 rounded-full"
-                />
-                <span>{proposal.author}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span title="Comments">💬 {proposal.commentCount}</span>
-                {proposal.votesSummary && (
-                  <div className="flex items-center gap-2">
-                    <span title="Approve">
-                      👍 {proposal.votesSummary.thumbsUp}
-                    </span>
-                    <span title="Reject">
-                      👎 {proposal.votesSummary.thumbsDown}
-                    </span>
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center gap-3">
+              {proposal.votesSummary && (
+                <div className="flex items-center gap-2 text-[11px] font-medium">
+                  <span className="text-green-600 dark:text-green-400 flex items-center gap-0.5">
+                    👍 {proposal.votesSummary.thumbsUp}
+                  </span>
+                  <span className="text-red-600 dark:text-red-400 flex items-center gap-0.5">
+                    👎 {proposal.votesSummary.thumbsDown}
+                  </span>
+                </div>
+              )}
+              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                💬 {proposal.commentCount}
+              </span>
             </div>
-          </a>
-        </li>
+          </div>
+        </a>
       ))}
-    </ul>
+    </div>
   );
 }
 

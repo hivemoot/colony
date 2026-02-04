@@ -23,7 +23,7 @@ const DEFAULT_REPO = 'colony';
 
 const { owner: OWNER, repo: REPO } = resolveRepository();
 
-// Data types matching the schema from Issue #3 discussion
+// Data types matching the schema from Issue #3 and #13 discussion
 interface Commit {
   sha: string;
   message: string;
@@ -82,6 +82,17 @@ interface ActivityData {
   issues: Issue[];
   pullRequests: PullRequest[];
   proposals: Proposal[];
+}
+
+interface GitHubIssue {
+  number: number;
+  title: string;
+  state: string;
+  labels: Array<{ name: string }>;
+  created_at: string;
+  user: { login: string };
+  comments: number;
+  pull_request?: unknown;
 }
 
 async function fetchJson<T>(endpoint: string): Promise<T> {
@@ -163,17 +174,6 @@ async function fetchCommits(): Promise<{ commits: Commit[]; agents: Agent[] }> {
     }));
 
   return { commits, agents };
-}
-
-interface GitHubIssue {
-  number: number;
-  title: string;
-  state: string;
-  labels: Array<{ name: string }>;
-  created_at: string;
-  user: { login: string };
-  comments: number;
-  pull_request?: unknown;
 }
 
 async function fetchIssues(): Promise<{
@@ -259,58 +259,9 @@ async function fetchPullRequests(): Promise<{
   return { pullRequests, agents };
 }
 
-async function fetchVotes(
-  issueNumber: number
-): Promise<{ thumbsUp: number; thumbsDown: number } | undefined> {
-  try {
-    const comments = await fetchJson<Array<{ body: string; id: number }>>(
-      `/repos/${OWNER}/${REPO}/issues/${issueNumber}/comments`
-    );
-
-    // Find the Queen's voting comment
-    const votingComment = comments.find(
-      (c) =>
-        c.body.includes('hivemoot-metadata') &&
-        c.body.includes('"type":"voting"')
-    );
-
-    if (!votingComment) return undefined;
-
-    interface Reaction {
-      content: string;
-    }
-    const reactions = await fetchJson<Reaction[]>(
-      `/repos/${OWNER}/${REPO}/issues/comments/${votingComment.id}/reactions`
-    );
-
-    return {
-      thumbsUp: reactions.filter((r) => r.content === '+1').length,
-      thumbsDown: reactions.filter((r) => r.content === '-1').length,
-    };
-  } catch (error) {
-    console.error(`Failed to fetch votes for issue #${issueNumber}:`, error);
-    return undefined;
-  }
-}
-
 async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
   const proposalIssues = rawIssues.filter((i) =>
     i.labels.some((l) => l.name.startsWith('phase:'))
-  );
-
-  // Fetch votes in parallel for all voting-phase proposals
-  const votingProposals = proposalIssues.filter((i) =>
-    i.labels.some((l) => l.name === 'phase:voting')
-  );
-  const votesResults = await Promise.all(
-    votingProposals.map((i) => fetchVotes(i.number))
-  );
-  const votesMap = new Map<
-    number,
-    { thumbsUp: number; thumbsDown: number } | undefined
-  >();
-  votingProposals.forEach((p, idx) =>
-    votesMap.set(p.number, votesResults[idx])
   );
 
   const proposals: Proposal[] = [];
@@ -320,13 +271,13 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
     'ready-to-implement',
     'implemented',
     'rejected',
-  ];
+  ] as const;
 
   for (const i of proposalIssues) {
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
     const phaseName = phaseLabel?.replace('phase:', '');
 
-    if (!phaseName || !validPhases.includes(phaseName)) continue;
+    if (!phaseName || !validPhases.includes(phaseName as any)) continue;
 
     const phase = phaseName as Proposal['phase'];
 
@@ -337,11 +288,48 @@ async function fetchProposals(rawIssues: GitHubIssue[]): Promise<Proposal[]> {
       author: i.user.login,
       createdAt: i.created_at,
       commentCount: i.comments,
-      votesSummary: votesMap.get(i.number),
     });
   }
 
-  return proposals;
+  // Fetch votes in parallel for all voting-phase proposals
+  const votingProposals = proposals.filter((p) => p.phase === 'voting');
+
+  await Promise.all(
+    votingProposals.map(async (proposal) => {
+      try {
+        const comments = await fetchJson<any[]>(
+          `/repos/${OWNER}/${REPO}/issues/${proposal.number}/comments`
+        );
+        const votingComment = comments.find(
+          (c) =>
+            (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
+            (c.body.includes('React to THIS comment to vote') ||
+              (
+                c.body.includes('hivemoot-metadata') &&
+                c.body.includes('"type":"voting"')
+              ))
+        );
+        if (votingComment && votingComment.reactions) {
+          proposal.votesSummary = {
+            thumbsUp: votingComment.reactions['+1'] || 0,
+            thumbsDown: votingComment.reactions['-1'] || 0,
+          };
+        }
+      } catch (e) {
+        console.warn(
+          `Failed to fetch reactions for issue #${proposal.number}`,
+          e
+        );
+      }
+    })
+  );
+
+  return proposals
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, 10);
 }
 
 async function generateActivityData(): Promise<ActivityData> {
