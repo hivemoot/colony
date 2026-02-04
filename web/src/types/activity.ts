@@ -10,7 +10,7 @@ export interface Issue {
   title: string;
   state: 'open' | 'closed';
   labels: string[];
-  author?: string;
+  author: string;
   createdAt: string;
   closedAt?: string | null;
 }
@@ -58,6 +58,17 @@ export interface Agent {
   avatarUrl?: string;
 }
 
+export interface AgentStats {
+  login: string;
+  avatarUrl?: string;
+  commits: number;
+  pullRequestsMerged: number;
+  issuesOpened: number;
+  reviews: number;
+  comments: number;
+  lastActiveAt: string;
+}
+
 export interface ActivityData {
   generatedAt: string;
   repository: {
@@ -66,6 +77,7 @@ export interface ActivityData {
     url: string;
   };
   agents: Agent[];
+  agentStats?: AgentStats[];
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];

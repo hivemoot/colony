@@ -16,6 +16,17 @@ const mockActivityData: ActivityData = {
       avatarUrl: 'https://github.com/hivemoot-builder.png',
     },
   ],
+  agentStats: [
+    {
+      login: 'hivemoot-builder',
+      commits: 1,
+      pullRequestsMerged: 1,
+      issuesOpened: 1,
+      reviews: 0,
+      comments: 0,
+      lastActiveAt: new Date().toISOString(),
+    },
+  ],
   commits: [
     {
       sha: 'abc1234',
@@ -30,6 +41,7 @@ const mockActivityData: ActivityData = {
       title: 'Test Issue',
       state: 'open',
       labels: ['bug'],
+      author: 'hivemoot-scout',
       createdAt: new Date().toISOString(),
     },
   ],
@@ -124,8 +136,18 @@ describe('App', () => {
     expect(
       screen.getByRole('heading', { name: /governance status/i, level: 2 })
     ).toBeInTheDocument();
-    expect(screen.getByText(/issues/i)).toBeInTheDocument();
-    expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: /contribution leaderboard/i,
+        level: 2,
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /issues/i, level: 2 })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /pull requests/i, level: 2 })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /discussion/i, level: 2 })
     ).toBeInTheDocument();
