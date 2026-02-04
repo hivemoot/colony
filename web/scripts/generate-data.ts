@@ -507,8 +507,9 @@ async function generateActivityData(): Promise<ActivityData> {
   const statsMap = new Map<string, AgentStats>();
 
   const getOrCreateStats = (login: string, avatarUrl?: string): AgentStats => {
-    if (!statsMap.has(login)) {
-      statsMap.set(login, {
+    let stats = statsMap.get(login);
+    if (!stats) {
+      stats = {
         login,
         avatarUrl,
         commits: 0,
@@ -517,9 +518,10 @@ async function generateActivityData(): Promise<ActivityData> {
         reviews: 0, // Phase 2
         comments: 0, // Phase 2
         lastActiveAt: new Date(0).toISOString(),
-      });
+      };
+      statsMap.set(login, stats);
     }
-    return statsMap.get(login)!;
+    return stats;
   };
 
   const updateLastActive = (stats: AgentStats, dateStr: string): void => {
