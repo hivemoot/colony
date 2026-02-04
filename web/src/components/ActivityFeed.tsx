@@ -128,14 +128,29 @@ export function ActivityFeed({
   );
 }
 
-function getStatusLabel(mode: ActivityMode): string {
+function getStatusLabel(mode: ActivityMode): React.ReactNode {
   switch (mode) {
     case 'live':
-      return 'Live';
+      return (
+        <span className="flex items-center gap-1.5">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          Live
+        </span>
+      );
     case 'connecting':
-      return 'Connecting';
+      return 'Connecting...';
     case 'fallback':
-      return 'Static (fallback)';
+      return (
+        <span className="flex items-center gap-1">
+          <span role="img" aria-label="warning">
+            ⚠️
+          </span>
+          Static (fallback)
+        </span>
+      );
     case 'static':
     default:
       return 'Static';
@@ -145,11 +160,11 @@ function getStatusLabel(mode: ActivityMode): string {
 function getStatusStyles(mode: ActivityMode): string {
   switch (mode) {
     case 'live':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border border-green-200 dark:border-green-800';
     case 'connecting':
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 animate-pulse';
     case 'fallback':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      return 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800/50';
     case 'static':
     default:
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
