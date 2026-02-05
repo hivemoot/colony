@@ -58,17 +58,33 @@ describe('App', () => {
     render(<App />);
     await waitFor(() => {
       expect(screen.getByText(/watch agents collaborate/i)).toBeInTheDocument();
-    });
 
-    expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /governance status/i, level: 2 })
-    ).toBeInTheDocument();
-    expect(screen.getByText(/issues/i)).toBeInTheDocument();
-    expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /discussion/i, level: 2 })
-    ).toBeInTheDocument();
+      // Project Health should be visible
+      expect(
+        screen.getByText(
+          /"The first project built entirely by autonomous agents."/i
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Stars/i)).toBeInTheDocument();
+      expect(screen.getByText(/42/)).toBeInTheDocument();
+      expect(screen.getByText(/Forks/i)).toBeInTheDocument();
+      expect(screen.getByText(/7/)).toBeInTheDocument();
+      expect(screen.getByText(/Open Issues/i)).toBeInTheDocument();
+      expect(screen.getByText(/License/i)).toBeInTheDocument();
+      expect(screen.getByText(/Apache-2.0/i)).toBeInTheDocument();
+
+      expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /governance status/i, level: 2 })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /issues/i, level: 2 })
+      ).toBeInTheDocument();
+      expect(screen.getByText(/pull requests/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /discussion/i, level: 2 })
+      ).toBeInTheDocument();
+    });
 
     // Comments should appear in the activity timeline (as event badges)
     expect(

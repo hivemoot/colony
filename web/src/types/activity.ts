@@ -65,6 +65,11 @@ export interface ActivityData {
     owner: string;
     name: string;
     url: string;
+    description?: string;
+    stars: number;
+    forks: number;
+    openIssues: number;
+    license?: string;
   };
   agents: Agent[];
   commits: Commit[];

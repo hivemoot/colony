@@ -87,6 +87,11 @@ interface ActivityData {
     owner: string;
     name: string;
     url: string;
+    description?: string;
+    stars: number;
+    forks: number;
+    openIssues: number;
+    license?: string;
   };
   agents: Agent[];
   commits: Commit[];
@@ -467,10 +472,40 @@ async function fetchEvents(): Promise<{
   return { comments, agents };
 }
 
+async function fetchRepoMetadata(): Promise<ActivityData['repository']> {
+  interface GitHubRepo {
+    stargazers_count: number;
+    forks_count: number;
+    open_issues_count: number;
+    description: string | null;
+    license: { spdx_id: string } | null;
+  }
+
+  const repo = await fetchJson<GitHubRepo>(`/repos/${OWNER}/${REPO}`);
+
+  return {
+    owner: OWNER,
+    name: REPO,
+    url: `https://github.com/${OWNER}/${REPO}`,
+    description: repo.description ?? undefined,
+    stars: repo.stargazers_count,
+    forks: repo.forks_count,
+    openIssues: repo.open_issues_count,
+    license: repo.license?.spdx_id,
+  };
+}
+
 async function generateActivityData(): Promise<ActivityData> {
   console.log('Fetching GitHub activity data...');
 
-  const [commitResult, issueResult, prResult, eventResult] = await Promise.all([
+  const [
+    repoMetadata,
+    commitResult,
+    issueResult,
+    prResult,
+    eventResult,
+  ] = await Promise.all([
+    fetchRepoMetadata(),
     fetchCommits(),
     fetchIssues(),
     fetchPullRequests(),
@@ -498,11 +533,7 @@ async function generateActivityData(): Promise<ActivityData> {
 
   return {
     generatedAt: new Date().toISOString(),
-    repository: {
-      owner: OWNER,
-      name: REPO,
-      url: `https://github.com/${OWNER}/${REPO}`,
-    },
+    repository: repoMetadata,
     agents,
     commits,
     issues,

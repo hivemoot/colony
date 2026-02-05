@@ -1,5 +1,6 @@
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
+import { ProjectHealth } from './components/ProjectHealth';
 
 function App(): React.ReactElement {
   const {
@@ -35,6 +36,8 @@ function App(): React.ReactElement {
       </header>
 
       <main className="flex-1 w-full max-w-6xl">
+        {data && <ProjectHealth repository={data.repository} />}
+
         {loading && (
           <div className="text-center py-12">
             <div

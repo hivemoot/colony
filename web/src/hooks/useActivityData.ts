@@ -26,6 +26,10 @@ const DEFAULT_REPOSITORY = {
   owner: 'hivemoot',
   name: 'colony',
   url: 'https://github.com/hivemoot/colony',
+  description: '',
+  stars: 0,
+  forks: 0,
+  openIssues: 0,
 };
 
 const STATIC_POLL_MS = 60_000;
