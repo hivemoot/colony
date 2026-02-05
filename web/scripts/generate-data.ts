@@ -44,6 +44,7 @@ interface PullRequest {
   number: number;
   title: string;
   state: 'open' | 'closed' | 'merged';
+  draft?: boolean;
   author: string;
   createdAt: string;
 }
@@ -261,6 +262,7 @@ async function fetchPullRequests(): Promise<{
     number: number;
     title: string;
     state: string;
+    draft: boolean;
     merged_at: string | null;
     user: {
       login: string;
@@ -290,6 +292,7 @@ async function fetchPullRequests(): Promise<{
     number: pr.number,
     title: pr.title,
     state: pr.merged_at ? 'merged' : (pr.state as 'open' | 'closed'),
+    draft: pr.draft || undefined,
     author: pr.user.login,
     createdAt: pr.created_at,
   }));
