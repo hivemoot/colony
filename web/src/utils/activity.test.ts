@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildStaticEvents, buildLiveEvents, GitHubEvent } from './activity';
+import { buildStaticEvents, buildLiveEvents } from './activity';
+import type { GitHubEvent } from './activity';
 import type { ActivityData } from '../types/activity';
 
 const mockBaseData: ActivityData = {
@@ -8,9 +9,6 @@ const mockBaseData: ActivityData = {
     owner: 'hivemoot',
     name: 'colony',
     url: 'https://github.com/hivemoot/colony',
-    stars: 0,
-    forks: 0,
-    openIssues: 0,
   },
   agents: [],
   commits: [],
