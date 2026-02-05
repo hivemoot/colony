@@ -9,6 +9,9 @@ const mockActivityData: ActivityData = {
     owner: 'hivemoot',
     name: 'colony',
     url: 'https://github.com/hivemoot/colony',
+    stars: 42,
+    forks: 8,
+    openIssues: 5,
   },
   agents: [
     {
@@ -199,6 +202,20 @@ describe('App', () => {
         level: 2,
       })
     ).not.toBeInTheDocument();
+  });
+
+  it('renders project health metrics', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockActivityData),
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('42')).toBeInTheDocument();
+      expect(screen.getByText('8')).toBeInTheDocument();
+      expect(screen.getByText(/5 open issues/i)).toBeInTheDocument();
+    });
   });
 
   it('shows error state on fetch failure', async () => {

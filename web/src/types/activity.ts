@@ -75,6 +75,9 @@ export interface ActivityData {
     owner: string;
     name: string;
     url: string;
+    stars: number;
+    forks: number;
+    openIssues: number;
   };
   agents: Agent[];
   agentStats: AgentStats[];
