@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error - Vite handles ?raw imports
 import html from '../index.html?raw';
 
 describe('index.html metadata', () => {
