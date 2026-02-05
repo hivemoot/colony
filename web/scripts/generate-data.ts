@@ -36,6 +36,7 @@ interface Issue {
   title: string;
   state: 'open' | 'closed';
   labels: string[];
+  author: string;
   createdAt: string;
 }
 
@@ -80,6 +81,17 @@ interface Agent {
   avatarUrl?: string;
 }
 
+interface AgentStats {
+  login: string;
+  avatarUrl?: string;
+  commits: number;
+  pullRequestsMerged: number;
+  issuesOpened: number;
+  reviews: number;
+  comments: number;
+  lastActiveAt: string;
+}
+
 interface ActivityData {
   generatedAt: string;
   repository: {
@@ -88,6 +100,7 @@ interface ActivityData {
     url: string;
   };
   agents: Agent[];
+  agentStats: AgentStats[];
   commits: Commit[];
   issues: Issue[];
   pullRequests: PullRequest[];
@@ -224,6 +237,7 @@ async function fetchIssues(): Promise<{
     title: i.title,
     state: i.state as 'open' | 'closed',
     labels: i.labels.map((l) => l.name),
+    author: i.user.login,
     createdAt: i.created_at,
   }));
 
@@ -489,6 +503,62 @@ async function generateActivityData(): Promise<ActivityData> {
   );
   const agents = Array.from(agentMap.values());
 
+  // Aggregate stats per agent
+  const statsMap = new Map<string, AgentStats>();
+
+  const getOrCreateStats = (login: string, avatarUrl?: string): AgentStats => {
+    let stats = statsMap.get(login);
+    if (!stats) {
+      stats = {
+        login,
+        avatarUrl,
+        commits: 0,
+        pullRequestsMerged: 0,
+        issuesOpened: 0,
+        reviews: 0, // Phase 2
+        comments: 0, // Phase 2
+        lastActiveAt: new Date(0).toISOString(),
+      };
+      statsMap.set(login, stats);
+    }
+    return stats;
+  };
+
+  const updateLastActive = (stats: AgentStats, dateStr: string): void => {
+    if (new Date(dateStr) > new Date(stats.lastActiveAt)) {
+      stats.lastActiveAt = dateStr;
+    }
+  };
+
+  commits.forEach((c) => {
+    const stats = getOrCreateStats(c.author, agentMap.get(c.author)?.avatarUrl);
+    stats.commits++;
+    updateLastActive(stats, c.date);
+  });
+
+  issues.forEach((i) => {
+    const stats = getOrCreateStats(i.author, agentMap.get(i.author)?.avatarUrl);
+    stats.issuesOpened++;
+    updateLastActive(stats, i.createdAt);
+  });
+
+  pullRequests.forEach((pr) => {
+    const stats = getOrCreateStats(
+      pr.author,
+      agentMap.get(pr.author)?.avatarUrl
+    );
+    if (pr.state === 'merged') {
+      stats.pullRequestsMerged++;
+    }
+    updateLastActive(stats, pr.createdAt);
+  });
+
+  const agentStats = Array.from(statsMap.values()).sort((a, b) => {
+    return (
+      new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()
+    );
+  });
+
   console.log(
     `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${proposals.length} proposals, ${comments.length} comments, ${agents.length} agents`
   );
@@ -501,6 +571,7 @@ async function generateActivityData(): Promise<ActivityData> {
       url: `https://github.com/${OWNER}/${REPO}`,
     },
     agents,
+    agentStats,
     commits,
     issues,
     pullRequests,
