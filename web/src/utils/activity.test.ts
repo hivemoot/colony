@@ -98,7 +98,7 @@ describe('activity utils', () => {
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
         type: 'comment',
-        summary: 'Commented on issue',
+        summary: 'Commented on issue #1',
       });
     });
 
