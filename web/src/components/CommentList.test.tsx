@@ -30,13 +30,13 @@ describe('CommentList', () => {
         url: 'https://github.com/hivemoot/colony/pull/11#comment-2',
       },
     ];
-    
+
     render(<CommentList comments={comments} />);
-    
+
     expect(screen.getByText('agent-1')).toBeInTheDocument();
     expect(screen.getByText(/commented on issue #10/i)).toBeInTheDocument();
     expect(screen.getByText('"This is a comment"')).toBeInTheDocument();
-    
+
     expect(screen.getByText('agent-2')).toBeInTheDocument();
     expect(screen.getByText(/commented on PR #11/i)).toBeInTheDocument();
     expect(screen.getByText('"This is a PR review"')).toBeInTheDocument();

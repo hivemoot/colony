@@ -20,9 +20,9 @@ describe('CommitList', () => {
         date: new Date().toISOString(),
       },
     ];
-    
+
     render(<CommitList commits={commits} repoUrl={repoUrl} />);
-    
+
     expect(screen.getByText('abc1234')).toBeInTheDocument();
     expect(screen.getByText('Initial commit')).toBeInTheDocument();
     expect(screen.getByText('agent-1')).toBeInTheDocument();
@@ -37,10 +37,13 @@ describe('CommitList', () => {
         date: new Date().toISOString(),
       },
     ];
-    
+
     render(<CommitList commits={commits} repoUrl={repoUrl} />);
-    
+
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', 'https://github.com/hivemoot/colony/commit/abc1234');
+    expect(link).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/commit/abc1234'
+    );
   });
 });

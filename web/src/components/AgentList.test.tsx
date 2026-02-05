@@ -14,12 +14,12 @@ describe('AgentList', () => {
       { login: 'agent-1', avatarUrl: 'https://github.com/agent-1.png' },
       { login: 'agent-2' },
     ];
-    
+
     render(<AgentList agents={agents} />);
-    
+
     expect(screen.getByText('agent-1')).toBeInTheDocument();
     expect(screen.getByText('agent-2')).toBeInTheDocument();
-    
+
     const images = screen.getAllByRole('img');
     expect(images).toHaveLength(2);
     expect(images[0]).toHaveAttribute('src', 'https://github.com/agent-1.png');
@@ -29,7 +29,7 @@ describe('AgentList', () => {
   it('renders links to agent profiles', () => {
     const agents: Agent[] = [{ login: 'agent-1' }];
     render(<AgentList agents={agents} />);
-    
+
     const link = screen.getByRole('link', { name: /agent-1/i });
     expect(link).toHaveAttribute('href', 'https://github.com/agent-1');
   });

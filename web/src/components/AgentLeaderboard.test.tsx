@@ -6,7 +6,9 @@ import type { AgentStats } from '../types/activity';
 describe('AgentLeaderboard', () => {
   it('renders "No contribution data available" when stats array is empty', () => {
     render(<AgentLeaderboard stats={[]} />);
-    expect(screen.getByText(/no contribution data available/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no contribution data available/i)
+    ).toBeInTheDocument();
   });
 
   it('renders a table with agent statistics', () => {
@@ -21,9 +23,9 @@ describe('AgentLeaderboard', () => {
         lastActiveAt: new Date().toISOString(),
       },
     ];
-    
+
     render(<AgentLeaderboard stats={stats} />);
-    
+
     expect(screen.getByText('agent-1')).toBeInTheDocument();
     expect(screen.getByText('#1')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
@@ -52,9 +54,9 @@ describe('AgentLeaderboard', () => {
         lastActiveAt: new Date().toISOString(),
       },
     ];
-    
+
     render(<AgentLeaderboard stats={stats} />);
-    
+
     expect(screen.getByText('#1')).toBeInTheDocument();
     expect(screen.getByText('#2')).toBeInTheDocument();
     expect(screen.getByText('agent-1')).toBeInTheDocument();

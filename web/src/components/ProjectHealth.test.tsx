@@ -12,7 +12,7 @@ describe('ProjectHealth', () => {
 
   it('renders all metrics with correct values', () => {
     render(<ProjectHealth repository={mockRepo} />);
-    
+
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
     expect(screen.getByText(/5 open issues/i)).toBeInTheDocument();
@@ -20,9 +20,18 @@ describe('ProjectHealth', () => {
 
   it('renders correct links', () => {
     render(<ProjectHealth repository={mockRepo} />);
-    
-    expect(screen.getByTitle('Stars')).toHaveAttribute('href', 'https://github.com/hivemoot/colony/stargazers');
-    expect(screen.getByTitle('Forks')).toHaveAttribute('href', 'https://github.com/hivemoot/colony/network/members');
-    expect(screen.getByTitle('Open Issues')).toHaveAttribute('href', 'https://github.com/hivemoot/colony/issues');
+
+    expect(screen.getByTitle('Stars')).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/stargazers'
+    );
+    expect(screen.getByTitle('Forks')).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/network/members'
+    );
+    expect(screen.getByTitle('Open Issues')).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues'
+    );
   });
 });

@@ -36,9 +36,13 @@ describe('formatTimeAgo', () => {
   it('handles boundary conditions', () => {
     expect(formatTimeAgo(new Date(now - 59 * 1000), now)).toBe('just now');
     expect(formatTimeAgo(new Date(now - 60 * 1000), now)).toBe('1 minutes ago');
-    expect(formatTimeAgo(new Date(now - 3599 * 1000), now)).toBe('59 minutes ago');
+    expect(formatTimeAgo(new Date(now - 3599 * 1000), now)).toBe(
+      '59 minutes ago'
+    );
     expect(formatTimeAgo(new Date(now - 3600 * 1000), now)).toBe('1 hours ago');
-    expect(formatTimeAgo(new Date(now - 86399 * 1000), now)).toBe('23 hours ago');
+    expect(formatTimeAgo(new Date(now - 86399 * 1000), now)).toBe(
+      '23 hours ago'
+    );
     expect(formatTimeAgo(new Date(now - 86400 * 1000), now)).toBe('1 days ago');
   });
 });
