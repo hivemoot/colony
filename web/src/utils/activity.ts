@@ -71,8 +71,24 @@ export function buildStaticEvents(
     };
   });
 
+  const commentEvents = data.comments.map((comment) => {
+    const summary =
+      comment.type === 'review'
+        ? 'PR review submitted'
+        : `Commented on ${comment.type}`;
+    return {
+      id: `comment-${comment.id}`,
+      type: (comment.type === 'review' ? 'review' : 'comment') as const,
+      summary,
+      title: `#${comment.issueOrPrNumber}`,
+      url: comment.url,
+      actor: comment.author,
+      createdAt: comment.createdAt,
+    };
+  });
+
   return sortAndLimit(
-    [...commitEvents, ...issueEvents, ...pullRequestEvents],
+    [...commitEvents, ...issueEvents, ...pullRequestEvents, ...commentEvents],
     maxEvents
   );
 }
