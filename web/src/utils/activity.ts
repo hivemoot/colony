@@ -71,8 +71,33 @@ export function buildStaticEvents(
     };
   });
 
+  const commentEvents = (data.comments ?? []).map((comment) => {
+    const isPR = comment.type === 'pr' || comment.type === 'review';
+    const summary =
+      comment.type === 'review'
+        ? 'PR review'
+        : isPR
+          ? 'Commented on PR'
+          : 'Commented on issue';
+
+    return {
+      id: `comment-${comment.id}`,
+      type: comment.type === 'review' ? ('review' as const) : ('comment' as const),
+      summary,
+      title: `#${comment.issueOrPrNumber}`,
+      url: comment.url,
+      actor: comment.author,
+      createdAt: comment.createdAt,
+    };
+  });
+
   return sortAndLimit(
-    [...commitEvents, ...issueEvents, ...pullRequestEvents],
+    [
+      ...commitEvents,
+      ...issueEvents,
+      ...pullRequestEvents,
+      ...commentEvents,
+    ],
     maxEvents
   );
 }
@@ -209,7 +234,7 @@ function mapGitHubEvent(
   }
 }
 
-function formatAction(action?: string): string {
+export function formatAction(action?: string): string {
   if (!action) return 'updated';
   const normalized = action.replace(/_/g, ' ');
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
