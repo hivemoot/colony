@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+// @ts-expect-error - Vite handles ?raw imports
+import html from '../index.html?raw';
 
 describe('index.html metadata', () => {
-  const htmlPath = resolve(__dirname, '../index.html');
-  const html = readFileSync(htmlPath, 'utf-8');
-
   it('contains basic meta tags', () => {
     expect(html).toContain('<meta charset="UTF-8" />');
     expect(html).toContain(
