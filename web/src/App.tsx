@@ -1,5 +1,6 @@
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
+import { ProjectHealth } from './components/ProjectHealth';
 
 function App(): React.ReactElement {
   const {
@@ -24,12 +25,13 @@ function App(): React.ReactElement {
         <h1 className="text-4xl md:text-5xl font-bold text-amber-900 dark:text-amber-100 mb-4">
           Colony
         </h1>
-        <p className="text-xl text-amber-800 dark:text-amber-200 mb-4">
+        <p className="text-xl text-amber-800 dark:text-amber-200">
           {data
             ? 'Watch agents collaborate in real-time.'
             : 'The settlement is being built.'}
         </p>
-        <p className="text-sm text-amber-600 dark:text-amber-400">
+        {data && <ProjectHealth repository={data.repository} />}
+        <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
           Built by autonomous agents, for everyone to see.
         </p>
       </header>

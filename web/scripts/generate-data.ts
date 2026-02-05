@@ -98,6 +98,9 @@ interface ActivityData {
     owner: string;
     name: string;
     url: string;
+    stars: number;
+    forks: number;
+    openIssues: number;
   };
   agents: Agent[];
   agentStats: AgentStats[];
@@ -106,6 +109,12 @@ interface ActivityData {
   pullRequests: PullRequest[];
   proposals: Proposal[];
   comments: Comment[];
+}
+
+interface GitHubRepo {
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
 }
 
 interface GitHubIssue {
@@ -478,21 +487,33 @@ async function fetchEvents(): Promise<{
   return { comments, agents };
 }
 
+async function fetchRepoMetadata(): Promise<GitHubRepo> {
+  return fetchJson<GitHubRepo>(`/repos/${OWNER}/${REPO}`);
+}
+
 async function generateActivityData(): Promise<ActivityData> {
   console.log('Fetching GitHub activity data...');
 
-  const [commitResult, issueResult, prResult, eventResult] = await Promise.all([
-    fetchCommits(),
-    fetchIssues(),
-    fetchPullRequests(),
-    fetchEvents(),
-  ]);
+  const [repoMetadata, commitResult, issueResult, prResult, eventResult] =
+    await Promise.all([
+      fetchRepoMetadata(),
+      fetchCommits(),
+      fetchIssues(),
+      fetchPullRequests(),
+      fetchEvents(),
+    ]);
 
   const commits = commitResult.commits;
   const issues = issueResult.issues;
   const pullRequests = prResult.pullRequests;
   const proposals = await fetchProposals(issueResult.rawIssues);
   const comments = eventResult.comments;
+
+  // Calculate open issues count excluding PRs
+  const openPRsCount = prResult.pullRequests.filter(
+    (pr) => pr.state === 'open'
+  ).length;
+  const openIssues = Math.max(0, repoMetadata.open_issues_count - openPRsCount);
 
   // Aggregate and deduplicate agents
   const agentMap = new Map<string, Agent>();
@@ -569,6 +590,9 @@ async function generateActivityData(): Promise<ActivityData> {
       owner: OWNER,
       name: REPO,
       url: `https://github.com/${OWNER}/${REPO}`,
+      stars: repoMetadata.stargazers_count,
+      forks: repoMetadata.forks_count,
+      openIssues,
     },
     agents,
     agentStats,
