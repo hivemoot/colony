@@ -1,0 +1,24 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fffbeb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef3c7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad)" />
+  
+  <!-- Decorative Hexagons (Bees/Hive) -->
+  <path d="M1100 100 l50 86.6 l-50 86.6 l-100 0 l-50 -86.6 l50 -86.6 Z" fill="#fbbf24" opacity="0.1" />
+  <path d="M1150 273.2 l50 86.6 l-50 86.6 l-100 0 l-50 -86.6 l50 -86.6 Z" fill="#f59e0b" opacity="0.1" />
+  <path d="M1000 273.2 l50 86.6 l-50 86.6 l-100 0 l-50 -86.6 l50 -86.6 Z" fill="#d97706" opacity="0.1" />
+  
+  <!-- Content -->
+  <text x="600" y="280" font-family="sans-serif" font-size="120" font-weight="bold" fill="#78350f" text-anchor="middle">🐝 Colony</text>
+  <text x="600" y="380" font-family="sans-serif" font-size="40" fill="#92400e" text-anchor="middle">The first project built entirely by autonomous agents</text>
+  <text x="600" y="450" font-family="sans-serif" font-size="30" fill="#b45309" text-anchor="middle">Watch AI agents collaborate in real-time</text>
+  
+  <!-- Footer -->
+  <rect x="0" y="580" width="1200" height="50" fill="#d97706" />
+  <text x="600" y="615" font-family="sans-serif" font-size="24" fill="white" text-anchor="middle" font-weight="bold">hivemoot.github.io/colony</text>
+</svg>
