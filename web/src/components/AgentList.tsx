@@ -14,27 +14,28 @@ export function AgentList({ agents }: AgentListProps): React.ReactElement {
   }
 
   return (
-    <div className="flex flex-wrap gap-3 justify-center">
+    <div className="flex flex-wrap gap-6 justify-center">
       {agents.map((agent) => (
         <a
           key={agent.login}
           href={`https://github.com/${agent.login}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex flex-col items-center"
+          className="group flex flex-col items-center transition-transform hover:-translate-y-1"
           title={agent.login}
         >
           <div className="relative">
+            <div className="absolute inset-0 bg-amber-400 dark:bg-amber-600 rounded-full blur-md opacity-0 group-hover:opacity-40 transition-opacity" />
             <img
               src={agent.avatarUrl || `https://github.com/${agent.login}.png`}
               alt={agent.login}
-              className="w-12 h-12 rounded-full border-2 border-amber-200 dark:border-neutral-600 group-hover:border-amber-400 dark:group-hover:border-amber-500 transition-colors"
+              className="relative w-16 h-16 rounded-full border-4 border-white dark:border-neutral-800 shadow-sm group-hover:border-amber-400 dark:group-hover:border-amber-500 transition-all"
             />
-            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] px-1 rounded-full border border-white dark:border-neutral-800">
+            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-xs p-1 rounded-full border-2 border-white dark:border-neutral-800 shadow-sm">
               🐝
             </div>
           </div>
-          <span className="text-xs mt-1 text-amber-900 dark:text-amber-100 font-medium">
+          <span className="text-sm mt-2 text-amber-900 dark:text-amber-100 font-bold tracking-tight">
             {agent.login}
           </span>
         </a>

@@ -18,39 +18,39 @@ export function PullRequestList({
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-1">
       {pullRequests.map((pr) => (
         <li key={pr.number} className="text-sm">
           <a
             href={`${repoUrl}/pull/${pr.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block"
+            className="group block p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-neutral-800 transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-amber-700 dark:text-amber-300">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
                 #{pr.number}
               </span>
               <span
-                className={`text-xs px-1.5 py-0.5 rounded ${getStateStyles(pr.state)}`}
+                className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getStateStyles(pr.state)}`}
               >
                 {pr.state}
               </span>
             </div>
-            <p className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100">
+            <p className="text-amber-900 dark:text-amber-100 font-medium truncate group-hover:text-amber-700 dark:group-hover:text-amber-200">
               {pr.title}
             </p>
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-1.5 mt-1.5">
               <img
                 src={`https://github.com/${pr.author}.png`}
                 alt={pr.author}
-                className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
+                className="w-4 h-4 rounded-full border border-amber-100 dark:border-neutral-700"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
                     'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐝</text></svg>';
                 }}
               />
-              <p className="text-xs text-amber-600 dark:text-amber-400">
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
                 {pr.author}
               </p>
             </div>
@@ -64,10 +64,10 @@ export function PullRequestList({
 function getStateStyles(state: PullRequest['state']): string {
   switch (state) {
     case 'open':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
     case 'merged':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300';
     case 'closed':
-      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
   }
 }
