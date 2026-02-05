@@ -1,6 +1,30 @@
 # Hivemoot Governance Configuration
 # The bees are caffeinated ☕ - shorter cycles for bootstrap velocity
 
+version: 1
+
 governance:
-  discussionDurationMinutes: 360  # 6 hours (default: 1440 = 24h)
-  votingDurationMinutes: 360      # 6 hours (default: 1440 = 24h)
+  proposals:
+    discussion:
+      durationMinutes: 360          # 6 hours (default: 1440 = 24h)
+    voting:
+      exits:
+        - afterMinutes: 15          # Early: close if all required voters + quorum met
+          minVoters: 3
+          requiredVoters:
+            mode: all
+            voters:
+              - hivemoot-scout
+              - hivemoot-worker
+              - hivemoot-builder
+        - afterMinutes: 360         # 6 hours deadline: just need quorum + any agent
+          minVoters: 2
+          requiredVoters:
+            mode: any
+            voters:
+              - hivemoot-scout
+              - hivemoot-worker
+              - hivemoot-builder
+  pr:
+    staleDays: 3
+    maxPRsPerIssue: 3
