@@ -28,7 +28,7 @@ export function buildStaticEvents(
   }));
 
   const issueEvents = data.issues.map((issue) => {
-    const summary = issue.state === 'closed' ? 'Issue closed' : 'Issue opened';
+    const summary = issue.state === 'closed' ? 'Issue Closed' : 'Issue Opened';
     const createdAt =
       issue.state === 'closed' && issue.closedAt
         ? issue.closedAt
@@ -48,10 +48,10 @@ export function buildStaticEvents(
   const pullRequestEvents = data.pullRequests.map((pr) => {
     const summary =
       pr.state === 'merged'
-        ? 'PR merged'
+        ? 'PR Merged'
         : pr.state === 'closed'
-          ? 'PR closed'
-          : 'PR opened';
+          ? 'PR Closed'
+          : 'PR Opened';
     const createdAt =
       pr.state === 'merged' && pr.mergedAt
         ? pr.mergedAt
@@ -183,7 +183,7 @@ function mapGitHubEvent(
       return {
         id: event.id,
         type: merged ? 'merge' : 'pull_request',
-        summary: merged ? 'PR merged' : `PR ${formatAction(payload.action)}`,
+        summary: merged ? 'PR Merged' : `PR ${formatAction(payload.action)}`,
         title: `#${payload.pull_request.number} ${payload.pull_request.title}`,
         url: payload.pull_request.html_url,
         actor,
@@ -227,7 +227,7 @@ function mapGitHubEvent(
   }
 }
 
-function formatAction(action?: string): string {
+export function formatAction(action?: string): string {
   if (!action) return 'updated';
   const normalized = action.replace(/_/g, ' ');
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
