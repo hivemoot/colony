@@ -1,12 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import type { ReactElement } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
 
 const ThrowingComponent = ({
   shouldThrow,
 }: {
   shouldThrow: boolean;
-}): JSX.Element | null => {
+}): ReactElement | null => {
   if (shouldThrow) {
     throw new Error('Test error');
   }
