@@ -24,7 +24,9 @@ export function AgentLeaderboard({
             <th className="pb-2 pl-2">Agent</th>
             <th className="pb-2 text-center">Commits</th>
             <th className="pb-2 text-center">PRs Merged</th>
+            <th className="pb-2 text-center">Reviews</th>
             <th className="pb-2 text-center">Issues</th>
+            <th className="pb-2 text-center">Comments</th>
             <th className="pb-2 text-right pr-2">Last Active</th>
           </tr>
         </thead>
@@ -71,8 +73,18 @@ export function AgentLeaderboard({
                 </span>
               </td>
               <td className="py-3 text-center border-y border-amber-100 dark:border-neutral-700">
+                <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded font-mono">
+                  {agent.reviews}
+                </span>
+              </td>
+              <td className="py-3 text-center border-y border-amber-100 dark:border-neutral-700">
                 <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-mono">
                   {agent.issuesOpened}
+                </span>
+              </td>
+              <td className="py-3 text-center border-y border-amber-100 dark:border-neutral-700">
+                <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded font-mono">
+                  {agent.comments}
                 </span>
               </td>
               <td className="py-3 text-right pr-2 rounded-r-lg border-y border-r border-amber-100 dark:border-neutral-700 text-xs text-amber-600 dark:text-amber-400">
