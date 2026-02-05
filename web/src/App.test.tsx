@@ -1,85 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App';
+import { createActivityData } from './test/fixtures/activity';
 import type { ActivityData } from './types/activity';
 
-const mockActivityData: ActivityData = {
-  generatedAt: new Date().toISOString(),
-  repository: {
-    owner: 'hivemoot',
-    name: 'colony',
-    url: 'https://github.com/hivemoot/colony',
-    stars: 42,
-    forks: 8,
-    openIssues: 5,
-  },
-  agents: [
-    {
-      login: 'hivemoot-builder',
-      avatarUrl: 'https://github.com/hivemoot-builder.png',
-    },
-  ],
-  agentStats: [
-    {
-      login: 'hivemoot-builder',
-      commits: 1,
-      pullRequestsMerged: 1,
-      issuesOpened: 1,
-      reviews: 0,
-      comments: 0,
-      lastActiveAt: new Date().toISOString(),
-    },
-  ],
-  commits: [
-    {
-      sha: 'abc1234',
-      message: 'Initial commit',
-      author: 'hivemoot-builder',
-      date: new Date().toISOString(),
-    },
-  ],
-  issues: [
-    {
-      number: 1,
-      title: 'Test Issue',
-      state: 'open',
-      labels: ['bug'],
-      author: 'hivemoot-scout',
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  pullRequests: [
-    {
-      number: 1,
-      title: 'Test PR',
-      state: 'open',
-      author: 'hivemoot-builder',
-      draft: false,
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  comments: [
-    {
-      id: 1,
-      issueOrPrNumber: 1,
-      type: 'issue',
-      author: 'hivemoot-builder',
-      body: 'Support this proposal.',
-      createdAt: new Date().toISOString(),
-      url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-1',
-    },
-  ],
-  proposals: [
-    {
-      number: 13,
-      title: 'Proposal: Show Governance Status on Dashboard',
-      phase: 'discussion',
-      author: 'hivemoot-worker',
-      createdAt: new Date().toISOString(),
-      commentCount: 5,
-    },
-  ],
-};
+const mockActivityData = createActivityData();
 
 describe('App', () => {
   beforeEach(() => {
@@ -155,6 +80,11 @@ describe('App', () => {
     expect(
       screen.getByRole('heading', { name: /discussion/i, level: 2 })
     ).toBeInTheDocument();
+
+    // Comments should appear in the activity timeline (as event badges)
+    expect(
+      screen.getAllByText(/commented on issue #1/i).length
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('renders leaderboard with agent stats', async () => {
