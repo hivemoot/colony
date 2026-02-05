@@ -2,7 +2,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ErrorBoundary } from './ErrorBoundary';
 
-const ThrowingComponent = ({ shouldThrow }: { shouldThrow: boolean }) => {
+const ThrowingComponent = ({
+  shouldThrow,
+}: {
+  shouldThrow: boolean;
+}): React.ReactElement => {
   if (shouldThrow) {
     throw new Error('Test error');
   }
@@ -31,7 +35,7 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     expect(screen.getByText('Test error')).toBeInTheDocument();
-    
+
     consoleSpy.mockRestore();
   });
 
