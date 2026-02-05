@@ -57,6 +57,14 @@ const mockActivityData: ActivityData = {
       createdAt: '2026-02-05T06:00:00Z',
       mergedAt: '2026-02-05T12:00:00Z',
     },
+    {
+      number: 5,
+      title: 'Draft PR',
+      state: 'open',
+      draft: true,
+      author: 'worker',
+      createdAt: '2026-02-05T13:00:00Z',
+    },
   ],
   comments: [],
   proposals: [],
@@ -104,6 +112,13 @@ describe('activity utils', () => {
         summary: 'PR merged',
         createdAt: '2026-02-05T12:00:00Z', // uses mergedAt
       });
+
+      const draftPR = events.find((e) => e.id === 'pr-5-open');
+      expect(draftPR).toMatchObject({
+        type: 'pull_request',
+        summary: 'PR opened (draft)',
+        createdAt: '2026-02-05T13:00:00Z',
+      });
     });
 
     it('returns events sorted by date (most recent first)', () => {
@@ -111,7 +126,7 @@ describe('activity utils', () => {
       const dates = events.map((e) => new Date(e.createdAt).getTime());
       const sortedDates = [...dates].sort((a, b) => b - a);
       expect(dates).toEqual(sortedDates);
-      expect(events[0].summary).toBe('PR merged'); // 12:00:00
+      expect(events[0].summary).toBe('PR opened (draft)'); // 13:00:00
     });
 
     it('respects maxEvents limit', () => {
@@ -213,6 +228,31 @@ describe('activity utils', () => {
       expect(events[0]).toMatchObject({
         type: 'pull_request',
         summary: 'PR Opened',
+      });
+    });
+
+    it('maps PullRequestEvent correctly (draft)', () => {
+      const raw = [
+        {
+          id: '4-draft',
+          type: 'PullRequestEvent',
+          actor: { login: 'worker' },
+          created_at: '2026-02-05T12:00:00Z',
+          payload: {
+            action: 'opened',
+            pull_request: {
+              number: 7,
+              title: 'Draft PR',
+              html_url: 'pr-url',
+              draft: true,
+            },
+          },
+        },
+      ];
+      const events = buildLiveEvents(raw, fallbackUrl);
+      expect(events[0]).toMatchObject({
+        type: 'pull_request',
+        summary: 'PR opened (draft)',
       });
     });
 

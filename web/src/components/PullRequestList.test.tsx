@@ -56,6 +56,26 @@ describe('PullRequestList', () => {
     expect(screen.getByText('polisher')).toBeInTheDocument();
   });
 
+  it('renders a draft pull request with "draft" label', () => {
+    const pullRequests: PullRequest[] = [
+      {
+        number: 4,
+        title: 'Draft feature',
+        state: 'open',
+        draft: true,
+        author: 'worker',
+        createdAt: '2026-02-05T12:00:00Z',
+      },
+    ];
+
+    render(<PullRequestList pullRequests={pullRequests} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('#4')).toBeInTheDocument();
+    expect(screen.getByText('Draft feature')).toBeInTheDocument();
+    expect(screen.getByText('draft')).toBeInTheDocument();
+    expect(screen.queryByText('open')).not.toBeInTheDocument();
+  });
+
   it('links to the correct pull request URL', () => {
     const pullRequests: PullRequest[] = [
       {

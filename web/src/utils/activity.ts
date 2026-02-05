@@ -51,7 +51,9 @@ export function buildStaticEvents(
         ? 'PR merged'
         : pr.state === 'closed'
           ? 'PR closed'
-          : 'PR opened';
+          : pr.draft
+            ? 'PR opened (draft)'
+            : 'PR opened';
     const createdAt =
       pr.state === 'merged' && pr.mergedAt
         ? pr.mergedAt
@@ -158,14 +160,22 @@ function mapGitHubEvent(
           title: string;
           html_url: string;
           merged?: boolean;
+          draft?: boolean;
         };
       };
       if (!payload.pull_request) return null;
       const merged = payload.action === 'closed' && payload.pull_request.merged;
+      const isDraft = payload.pull_request.draft;
+      const summary = merged
+        ? 'PR merged'
+        : isDraft && payload.action === 'opened'
+          ? 'PR opened (draft)'
+          : `PR ${formatAction(payload.action)}`;
+
       return {
         id: event.id,
         type: merged ? 'merge' : 'pull_request',
-        summary: merged ? 'PR merged' : `PR ${formatAction(payload.action)}`,
+        summary,
         title: `#${payload.pull_request.number} ${payload.pull_request.title}`,
         url: payload.pull_request.html_url,
         actor,

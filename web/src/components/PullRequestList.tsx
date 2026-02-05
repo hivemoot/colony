@@ -32,9 +32,9 @@ export function PullRequestList({
                 #{pr.number}
               </span>
               <span
-                className={`text-xs px-1.5 py-0.5 rounded ${getStateStyles(pr.state)}`}
+                className={`text-xs px-1.5 py-0.5 rounded ${getStateStyles(pr.state, pr.draft)}`}
               >
-                {pr.state}
+                {pr.draft ? 'draft' : pr.state}
               </span>
             </div>
             <p className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100">
@@ -61,7 +61,11 @@ export function PullRequestList({
   );
 }
 
-function getStateStyles(state: PullRequest['state']): string {
+function getStateStyles(state: PullRequest['state'], draft?: boolean): string {
+  if (draft) {
+    return 'bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-neutral-300';
+  }
+
   switch (state) {
     case 'open':
       return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
