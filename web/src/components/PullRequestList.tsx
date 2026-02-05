@@ -31,6 +31,11 @@ export function PullRequestList({
               <span className="text-xs text-amber-700 dark:text-amber-300">
                 #{pr.number}
               </span>
+              {pr.draft && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                  draft
+                </span>
+              )}
               <span
                 className={`text-xs px-1.5 py-0.5 rounded ${getStateStyles(pr.state)}`}
               >
