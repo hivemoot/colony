@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildStaticEvents,
-  buildLiveEvents,
-  formatAction,
-} from './activity';
+import { buildStaticEvents, buildLiveEvents, formatAction } from './activity';
 import type { GitHubEvent } from './activity';
-import type { ActivityData } from '../types/activity';
 import {
   createActivityData,
   createCommit,
@@ -18,7 +13,9 @@ describe('activity utils', () => {
   describe('buildStaticEvents', () => {
     it('correctly maps commits to events', () => {
       const data = createActivityData({
-        commits: [createCommit({ sha: 'abc1234', message: 'feat: test commit' })],
+        commits: [
+          createCommit({ sha: 'abc1234', message: 'feat: test commit' }),
+        ],
         issues: [],
         pullRequests: [],
         comments: [],
@@ -35,7 +32,9 @@ describe('activity utils', () => {
     it('correctly maps issues to events', () => {
       const data = createActivityData({
         commits: [],
-        issues: [createIssue({ number: 1, title: 'Test issue', state: 'open' })],
+        issues: [
+          createIssue({ number: 1, title: 'Test issue', state: 'open' }),
+        ],
         pullRequests: [],
         comments: [],
       });
@@ -126,7 +125,9 @@ describe('activity utils', () => {
     it('sorts events by date descending', () => {
       const data = createActivityData({
         commits: [createCommit({ sha: 'old', date: '2026-02-01T00:00:00Z' })],
-        issues: [createIssue({ title: 'new', createdAt: '2026-02-04T00:00:00Z' })],
+        issues: [
+          createIssue({ title: 'new', createdAt: '2026-02-04T00:00:00Z' }),
+        ],
         pullRequests: [],
         comments: [],
       });
@@ -139,7 +140,9 @@ describe('activity utils', () => {
       const data = createActivityData({
         commits: Array(10)
           .fill(0)
-          .map((_, i) => createCommit({ sha: `sha-${i}`, date: `2026-02-01T00:00:0${i}Z` })),
+          .map((_, i) =>
+            createCommit({ sha: `sha-${i}`, date: `2026-02-01T00:00:0${i}Z` })
+          ),
         issues: [],
         pullRequests: [],
         comments: [],
@@ -261,8 +264,18 @@ describe('activity utils', () => {
 
     it('handles missing payload data gracefully', () => {
       const rawEvents: GitHubEvent[] = [
-        { id: '1', type: 'PushEvent', created_at: '2026-02-04T11:00:00Z', payload: {} },
-        { id: '2', type: 'IssuesEvent', created_at: '2026-02-04T11:00:00Z', payload: {} },
+        {
+          id: '1',
+          type: 'PushEvent',
+          created_at: '2026-02-04T11:00:00Z',
+          payload: {},
+        },
+        {
+          id: '2',
+          type: 'IssuesEvent',
+          created_at: '2026-02-04T11:00:00Z',
+          payload: {},
+        },
       ];
       const events = buildLiveEvents(rawEvents, repoUrl);
       expect(events).toHaveLength(0);
