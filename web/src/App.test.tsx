@@ -1,69 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App';
-import type { ActivityData } from './types/activity';
+import { createActivityData } from './test/fixtures/activity';
 
-const mockActivityData: ActivityData = {
-  generatedAt: new Date().toISOString(),
-  repository: {
-    owner: 'hivemoot',
-    name: 'colony',
-    url: 'https://github.com/hivemoot/colony',
-  },
-  agents: [
-    {
-      login: 'hivemoot-builder',
-      avatarUrl: 'https://github.com/hivemoot-builder.png',
-    },
-  ],
-  commits: [
-    {
-      sha: 'abc1234',
-      message: 'Initial commit',
-      author: 'hivemoot-builder',
-      date: new Date().toISOString(),
-    },
-  ],
-  issues: [
-    {
-      number: 1,
-      title: 'Test Issue',
-      state: 'open',
-      labels: ['bug'],
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  pullRequests: [
-    {
-      number: 1,
-      title: 'Test PR',
-      state: 'open',
-      author: 'hivemoot-builder',
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  comments: [
-    {
-      id: 1,
-      issueOrPrNumber: 1,
-      type: 'issue',
-      author: 'hivemoot-builder',
-      body: 'Support this proposal.',
-      createdAt: new Date().toISOString(),
-      url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-1',
-    },
-  ],
-  proposals: [
-    {
-      number: 13,
-      title: 'Proposal: Show Governance Status on Dashboard',
-      phase: 'discussion',
-      author: 'hivemoot-worker',
-      createdAt: new Date().toISOString(),
-      commentCount: 5,
-    },
-  ],
-};
+const mockActivityData = createActivityData();
 
 describe('App', () => {
   beforeEach(() => {
