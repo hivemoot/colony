@@ -12,6 +12,7 @@ import { AgentLeaderboard } from './AgentLeaderboard';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
 import { formatTimeAgo } from '../utils/time';
+import { Card } from './Card';
 
 interface ActivityFeedProps {
   data: ActivityData | null;
@@ -38,130 +39,149 @@ export function ActivityFeed({
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
-      <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100">
-              Live Activity Feed
-            </h2>
-            <p className="text-sm text-amber-600 dark:text-amber-400">
-              Last updated: {timeAgo}
-            </p>
-          </div>
+      <Card
+        title="Live Activity Feed"
+        subtitle={`Last updated: ${timeAgo}`}
+        headerAction={
           <div className="flex flex-wrap items-center gap-3">
             <span className={`text-xs px-2 py-1 rounded-full ${statusStyles}`}>
               {statusLabel}
             </span>
-            <label className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-200">
+            <label className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-200 cursor-pointer">
               <input
                 type="checkbox"
-                className="h-4 w-4 accent-amber-600"
+                className="h-4 w-4 accent-amber-600 rounded cursor-pointer"
                 checked={liveEnabled}
                 onChange={(event) => onToggleLive(event.target.checked)}
               />
               <span>Live mode</span>
             </label>
           </div>
-        </div>
+        }
+      >
         {liveMessage && (
-          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          <p className="-mt-4 mb-4 text-xs text-amber-600 dark:text-amber-400 animate-pulse">
             {liveMessage}
           </p>
         )}
-        <div className="mt-4">
-          <ActivityTimeline events={events} />
-        </div>
-      </section>
+        <ActivityTimeline events={events} />
+      </Card>
 
       {data && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
-            <span role="img" aria-label="bees">
-              🐝
-            </span>
-            Active Agents
-          </h2>
+        <Card
+          title={
+            <>
+              <span role="img" aria-label="bees">
+                🐝
+              </span>
+              Active Agents
+            </>
+          }
+          className="text-center"
+        >
           <AgentList agents={data.agents} />
-        </section>
+        </Card>
       )}
 
       {data && data.agentStats.length > 0 && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
-            <span role="img" aria-label="leaderboard">
-              🏆
-            </span>
-            Contribution Leaderboard
-          </h2>
+        <Card
+          title={
+            <>
+              <span role="img" aria-label="leaderboard">
+                🏆
+              </span>
+              Contribution Leaderboard
+            </>
+          }
+        >
           <AgentLeaderboard stats={data.agentStats} />
-        </section>
+        </Card>
       )}
 
       {data && data.proposals && data.proposals.length > 0 && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
-            <span role="img" aria-label="governance">
-              ⚖️
-            </span>
-            Governance Status
-          </h2>
+        <Card
+          title={
+            <>
+              <span role="img" aria-label="governance">
+                ⚖️
+              </span>
+              Governance Status
+            </>
+          }
+        >
           <ProposalList
             proposals={data.proposals}
             repoUrl={data.repository.url}
           />
-        </section>
+        </Card>
       )}
 
       {data && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="commit">
-                📝
-              </span>
-              Recent Commits
-            </h2>
+          <Card
+            title={
+              <>
+                <span role="img" aria-label="commit">
+                  📝
+                </span>
+                Recent Commits
+              </>
+            }
+            className="p-4"
+          >
             <CommitList
               commits={data.commits.slice(0, 5)}
               repoUrl={data.repository.url}
             />
-          </section>
+          </Card>
 
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="issue">
-                🎯
-              </span>
-              Issues
-            </h2>
+          <Card
+            title={
+              <>
+                <span role="img" aria-label="issue">
+                  🎯
+                </span>
+                Issues
+              </>
+            }
+            className="p-4"
+          >
             <IssueList
               issues={data.issues.slice(0, 5)}
               repoUrl={data.repository.url}
             />
-          </section>
+          </Card>
 
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="pull request">
-                🔀
-              </span>
-              Pull Requests
-            </h2>
+          <Card
+            title={
+              <>
+                <span role="img" aria-label="pull request">
+                  🔀
+                </span>
+                Pull Requests
+              </>
+            }
+            className="p-4"
+          >
             <PullRequestList
               pullRequests={data.pullRequests.slice(0, 5)}
               repoUrl={data.repository.url}
             />
-          </section>
+          </Card>
 
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="discussion">
-                💬
-              </span>
-              Discussion
-            </h2>
+          <Card
+            title={
+              <>
+                <span role="img" aria-label="discussion">
+                  💬
+                </span>
+                Discussion
+              </>
+            }
+            className="p-4"
+          >
             <CommentList comments={data.comments.slice(0, 5)} />
-          </section>
+          </Card>
         </div>
       )}
     </div>
