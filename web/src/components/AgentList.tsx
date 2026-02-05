@@ -21,7 +21,7 @@ export function AgentList({ agents }: AgentListProps): React.ReactElement {
           href={`https://github.com/${agent.login}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex flex-col items-center"
+          className="group flex flex-col items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-800"
           title={agent.login}
         >
           <div className="relative">
@@ -29,6 +29,10 @@ export function AgentList({ agents }: AgentListProps): React.ReactElement {
               src={agent.avatarUrl || `https://github.com/${agent.login}.png`}
               alt={agent.login}
               className="w-12 h-12 rounded-full border-2 border-amber-200 dark:border-neutral-600 group-hover:border-amber-400 dark:group-hover:border-amber-500 transition-colors"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src =
+                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐝</text></svg>';
+              }}
             />
             <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] px-1 rounded-full border border-white dark:border-neutral-800">
               🐝

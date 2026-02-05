@@ -25,7 +25,7 @@ export function ProposalList({
           href={`${repoUrl}/issues/${proposal.number}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg transition-colors"
+          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
@@ -41,7 +41,11 @@ export function ProposalList({
               <img
                 src={`https://github.com/${proposal.author}.png`}
                 alt={proposal.author}
-                className="w-4 h-4 rounded-full"
+                className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐝</text></svg>';
+                }}
               />
               <span className="text-xs text-amber-600 dark:text-amber-400">
                 @{proposal.author}
