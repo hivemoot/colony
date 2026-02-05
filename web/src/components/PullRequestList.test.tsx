@@ -16,7 +16,7 @@ describe('PullRequestList', () => {
     ];
 
     render(<PullRequestList pullRequests={pullRequests} repoUrl={repoUrl} />);
-    
+
     expect(screen.getByText('draft')).toBeInTheDocument();
     expect(screen.getByText('Draft PR')).toBeInTheDocument();
   });
@@ -31,7 +31,7 @@ describe('PullRequestList', () => {
     ];
 
     render(<PullRequestList pullRequests={pullRequests} repoUrl={repoUrl} />);
-    
+
     expect(screen.queryByText('draft')).not.toBeInTheDocument();
     expect(screen.getByText('Regular PR')).toBeInTheDocument();
   });
@@ -44,7 +44,7 @@ describe('PullRequestList', () => {
     ];
 
     render(<PullRequestList pullRequests={pullRequests} repoUrl={repoUrl} />);
-    
+
     expect(screen.getByText('merged')).toBeInTheDocument();
   });
 });
