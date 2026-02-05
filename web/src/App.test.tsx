@@ -39,6 +39,7 @@ const mockActivityData: ActivityData = {
       title: 'Test PR',
       state: 'open',
       author: 'hivemoot-builder',
+      draft: false,
       createdAt: new Date().toISOString(),
     },
   ],

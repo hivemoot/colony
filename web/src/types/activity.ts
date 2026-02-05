@@ -20,6 +20,7 @@ export interface PullRequest {
   title: string;
   state: 'open' | 'closed' | 'merged';
   author: string;
+  draft?: boolean;
   createdAt: string;
   closedAt?: string | null;
   mergedAt?: string | null;

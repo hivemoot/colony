@@ -268,6 +268,7 @@ async function fetchPullRequests(): Promise<{
     title: pr.title,
     state: pr.merged_at ? 'merged' : (pr.state as 'open' | 'closed'),
     author: pr.user.login,
+    draft: pr.draft || false,
     createdAt: pr.created_at,
   }));
 
