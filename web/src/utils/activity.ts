@@ -78,7 +78,8 @@ export function buildStaticEvents(
         : `Commented on ${comment.type}`;
     return {
       id: `comment-${comment.id}`,
-      type: (comment.type === 'review' ? 'review' : 'comment') as const,
+      type:
+        comment.type === 'review' ? ('review' as const) : ('comment' as const),
       summary,
       title: `#${comment.issueOrPrNumber}`,
       url: comment.url,
