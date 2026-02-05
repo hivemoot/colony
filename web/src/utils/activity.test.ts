@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildStaticEvents,
-  buildLiveEvents,
-  formatAction,
-  DEFAULT_EVENT_LIMIT,
-} from './activity';
+import { buildStaticEvents, buildLiveEvents, formatAction } from './activity';
 import {
   createActivityData,
   createCommit,
@@ -12,7 +7,6 @@ import {
   createPullRequest,
   createComment,
 } from '../test/fixtures/activity';
-import type { ActivityData } from '../types/activity';
 import type { GitHubEvent } from './activity';
 
 describe('activity utils', () => {
@@ -245,7 +239,7 @@ describe('activity utils', () => {
           id: '4',
           type: 'UnknownEvent',
           created_at: '2026-02-05T08:00:00Z',
-        } as any,
+        } as unknown as GitHubEvent,
       ];
 
       const events = buildLiveEvents(rawEvents, fallbackUrl);

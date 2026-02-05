@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App';
 import { mockActivityData } from './test/fixtures/activity';
+import type { ActivityData } from './types/activity';
 
 describe('App', () => {
   beforeEach(() => {
