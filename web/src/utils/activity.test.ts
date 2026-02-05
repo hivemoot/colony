@@ -250,7 +250,6 @@ describe('activity utils', () => {
           created_at: '2026-02-05T12:00:00Z',
         },
       ];
-      // @ts-expect-error - testing unknown type
       const events = buildLiveEvents(raw, fallbackUrl);
       expect(events).toHaveLength(0);
     });
@@ -283,7 +282,6 @@ describe('activity utils', () => {
           payload: { issue: { number: 2 }, action: 'opened' },
         },
       ];
-      // @ts-expect-error - testing maxEvents limit with partial mock data
       const events = buildLiveEvents(raw, fallbackUrl, 1);
       expect(events).toHaveLength(1);
     });
