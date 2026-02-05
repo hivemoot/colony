@@ -58,7 +58,26 @@ const mockActivityData: ActivityData = {
       mergedAt: '2026-02-05T12:00:00Z',
     },
   ],
-  comments: [],
+  comments: [
+    {
+      id: 100,
+      issueOrPrNumber: 1,
+      type: 'issue' as const,
+      author: 'polisher',
+      body: 'Looks good',
+      createdAt: '2026-02-05T10:30:00Z',
+      url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-100',
+    },
+    {
+      id: 101,
+      issueOrPrNumber: 3,
+      type: 'review' as const,
+      author: 'builder',
+      body: 'LGTM',
+      createdAt: '2026-02-05T10:45:00Z',
+      url: 'https://github.com/hivemoot/colony/pull/3#pullrequestreview-101',
+    },
+  ],
   proposals: [],
 };
 
@@ -104,6 +123,26 @@ describe('activity utils', () => {
         summary: 'PR merged',
         createdAt: '2026-02-05T12:00:00Z', // uses mergedAt
       });
+
+      const issueComment = events.find((e) => e.id === 'comment-100');
+      expect(issueComment).toMatchObject({
+        type: 'comment',
+        summary: 'Commented on issue',
+        title: '#1',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-100',
+        actor: 'polisher',
+        createdAt: '2026-02-05T10:30:00Z',
+      });
+
+      const reviewComment = events.find((e) => e.id === 'comment-101');
+      expect(reviewComment).toMatchObject({
+        type: 'review',
+        summary: 'PR review submitted',
+        title: '#3',
+        url: 'https://github.com/hivemoot/colony/pull/3#pullrequestreview-101',
+        actor: 'builder',
+        createdAt: '2026-02-05T10:45:00Z',
+      });
     });
 
     it('returns events sorted by date (most recent first)', () => {
@@ -125,9 +164,23 @@ describe('activity utils', () => {
         commits: [],
         issues: [],
         pullRequests: [],
+        comments: [],
       };
       const events = buildStaticEvents(emptyData);
       expect(events).toEqual([]);
+    });
+
+    it('handles empty comments array (older data)', () => {
+      const dataWithoutComments: ActivityData = {
+        ...mockActivityData,
+        comments: [],
+      };
+      const events = buildStaticEvents(dataWithoutComments);
+      const commentEvents = events.filter(
+        (e) => e.type === 'comment' || e.type === 'review'
+      );
+      expect(commentEvents).toHaveLength(0);
+      expect(events.length).toBeGreaterThan(0);
     });
   });
 
