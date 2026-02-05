@@ -69,6 +69,11 @@ describe('App', () => {
     expect(
       screen.getByRole('heading', { name: /discussion/i, level: 2 })
     ).toBeInTheDocument();
+
+    // Comments should appear in the activity timeline (as event badges)
+    expect(
+      screen.getAllByText(/commented on issue #1/i).length
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('shows error state on fetch failure', async () => {

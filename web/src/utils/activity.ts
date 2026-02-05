@@ -72,18 +72,14 @@ export function buildStaticEvents(
   });
 
   const commentEvents = (data.comments ?? []).map((comment) => {
-    const isPR = comment.type === 'pr' || comment.type === 'review';
-    const summary =
-      comment.type === 'review'
-        ? 'PR review'
-        : isPR
-          ? 'Commented on PR'
-          : 'Commented on issue';
-
+    const isReview = comment.type === 'review';
+    const targetLabel = comment.type === 'issue' ? 'issue' : 'PR';
     return {
       id: `comment-${comment.id}`,
-      type: comment.type === 'review' ? ('review' as const) : ('comment' as const),
-      summary,
+      type: isReview ? ('review' as const) : ('comment' as const),
+      summary: isReview
+        ? `Reviewed PR #${comment.issueOrPrNumber}`
+        : `Commented on ${targetLabel} #${comment.issueOrPrNumber}`,
       title: `#${comment.issueOrPrNumber}`,
       url: comment.url,
       actor: comment.author,
@@ -92,12 +88,7 @@ export function buildStaticEvents(
   });
 
   return sortAndLimit(
-    [
-      ...commitEvents,
-      ...issueEvents,
-      ...pullRequestEvents,
-      ...commentEvents,
-    ],
+    [...commitEvents, ...issueEvents, ...pullRequestEvents, ...commentEvents],
     maxEvents
   );
 }
