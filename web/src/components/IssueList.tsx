@@ -41,7 +41,10 @@ export function IssueList({
                 {issue.state}
               </span>
             </div>
-            <p className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100">
+            <p
+              title={issue.title}
+              className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100"
+            >
               {issue.title}
             </p>
             {issue.labels.length > 0 && (

@@ -41,7 +41,7 @@ function App(): React.ReactElement {
         {loading && (
           <div className="text-center py-12">
             <div
-              className="inline-block animate-spin text-4xl"
+              className="inline-block animate-spin motion-reduce:animate-none text-4xl"
               role="img"
               aria-label="loading"
             >

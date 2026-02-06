@@ -112,6 +112,16 @@ describe('App', () => {
     });
   });
 
+  it('loading spinner respects reduced motion preference', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+
+    render(<App />);
+    await waitFor(() => {
+      const spinner = screen.getByRole('img', { name: /loading/i });
+      expect(spinner.className).toContain('motion-reduce:animate-none');
+    });
+  });
+
   it('shows placeholder when no data is available', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,

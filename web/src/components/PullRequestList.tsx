@@ -42,7 +42,10 @@ export function PullRequestList({
                 {pr.state}
               </span>
             </div>
-            <p className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100">
+            <p
+              title={pr.title}
+              className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100"
+            >
               {pr.title}
             </p>
             <div className="flex items-center gap-1.5 mt-1">
