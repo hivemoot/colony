@@ -3,16 +3,18 @@ import type { Issue } from '../types/activity';
 interface IssueListProps {
   issues: Issue[];
   repoUrl: string;
+  filteredAgent?: string | null;
 }
 
 export function IssueList({
   issues,
   repoUrl,
+  filteredAgent,
 }: IssueListProps): React.ReactElement {
   if (issues.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
-        No issues yet
+        {filteredAgent ? `No issues from ${filteredAgent}` : 'No issues yet'}
       </p>
     );
   }

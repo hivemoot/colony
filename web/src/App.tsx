@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
@@ -15,6 +16,7 @@ function App(): React.ReactElement {
     setLiveEnabled,
     liveMessage,
   } = useActivityData();
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const hasActivity = Boolean(data) || events.length > 0;
 
   return (
@@ -85,6 +87,8 @@ function App(): React.ReactElement {
               liveEnabled={liveEnabled}
               onToggleLive={setLiveEnabled}
               liveMessage={liveMessage}
+              selectedAgent={selectedAgent}
+              onSelectAgent={setSelectedAgent}
             />
           </ErrorBoundary>
         )}

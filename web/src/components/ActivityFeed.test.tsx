@@ -101,6 +101,8 @@ describe('ActivityFeed', () => {
     liveEnabled: false,
     onToggleLive: vi.fn(),
     liveMessage: null,
+    selectedAgent: null,
+    onSelectAgent: vi.fn(),
   };
 
   it('renders the activity feed header', () => {
@@ -235,5 +237,118 @@ describe('ActivityFeed', () => {
     render(<ActivityFeed {...defaultProps} lastUpdated={null} />);
     const paragraph = screen.getByText(/last updated: unknown/i);
     expect(paragraph.querySelector('time')).toBeNull();
+  });
+
+  describe('agent filtering', () => {
+    const multiAgentData: ActivityData = {
+      ...mockData,
+      agents: [{ login: 'worker' }, { login: 'scout' }],
+      commits: [
+        {
+          sha: 'abc123',
+          message: 'Worker commit',
+          author: 'worker',
+          date: '2026-02-05T10:00:00Z',
+        },
+        {
+          sha: 'def456',
+          message: 'Scout commit',
+          author: 'scout',
+          date: '2026-02-05T09:00:00Z',
+        },
+      ],
+      issues: [
+        {
+          number: 1,
+          title: 'Scout issue',
+          state: 'open',
+          labels: [],
+          author: 'scout',
+          createdAt: '2026-02-05T09:00:00Z',
+        },
+      ],
+      pullRequests: [
+        {
+          number: 1,
+          title: 'Worker PR',
+          state: 'open',
+          author: 'worker',
+          createdAt: '2026-02-05T08:00:00Z',
+        },
+      ],
+      comments: [
+        {
+          id: 1,
+          issueOrPrNumber: 1,
+          type: 'issue',
+          author: 'scout',
+          body: 'Scout comment',
+          createdAt: '2026-02-05T07:00:00Z',
+          url: 'https://example.com/1',
+        },
+      ],
+    };
+
+    const multiAgentEvents: ActivityEvent[] = [
+      {
+        id: 'e1',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Worker commit',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+      {
+        id: 'e2',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Scout commit',
+        actor: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    it('shows filter indicator when an agent is selected', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+        />
+      );
+
+      expect(screen.getByText(/filtered by:/i)).toBeInTheDocument();
+      expect(screen.getByText('Clear filter')).toBeInTheDocument();
+    });
+
+    it('does not show filter indicator when no agent is selected', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent={null}
+        />
+      );
+
+      expect(screen.queryByText('Clear filter')).not.toBeInTheDocument();
+    });
+
+    it('calls onSelectAgent(null) when Clear filter is clicked', () => {
+      const onSelectAgent = vi.fn();
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+          onSelectAgent={onSelectAgent}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Clear filter'));
+      expect(onSelectAgent).toHaveBeenCalledWith(null);
+    });
   });
 });

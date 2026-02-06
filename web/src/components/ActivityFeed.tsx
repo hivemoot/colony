@@ -21,6 +21,8 @@ interface ActivityFeedProps {
   liveEnabled: boolean;
   onToggleLive: (enabled: boolean) => void;
   liveMessage: string | null;
+  selectedAgent: string | null;
+  onSelectAgent: (agent: string | null) => void;
 }
 
 export function ActivityFeed({
@@ -31,10 +33,16 @@ export function ActivityFeed({
   liveEnabled,
   onToggleLive,
   liveMessage,
+  selectedAgent,
+  onSelectAgent,
 }: ActivityFeedProps): React.ReactElement {
   const timeAgo = lastUpdated ? formatTimeAgo(lastUpdated) : 'unknown';
   const statusLabel = getStatusLabel(mode);
   const statusStyles = getStatusStyles(mode);
+
+  const filteredEvents = selectedAgent
+    ? events.filter((e) => e.actor === selectedAgent)
+    : events;
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
@@ -73,8 +81,21 @@ export function ActivityFeed({
             {liveMessage}
           </p>
         )}
+        {selectedAgent && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-amber-700 dark:text-amber-300">
+              Filtered by: <strong>{selectedAgent}</strong>
+            </span>
+            <button
+              onClick={() => onSelectAgent(null)}
+              className="text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded"
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
         <div className="mt-4">
-          <ActivityTimeline events={events} />
+          <ActivityTimeline events={filteredEvents} />
         </div>
       </section>
 
@@ -86,7 +107,11 @@ export function ActivityFeed({
             </span>
             Active Agents
           </h2>
-          <AgentList agents={data.agents} />
+          <AgentList
+            agents={data.agents}
+            selectedAgent={selectedAgent}
+            onSelectAgent={onSelectAgent}
+          />
         </section>
       )}
 
@@ -98,7 +123,11 @@ export function ActivityFeed({
             </span>
             Contribution Leaderboard
           </h2>
-          <AgentLeaderboard stats={data.agentStats} />
+          <AgentLeaderboard
+            stats={data.agentStats}
+            selectedAgent={selectedAgent}
+            onSelectAgent={onSelectAgent}
+          />
         </section>
       )}
 
@@ -111,7 +140,7 @@ export function ActivityFeed({
             Governance Status
           </h2>
           <ProposalList
-            proposals={data.proposals}
+            proposals={filterByAuthor(data.proposals, selectedAgent)}
             repoUrl={data.repository.url}
           />
         </section>
@@ -127,8 +156,9 @@ export function ActivityFeed({
               Recent Commits
             </h2>
             <CommitList
-              commits={data.commits.slice(0, 5)}
+              commits={filterByAuthor(data.commits, selectedAgent).slice(0, 5)}
               repoUrl={data.repository.url}
+              filteredAgent={selectedAgent}
             />
           </section>
 
@@ -140,8 +170,9 @@ export function ActivityFeed({
               Issues
             </h2>
             <IssueList
-              issues={data.issues.slice(0, 5)}
+              issues={filterByAuthor(data.issues, selectedAgent).slice(0, 5)}
               repoUrl={data.repository.url}
+              filteredAgent={selectedAgent}
             />
           </section>
 
@@ -153,8 +184,12 @@ export function ActivityFeed({
               Pull Requests
             </h2>
             <PullRequestList
-              pullRequests={data.pullRequests.slice(0, 5)}
+              pullRequests={filterByAuthor(
+                data.pullRequests,
+                selectedAgent
+              ).slice(0, 5)}
               repoUrl={data.repository.url}
+              filteredAgent={selectedAgent}
             />
           </section>
 
@@ -165,12 +200,26 @@ export function ActivityFeed({
               </span>
               Discussion
             </h2>
-            <CommentList comments={data.comments.slice(0, 5)} />
+            <CommentList
+              comments={filterByAuthor(data.comments, selectedAgent).slice(
+                0,
+                5
+              )}
+              filteredAgent={selectedAgent}
+            />
           </section>
         </div>
       )}
     </div>
   );
+}
+
+function filterByAuthor<T extends { author: string }>(
+  items: T[],
+  agent: string | null
+): T[] {
+  if (!agent) return items;
+  return items.filter((item) => item.author === agent);
 }
 
 function getStatusLabel(mode: ActivityMode): string {

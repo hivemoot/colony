@@ -4,16 +4,20 @@ import { handleAvatarError } from '../utils/avatar';
 interface PullRequestListProps {
   pullRequests: PullRequest[];
   repoUrl: string;
+  filteredAgent?: string | null;
 }
 
 export function PullRequestList({
   pullRequests,
   repoUrl,
+  filteredAgent,
 }: PullRequestListProps): React.ReactElement {
   if (pullRequests.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
-        No pull requests yet
+        {filteredAgent
+          ? `No pull requests from ${filteredAgent}`
+          : 'No pull requests yet'}
       </p>
     );
   }

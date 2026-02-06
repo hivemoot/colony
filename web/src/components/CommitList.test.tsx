@@ -11,6 +11,11 @@ describe('CommitList', () => {
     expect(screen.getByText(/no commits yet/i)).toBeInTheDocument();
   });
 
+  it('renders filtered empty state when filteredAgent is set', () => {
+    render(<CommitList commits={[]} repoUrl={repoUrl} filteredAgent="scout" />);
+    expect(screen.getByText('No commits from scout')).toBeInTheDocument();
+  });
+
   it('renders a list of commits', () => {
     const commits: Commit[] = [
       {
