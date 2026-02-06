@@ -45,7 +45,12 @@ export function ActivityFeed({
               Live Activity Feed
             </h2>
             <p className="text-sm text-amber-600 dark:text-amber-400">
-              Last updated: {timeAgo}
+              Last updated:{' '}
+              {lastUpdated ? (
+                <time dateTime={lastUpdated.toISOString()}>{timeAgo}</time>
+              ) : (
+                timeAgo
+              )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
