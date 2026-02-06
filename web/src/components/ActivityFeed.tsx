@@ -142,6 +142,7 @@ export function ActivityFeed({
           <ProposalList
             proposals={filterByAuthor(data.proposals, selectedAgent)}
             repoUrl={data.repository.url}
+            filteredAgent={selectedAgent}
           />
         </section>
       )}

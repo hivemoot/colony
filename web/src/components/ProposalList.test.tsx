@@ -156,4 +156,11 @@ describe('ProposalList', () => {
     expect(screen.getByText('implemented')).toBeInTheDocument();
     expect(screen.getByText('rejected')).toBeInTheDocument();
   });
+
+  it('renders "No proposals from {agent}" when filtered and empty', () => {
+    render(
+      <ProposalList proposals={[]} repoUrl={repoUrl} filteredAgent="worker" />
+    );
+    expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
+  });
 });

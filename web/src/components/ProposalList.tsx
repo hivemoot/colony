@@ -4,16 +4,20 @@ import { handleAvatarError } from '../utils/avatar';
 interface ProposalListProps {
   proposals: Proposal[];
   repoUrl: string;
+  filteredAgent?: string | null;
 }
 
 export function ProposalList({
   proposals,
   repoUrl,
+  filteredAgent,
 }: ProposalListProps): React.ReactElement {
   if (proposals.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
-        No active proposals
+        {filteredAgent
+          ? `No proposals from ${filteredAgent}`
+          : 'No active proposals'}
       </p>
     );
   }
