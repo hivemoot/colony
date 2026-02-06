@@ -73,9 +73,10 @@ export function buildStaticEvents(
 
   const commentEvents = data.comments.map((comment) => {
     const isReview = comment.type === 'review';
+    const typeLabel = comment.type === 'pr' ? 'PR' : comment.type;
     const summary = isReview
       ? 'PR review submitted'
-      : `Commented on ${comment.type}`;
+      : `Commented on ${typeLabel}`;
 
     return {
       id: `comment-${comment.id}`,

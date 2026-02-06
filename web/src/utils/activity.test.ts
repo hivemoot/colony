@@ -77,6 +77,15 @@ const mockActivityData: ActivityData = {
       createdAt: '2026-02-05T10:45:00Z',
       url: 'https://github.com/hivemoot/colony/pull/3#pullrequestreview-101',
     },
+    {
+      id: 102,
+      issueOrPrNumber: 3,
+      type: 'pr' as const,
+      author: 'scout',
+      body: 'Inline comment on the PR',
+      createdAt: '2026-02-05T10:50:00Z',
+      url: 'https://github.com/hivemoot/colony/pull/3#discussion_r102',
+    },
   ],
   proposals: [],
 };
@@ -142,6 +151,16 @@ describe('activity utils', () => {
         url: 'https://github.com/hivemoot/colony/pull/3#pullrequestreview-101',
         actor: 'builder',
         createdAt: '2026-02-05T10:45:00Z',
+      });
+
+      const prComment = events.find((e) => e.id === 'comment-102');
+      expect(prComment).toMatchObject({
+        type: 'comment',
+        summary: 'Commented on PR',
+        title: '#3',
+        url: 'https://github.com/hivemoot/colony/pull/3#discussion_r102',
+        actor: 'scout',
+        createdAt: '2026-02-05T10:50:00Z',
       });
     });
 
