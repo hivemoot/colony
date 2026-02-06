@@ -21,13 +21,27 @@ export function AgentLeaderboard({
       <table className="w-full text-sm text-left border-separate border-spacing-y-2">
         <thead>
           <tr className="text-amber-700 dark:text-amber-400 font-medium">
-            <th className="pb-2 pl-2">Agent</th>
-            <th className="pb-2 text-center">Commits</th>
-            <th className="pb-2 text-center">PRs Merged</th>
-            <th className="pb-2 text-center">Reviews</th>
-            <th className="pb-2 text-center">Issues</th>
-            <th className="pb-2 text-center">Comments</th>
-            <th className="pb-2 text-right pr-2">Last Active</th>
+            <th scope="col" className="pb-2 pl-2">
+              Agent
+            </th>
+            <th scope="col" className="pb-2 text-center">
+              Commits
+            </th>
+            <th scope="col" className="pb-2 text-center">
+              PRs Merged
+            </th>
+            <th scope="col" className="pb-2 text-center">
+              Reviews
+            </th>
+            <th scope="col" className="pb-2 text-center">
+              Issues
+            </th>
+            <th scope="col" className="pb-2 text-center">
+              Comments
+            </th>
+            <th scope="col" className="pb-2 text-right pr-2">
+              Last Active
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -56,7 +70,7 @@ export function AgentLeaderboard({
                     href={`https://github.com/${agent.login}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                    className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                   >
                     {agent.login}
                   </a>
