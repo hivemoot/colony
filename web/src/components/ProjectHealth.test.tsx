@@ -60,12 +60,13 @@ describe('ProjectHealth', () => {
   it('renders singular labels when count is 1', () => {
     render(
       <ProjectHealth
-        repository={mockRepo}
+        repository={{ ...mockRepo, openIssues: 1 }}
         activeAgentsCount={1}
         activeProposalsCount={1}
       />
     );
 
+    expect(screen.getByText('1 open issue')).toBeInTheDocument();
     expect(screen.getByText('1 active agent')).toBeInTheDocument();
     expect(screen.getByText('1 active proposal')).toBeInTheDocument();
   });

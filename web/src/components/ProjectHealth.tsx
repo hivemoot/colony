@@ -56,7 +56,7 @@ export function ProjectHealth({
         <span role="img" aria-label="issue">
           🎯
         </span>
-        {repository.openIssues} open issues
+        {repository.openIssues} open {repository.openIssues === 1 ? 'issue' : 'issues'}
       </a>
       <span className="text-amber-300 dark:text-neutral-600" aria-hidden="true">
         |
