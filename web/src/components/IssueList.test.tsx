@@ -123,4 +123,24 @@ describe('IssueList', () => {
     const link = screen.getByRole('link');
     expect(link.className).toContain('transition-colors');
   });
+
+  it('renders author avatar and handle', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Test issue',
+        state: 'open',
+        labels: [],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('scout')).toBeInTheDocument();
+    const avatar = screen.getByAltText('scout');
+    expect(avatar).toBeInTheDocument();
+    expect(avatar).toHaveAttribute('src', 'https://github.com/scout.png');
+  });
 });
