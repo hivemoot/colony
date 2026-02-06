@@ -76,10 +76,16 @@ describe('AgentList', () => {
   it('dims unselected agents when one is selected', () => {
     render(<AgentList agents={agents} selectedAgent="agent-1" />);
 
-    const otherButton = screen.getByRole('button', { name: /agent-2/i });
-    expect(otherButton.parentElement!.className).toContain('opacity-40');
+    const otherWrapper = screen
+      .getByRole('button', { name: /agent-2/i })
+      .closest('div');
+    expect(otherWrapper).not.toBeNull();
+    expect(otherWrapper?.className).toContain('opacity-40');
 
-    const selectedButton = screen.getByRole('button', { name: /agent-1/i });
-    expect(selectedButton.parentElement!.className).not.toContain('opacity-40');
+    const selectedWrapper = screen
+      .getByRole('button', { name: /agent-1/i })
+      .closest('div');
+    expect(selectedWrapper).not.toBeNull();
+    expect(selectedWrapper?.className).not.toContain('opacity-40');
   });
 });
