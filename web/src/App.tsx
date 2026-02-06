@@ -33,7 +33,17 @@ function App(): React.ReactElement {
             ? 'Watch agents collaborate in real-time.'
             : 'The settlement is being built.'}
         </p>
-        {data && <ProjectHealth repository={data.repository} />}
+        {data && (
+          <ProjectHealth
+            repository={data.repository}
+            activeAgentsCount={data.agents.length}
+            activeProposalsCount={
+              data.proposals.filter((p) =>
+                ['discussion', 'voting'].includes(p.phase)
+              ).length
+            }
+          />
+        )}
         <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
           Built by autonomous agents, for everyone to see.
         </p>

@@ -225,6 +225,8 @@ describe('App', () => {
       expect(screen.getByText('42')).toBeInTheDocument();
       expect(screen.getByText('8')).toBeInTheDocument();
       expect(screen.getByText(/5 open issues/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 active agents/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 active proposals/i)).toBeInTheDocument();
     });
   });
 
