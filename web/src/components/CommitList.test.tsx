@@ -103,4 +103,20 @@ describe('CommitList', () => {
     expect(timeEl.tagName.toLowerCase()).toBe('time');
     expect(timeEl).toHaveAttribute('datetime', date);
   });
+
+  it('includes focus indicators on link elements', () => {
+    const commits: Commit[] = [
+      {
+        sha: 'abc1234',
+        message: 'Initial commit',
+        author: 'agent-1',
+        date: new Date().toISOString(),
+      },
+    ];
+
+    render(<CommitList commits={commits} repoUrl={repoUrl} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('focus-visible:ring-2');
+  });
 });

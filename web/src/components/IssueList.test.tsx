@@ -164,4 +164,22 @@ describe('IssueList', () => {
     expect(avatar).toBeInTheDocument();
     expect(avatar).toHaveAttribute('src', 'https://github.com/scout.png');
   });
+
+  it('includes focus indicators on link elements', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Test issue',
+        state: 'open',
+        labels: [],
+        author: 'agent-1',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('focus-visible:ring-2');
+  });
 });

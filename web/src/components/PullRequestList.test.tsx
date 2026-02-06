@@ -89,6 +89,12 @@ describe('PullRequestList', () => {
     expect(link.className).toContain('transition-colors');
   });
 
+  it('includes focus indicators on link elements', () => {
+    render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('focus-visible:ring-2');
+  });
+
   it('does not render draft badge when PR is not a draft', () => {
     render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
     expect(screen.queryByText('draft')).not.toBeInTheDocument();
