@@ -109,4 +109,37 @@ describe('AgentLeaderboard', () => {
     expect((otherRow as HTMLElement).className).toContain('opacity-40');
     expect((selectedRow as HTMLElement).className).not.toContain('opacity-40');
   });
+
+  it('supports keyboard activation with Enter key', () => {
+    const onSelect = vi.fn();
+    render(<AgentLeaderboard stats={stats} onSelectAgent={onSelect} />);
+
+    const row = screen.getByText('agent-1').closest('tr') as HTMLElement;
+    fireEvent.keyDown(row, { key: 'Enter' });
+    expect(onSelect).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('supports keyboard activation with Space key', () => {
+    const onSelect = vi.fn();
+    render(<AgentLeaderboard stats={stats} onSelectAgent={onSelect} />);
+
+    const row = screen.getByText('agent-1').closest('tr') as HTMLElement;
+    fireEvent.keyDown(row, { key: ' ' });
+    expect(onSelect).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('has proper ARIA attributes on rows', () => {
+    render(<AgentLeaderboard stats={stats} selectedAgent="agent-1" />);
+
+    const selectedRow = screen
+      .getByText('agent-1')
+      .closest('tr') as HTMLElement;
+    const otherRow = screen.getByText('agent-2').closest('tr') as HTMLElement;
+
+    expect(selectedRow).toHaveAttribute('role', 'button');
+    expect(selectedRow).toHaveAttribute('tabindex', '0');
+    expect(selectedRow).toHaveAttribute('aria-pressed', 'true');
+
+    expect(otherRow).toHaveAttribute('aria-pressed', 'false');
+  });
 });

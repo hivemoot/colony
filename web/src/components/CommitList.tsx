@@ -4,16 +4,18 @@ import { handleAvatarError } from '../utils/avatar';
 interface CommitListProps {
   commits: Commit[];
   repoUrl: string;
+  filteredAgent?: string | null;
 }
 
 export function CommitList({
   commits,
   repoUrl,
+  filteredAgent,
 }: CommitListProps): React.ReactElement {
   if (commits.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
-        No commits yet
+        {filteredAgent ? `No commits from ${filteredAgent}` : 'No commits yet'}
       </p>
     );
   }

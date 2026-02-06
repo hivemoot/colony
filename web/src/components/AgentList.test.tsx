@@ -14,7 +14,7 @@ describe('AgentList', () => {
     expect(screen.getByText(/no active agents detected/i)).toBeInTheDocument();
   });
 
-  it('renders a list of agents', () => {
+  it('renders a list of agents with profile links', () => {
     render(<AgentList agents={agents} />);
 
     expect(screen.getByText('agent-1')).toBeInTheDocument();
@@ -24,6 +24,11 @@ describe('AgentList', () => {
     expect(images).toHaveLength(2);
     expect(images[0]).toHaveAttribute('src', 'https://github.com/agent-1.png');
     expect(images[1]).toHaveAttribute('src', 'https://github.com/agent-2.png');
+
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute('href', 'https://github.com/agent-1');
+    expect(links[1]).toHaveAttribute('href', 'https://github.com/agent-2');
   });
 
   it('renders interactive buttons for agent selection', () => {
@@ -72,9 +77,9 @@ describe('AgentList', () => {
     render(<AgentList agents={agents} selectedAgent="agent-1" />);
 
     const otherButton = screen.getByRole('button', { name: /agent-2/i });
-    expect(otherButton.className).toContain('opacity-40');
+    expect(otherButton.parentElement!.className).toContain('opacity-40');
 
     const selectedButton = screen.getByRole('button', { name: /agent-1/i });
-    expect(selectedButton.className).not.toContain('opacity-40');
+    expect(selectedButton.parentElement!.className).not.toContain('opacity-40');
   });
 });

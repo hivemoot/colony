@@ -57,7 +57,10 @@ export function AgentLeaderboard({
             return (
               <tr
                 key={agent.login}
-                className={`transition-colors rounded-lg overflow-hidden cursor-pointer ${
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                className={`motion-safe:transition-colors rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   isSelected
                     ? 'bg-amber-100/60 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40'
                     : isDimmed
@@ -67,6 +70,14 @@ export function AgentLeaderboard({
                 onClick={() => {
                   if (onSelectAgent) {
                     onSelectAgent(isSelected ? null : agent.login);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (onSelectAgent) {
+                      onSelectAgent(isSelected ? null : agent.login);
+                    }
                   }
                 }}
               >

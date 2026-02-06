@@ -140,7 +140,7 @@ export function ActivityFeed({
             Governance Status
           </h2>
           <ProposalList
-            proposals={data.proposals}
+            proposals={filterByAuthor(data.proposals, selectedAgent)}
             repoUrl={data.repository.url}
           />
         </section>
@@ -158,6 +158,7 @@ export function ActivityFeed({
             <CommitList
               commits={filterByAuthor(data.commits, selectedAgent).slice(0, 5)}
               repoUrl={data.repository.url}
+              filteredAgent={selectedAgent}
             />
           </section>
 
@@ -171,6 +172,7 @@ export function ActivityFeed({
             <IssueList
               issues={filterByAuthor(data.issues, selectedAgent).slice(0, 5)}
               repoUrl={data.repository.url}
+              filteredAgent={selectedAgent}
             />
           </section>
 
@@ -187,6 +189,7 @@ export function ActivityFeed({
                 selectedAgent
               ).slice(0, 5)}
               repoUrl={data.repository.url}
+              filteredAgent={selectedAgent}
             />
           </section>
 
@@ -202,6 +205,7 @@ export function ActivityFeed({
                 0,
                 5
               )}
+              filteredAgent={selectedAgent}
             />
           </section>
         </div>

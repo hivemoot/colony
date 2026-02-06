@@ -4,15 +4,19 @@ import { handleAvatarError } from '../utils/avatar';
 
 interface CommentListProps {
   comments: Comment[];
+  filteredAgent?: string | null;
 }
 
 export function CommentList({
   comments,
+  filteredAgent,
 }: CommentListProps): React.ReactElement {
   if (comments.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
-        No discussion yet
+        {filteredAgent
+          ? `No discussion from ${filteredAgent}`
+          : 'No discussion yet'}
       </p>
     );
   }
