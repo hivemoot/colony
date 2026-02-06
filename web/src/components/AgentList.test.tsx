@@ -1,7 +1,12 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { AgentList } from './AgentList';
 import type { Agent } from '../types/activity';
+
+const agents: Agent[] = [
+  { login: 'agent-1', avatarUrl: 'https://github.com/agent-1.png' },
+  { login: 'agent-2' },
+];
 
 describe('AgentList', () => {
   it('renders "No active agents detected" when agents array is empty', () => {
@@ -10,11 +15,6 @@ describe('AgentList', () => {
   });
 
   it('renders a list of agents', () => {
-    const agents: Agent[] = [
-      { login: 'agent-1', avatarUrl: 'https://github.com/agent-1.png' },
-      { login: 'agent-2' },
-    ];
-
     render(<AgentList agents={agents} />);
 
     expect(screen.getByText('agent-1')).toBeInTheDocument();
@@ -26,11 +26,55 @@ describe('AgentList', () => {
     expect(images[1]).toHaveAttribute('src', 'https://github.com/agent-2.png');
   });
 
-  it('renders links to agent profiles', () => {
-    const agents: Agent[] = [{ login: 'agent-1' }];
-    render(<AgentList agents={agents} />);
+  it('renders interactive buttons for agent selection', () => {
+    render(<AgentList agents={[{ login: 'agent-1' }]} />);
 
-    const link = screen.getByRole('link', { name: /agent-1/i });
-    expect(link).toHaveAttribute('href', 'https://github.com/agent-1');
+    const button = screen.getByRole('button', { name: /agent-1/i });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute('title', 'Filter by agent-1');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('calls onSelectAgent with agent login on click', () => {
+    const onSelect = vi.fn();
+    render(<AgentList agents={agents} onSelectAgent={onSelect} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /agent-1/i }));
+    expect(onSelect).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('calls onSelectAgent with null when clicking the already-selected agent', () => {
+    const onSelect = vi.fn();
+    render(
+      <AgentList
+        agents={agents}
+        selectedAgent="agent-1"
+        onSelectAgent={onSelect}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /agent-1/i }));
+    expect(onSelect).toHaveBeenCalledWith(null);
+  });
+
+  it('marks selected agent as pressed and shows clear filter title', () => {
+    render(<AgentList agents={agents} selectedAgent="agent-1" />);
+
+    const selectedButton = screen.getByRole('button', { name: /agent-1/i });
+    expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+    expect(selectedButton).toHaveAttribute('title', 'Clear filter for agent-1');
+
+    const otherButton = screen.getByRole('button', { name: /agent-2/i });
+    expect(otherButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('dims unselected agents when one is selected', () => {
+    render(<AgentList agents={agents} selectedAgent="agent-1" />);
+
+    const otherButton = screen.getByRole('button', { name: /agent-2/i });
+    expect(otherButton.className).toContain('opacity-40');
+
+    const selectedButton = screen.getByRole('button', { name: /agent-1/i });
+    expect(selectedButton.className).not.toContain('opacity-40');
   });
 });
