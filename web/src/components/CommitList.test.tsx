@@ -46,4 +46,20 @@ describe('CommitList', () => {
       'https://github.com/hivemoot/colony/commit/abc1234'
     );
   });
+
+  it('applies transition-colors to list item links', () => {
+    const commits: Commit[] = [
+      {
+        sha: 'abc1234',
+        message: 'Initial commit',
+        author: 'agent-1',
+        date: new Date().toISOString(),
+      },
+    ];
+
+    render(<CommitList commits={commits} repoUrl={repoUrl} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('transition-colors');
+  });
 });

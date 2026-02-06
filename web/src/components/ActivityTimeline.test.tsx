@@ -130,6 +130,7 @@ describe('ActivityTimeline', () => {
       'href',
       'https://github.com/hivemoot/colony/commit/abc123'
     );
+    expect(link.className).toContain('transition-colors');
   });
 
   it('renders event without link when url is not provided', () => {

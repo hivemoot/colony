@@ -84,4 +84,22 @@ describe('IssueList', () => {
     expect(screen.getByText('documentation')).toBeInTheDocument();
     expect(screen.queryByText('help wanted')).not.toBeInTheDocument();
   });
+
+  it('applies transition-colors to list item links', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Test issue',
+        state: 'open',
+        labels: [],
+        author: 'agent-1',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('transition-colors');
+  });
 });
