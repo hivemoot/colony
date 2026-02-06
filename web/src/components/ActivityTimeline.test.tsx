@@ -152,7 +152,7 @@ describe('ActivityTimeline', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders time ago for each event', () => {
+  it('renders time ago in a semantic time element with dateTime', () => {
     const events: ActivityEvent[] = [
       {
         id: 'commit-1',
@@ -166,7 +166,9 @@ describe('ActivityTimeline', () => {
 
     render(<ActivityTimeline events={events} />);
 
-    expect(screen.getByText('5 minutes ago')).toBeInTheDocument();
+    const timeEl = screen.getByText('5 minutes ago');
+    expect(timeEl.tagName).toBe('TIME');
+    expect(timeEl).toHaveAttribute('datetime', '2026-02-05T10:00:00Z');
   });
 
   it('renders actor avatars', () => {

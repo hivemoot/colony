@@ -90,7 +90,7 @@ export function ActivityTimeline({
                 >
                   •
                 </span>
-                <span>{timeAgo}</span>
+                <time dateTime={event.createdAt}>{timeAgo}</time>
               </div>
               {event.url ? (
                 <a

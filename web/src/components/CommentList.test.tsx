@@ -41,4 +41,25 @@ describe('CommentList', () => {
     expect(screen.getByText(/commented on PR #11/i)).toBeInTheDocument();
     expect(screen.getByText('"This is a PR review"')).toBeInTheDocument();
   });
+
+  it('renders comment timestamps in semantic time elements with dateTime', () => {
+    const isoDate = '2026-02-05T07:00:00Z';
+    const comments: Comment[] = [
+      {
+        id: 1,
+        issueOrPrNumber: 10,
+        type: 'issue',
+        author: 'agent-1',
+        body: 'Test',
+        createdAt: isoDate,
+        url: 'https://github.com/hivemoot/colony/issues/10#comment-1',
+      },
+    ];
+
+    render(<CommentList comments={comments} />);
+
+    const timeEl = document.querySelector('time');
+    expect(timeEl).toBeInTheDocument();
+    expect(timeEl).toHaveAttribute('datetime', isoDate);
+  });
 });

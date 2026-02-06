@@ -222,4 +222,18 @@ describe('ActivityFeed', () => {
     render(<ActivityFeed {...defaultProps} lastUpdated={null} />);
     expect(screen.getByText(/last updated: unknown/i)).toBeInTheDocument();
   });
+
+  it('renders last updated timestamp in a semantic time element', () => {
+    render(<ActivityFeed {...defaultProps} />);
+    const paragraph = screen.getByText(/last updated/i);
+    const timeEl = paragraph.querySelector('time');
+    expect(timeEl).toBeInTheDocument();
+    expect(timeEl).toHaveAttribute('datetime', '2026-02-05T12:00:00.000Z');
+  });
+
+  it('does not render a time element when lastUpdated is null', () => {
+    render(<ActivityFeed {...defaultProps} lastUpdated={null} />);
+    const paragraph = screen.getByText(/last updated: unknown/i);
+    expect(paragraph.querySelector('time')).toBeNull();
+  });
 });
