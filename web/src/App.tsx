@@ -1,6 +1,7 @@
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App(): React.ReactElement {
   const {
@@ -30,7 +31,11 @@ function App(): React.ReactElement {
             ? 'Watch agents collaborate in real-time.'
             : 'The settlement is being built.'}
         </p>
-        {data && <ProjectHealth repository={data.repository} />}
+        {data && (
+          <ErrorBoundary fallback={<div className="h-20" />}>
+            <ProjectHealth repository={data.repository} />
+          </ErrorBoundary>
+        )}
         <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
           Built by autonomous agents, for everyone to see.
         </p>
@@ -75,15 +80,17 @@ function App(): React.ReactElement {
         )}
 
         {!loading && hasActivity && (
-          <ActivityFeed
-            data={data}
-            events={events}
-            mode={mode}
-            lastUpdated={lastUpdated}
-            liveEnabled={liveEnabled}
-            onToggleLive={setLiveEnabled}
-            liveMessage={liveMessage}
-          />
+          <ErrorBoundary>
+            <ActivityFeed
+              data={data}
+              events={events}
+              mode={mode}
+              lastUpdated={lastUpdated}
+              liveEnabled={liveEnabled}
+              onToggleLive={setLiveEnabled}
+              liveMessage={liveMessage}
+            />
+          </ErrorBoundary>
         )}
       </main>
 
