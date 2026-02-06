@@ -315,6 +315,32 @@ describe('activity utils', () => {
       });
     });
 
+    it('maps IssueCommentEvent on PR correctly', () => {
+      const raw = [
+        {
+          id: '9',
+          type: 'IssueCommentEvent',
+          actor: { login: 'polisher' },
+          created_at: '2026-02-05T12:00:00Z',
+          payload: {
+            issue: {
+              number: 6,
+              title: 'Cool PR',
+              html_url: 'url',
+              pull_request: {},
+            },
+            comment: { html_url: 'comment-url' },
+          },
+        },
+      ];
+      const events = buildLiveEvents(raw, fallbackUrl);
+      expect(events[0]).toMatchObject({
+        type: 'comment',
+        summary: 'Commented on PR',
+        url: 'comment-url',
+      });
+    });
+
     it('maps PullRequestEvent correctly (opened)', () => {
       const raw = [
         {
