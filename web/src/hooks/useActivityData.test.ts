@@ -253,6 +253,8 @@ describe('useActivityData', () => {
         result.current.setLiveEnabled(true);
       });
 
+      // Flush microtask queue — the live fetch chain uses async/await
+      // internally, so multiple zero-time advances drain queued promises
       await act(async () => {
         for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(0);
       });
@@ -481,46 +483,26 @@ describe('useActivityData', () => {
       // Backoff starts at 40s (20s * 2 after first failure)
       expect(pollingDelays[0]).toBe(40_000);
 
-      // Advance through backoff cycles
-      setTimeoutSpy.mockClear();
+      // Advance through backoff cycles, asserting each delay explicitly
+      const advanceAndExpect = async (
+        advanceBy: number,
+        expectedDelay: number
+      ): Promise<void> => {
+        setTimeoutSpy.mockClear();
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(advanceBy);
+        });
+        const delays = setTimeoutSpy.mock.calls
+          .map((c) => c[1] as number)
+          .filter((d) => d >= 20_000);
+        expect(delays).toHaveLength(1);
+        expect(delays[0]).toBe(expectedDelay);
+      };
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(40_000);
-      });
-
-      const secondDelays = setTimeoutSpy.mock.calls
-        .map((c) => c[1] as number)
-        .filter((d) => d >= 20_000);
-      if (secondDelays.length > 0) {
-        expect(secondDelays[0]).toBe(80_000);
-      }
-
-      setTimeoutSpy.mockClear();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(80_000);
-      });
-
-      const thirdDelays = setTimeoutSpy.mock.calls
-        .map((c) => c[1] as number)
-        .filter((d) => d >= 20_000);
-      if (thirdDelays.length > 0) {
-        expect(thirdDelays[0]).toBe(160_000);
-      }
-
-      setTimeoutSpy.mockClear();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(160_000);
-      });
-
-      const fourthDelays = setTimeoutSpy.mock.calls
-        .map((c) => c[1] as number)
-        .filter((d) => d >= 20_000);
-      if (fourthDelays.length > 0) {
-        // 320_000 would exceed cap, so it should be capped at 300_000
-        expect(fourthDelays[0]).toBe(300_000);
-      }
+      await advanceAndExpect(40_000, 80_000);
+      await advanceAndExpect(80_000, 160_000);
+      // 320_000 would exceed cap, so it should be capped at 300_000
+      await advanceAndExpect(160_000, 300_000);
 
       setTimeoutSpy.mockRestore();
     });
@@ -574,9 +556,8 @@ describe('useActivityData', () => {
       const baseDelays = setTimeoutSpy.mock.calls
         .map((c) => c[1] as number)
         .filter((d) => d >= 20_000);
-      if (baseDelays.length > 0) {
-        expect(baseDelays[baseDelays.length - 1]).toBe(20_000);
-      }
+      expect(baseDelays.length).toBeGreaterThanOrEqual(1);
+      expect(baseDelays[baseDelays.length - 1]).toBe(20_000);
 
       setTimeoutSpy.mockRestore();
     });
