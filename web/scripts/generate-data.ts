@@ -539,8 +539,8 @@ async function generateActivityData(): Promise<ActivityData> {
         commits: 0,
         pullRequestsMerged: 0,
         issuesOpened: 0,
-        reviews: 0,
-        comments: 0,
+        reviews: 0, // Phase 2
+        comments: 0, // Phase 2
         lastActiveAt: new Date(0).toISOString(),
       };
       statsMap.set(login, stats);

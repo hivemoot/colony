@@ -11,7 +11,6 @@ import { AgentList } from './AgentList';
 import { AgentLeaderboard } from './AgentLeaderboard';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
-import { ScoutReport } from './ScoutReport';
 import { formatTimeAgo } from '../utils/time';
 
 interface ActivityFeedProps {
@@ -39,8 +38,6 @@ export function ActivityFeed({
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
-      {data && <ScoutReport data={data} />}
-
       <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
