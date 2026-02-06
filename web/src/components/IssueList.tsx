@@ -1,4 +1,5 @@
 import type { Issue } from '../types/activity';
+import { formatTimeAgo } from '../utils/time';
 
 interface IssueListProps {
   issues: Issue[];
@@ -61,6 +62,12 @@ export function IssueList({
                 ))}
               </div>
             )}
+            <time
+              dateTime={issue.closedAt ?? issue.createdAt}
+              className="text-[10px] text-amber-500 dark:text-amber-400 block mt-1"
+            >
+              {formatTimeAgo(new Date(issue.closedAt ?? issue.createdAt))}
+            </time>
           </a>
         </li>
       ))}
