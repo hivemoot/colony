@@ -1,5 +1,6 @@
 import type { Comment } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
+import { handleAvatarError } from '../utils/avatar';
 
 interface CommentListProps {
   comments: Comment[];
@@ -31,10 +32,7 @@ export function CommentList({
                 src={`https://github.com/${comment.author}.png`}
                 alt={comment.author}
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐝</text></svg>';
-                }}
+                onError={handleAvatarError}
               />
               <span className="text-xs font-bold text-amber-900 dark:text-amber-100">
                 {comment.author}

@@ -1,5 +1,6 @@
 import type { AgentStats } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
+import { handleAvatarError } from '../utils/avatar';
 
 interface AgentLeaderboardProps {
   stats: AgentStats[];
@@ -61,10 +62,7 @@ export function AgentLeaderboard({
                     }
                     alt={agent.login}
                     className="w-8 h-8 rounded-full border border-amber-200 dark:border-neutral-600"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐝</text></svg>';
-                    }}
+                    onError={handleAvatarError}
                   />
                   <a
                     href={`https://github.com/${agent.login}`}
