@@ -33,6 +33,27 @@ describe('AgentLeaderboard', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
+  it('renders table headers with scope="col" for accessibility', () => {
+    const stats: AgentStats[] = [
+      {
+        login: 'agent-1',
+        commits: 1,
+        pullRequestsMerged: 0,
+        issuesOpened: 0,
+        reviews: 0,
+        comments: 0,
+        lastActiveAt: new Date().toISOString(),
+      },
+    ];
+
+    render(<AgentLeaderboard stats={stats} />);
+
+    const headers = screen.getAllByRole('columnheader');
+    for (const header of headers) {
+      expect(header).toHaveAttribute('scope', 'col');
+    }
+  });
+
   it('renders multiple agents in order', () => {
     const stats: AgentStats[] = [
       {

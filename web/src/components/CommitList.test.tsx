@@ -28,6 +28,24 @@ describe('CommitList', () => {
     expect(screen.getByText('agent-1')).toBeInTheDocument();
   });
 
+  it('renders title attribute on truncated commit messages', () => {
+    const commits: Commit[] = [
+      {
+        sha: 'abc1234',
+        message: 'A very long commit message that would be truncated by CSS',
+        author: 'agent-1',
+        date: new Date().toISOString(),
+      },
+    ];
+
+    render(<CommitList commits={commits} repoUrl={repoUrl} />);
+
+    const message = screen.getByTitle(
+      'A very long commit message that would be truncated by CSS'
+    );
+    expect(message).toBeInTheDocument();
+  });
+
   it('links to the correct commit URL', () => {
     const commits: Commit[] = [
       {

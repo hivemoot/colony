@@ -44,6 +44,27 @@ describe('IssueList', () => {
     expect(screen.getByText('closed')).toBeInTheDocument();
   });
 
+  it('renders title attribute on truncated issue titles', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title:
+          'A very long issue title that would be truncated by CSS overflow',
+        state: 'open',
+        labels: [],
+        author: 'agent-1',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    const title = screen.getByTitle(
+      'A very long issue title that would be truncated by CSS overflow'
+    );
+    expect(title).toBeInTheDocument();
+  });
+
   it('links to the correct issue URL', () => {
     const issues: Issue[] = [
       {

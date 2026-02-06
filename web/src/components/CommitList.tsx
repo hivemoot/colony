@@ -30,7 +30,10 @@ export function CommitList({
             <code className="text-xs text-amber-700 dark:text-amber-300 font-mono group-hover:underline">
               {commit.sha}
             </code>
-            <p className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100">
+            <p
+              title={commit.message}
+              className="text-amber-800 dark:text-amber-200 truncate group-hover:text-amber-600 dark:group-hover:text-amber-100"
+            >
               {commit.message}
             </p>
             <div className="flex items-center gap-1.5 mt-1">

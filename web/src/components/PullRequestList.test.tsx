@@ -33,6 +33,13 @@ describe('PullRequestList', () => {
     );
   });
 
+  it('renders title attribute on truncated PR titles', () => {
+    render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
+
+    const title = screen.getByTitle('feat: add dashboard');
+    expect(title).toBeInTheDocument();
+  });
+
   it('renders open state badge', () => {
     render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
     expect(screen.getByText('open')).toBeInTheDocument();
