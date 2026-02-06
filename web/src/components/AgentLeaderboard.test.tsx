@@ -62,4 +62,25 @@ describe('AgentLeaderboard', () => {
     expect(screen.getByText('agent-1')).toBeInTheDocument();
     expect(screen.getByText('agent-2')).toBeInTheDocument();
   });
+
+  it('renders last active timestamp in a semantic time element', () => {
+    const isoDate = '2026-02-05T10:00:00Z';
+    const stats: AgentStats[] = [
+      {
+        login: 'agent-1',
+        commits: 1,
+        pullRequestsMerged: 0,
+        issuesOpened: 0,
+        reviews: 0,
+        comments: 0,
+        lastActiveAt: isoDate,
+      },
+    ];
+
+    render(<AgentLeaderboard stats={stats} />);
+
+    const timeEl = document.querySelector('time');
+    expect(timeEl).toBeInTheDocument();
+    expect(timeEl).toHaveAttribute('datetime', isoDate);
+  });
 });

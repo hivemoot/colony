@@ -100,7 +100,9 @@ export function AgentLeaderboard({
                 </span>
               </td>
               <td className="py-3 text-right pr-2 rounded-r-lg border-y border-r border-amber-100 dark:border-neutral-700 text-xs text-amber-600 dark:text-amber-400">
-                {formatTimeAgo(new Date(agent.lastActiveAt))}
+                <time dateTime={agent.lastActiveAt}>
+                  {formatTimeAgo(new Date(agent.lastActiveAt))}
+                </time>
               </td>
             </tr>
           ))}
