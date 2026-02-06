@@ -56,7 +56,8 @@ export function ProjectHealth({
         <span role="img" aria-label="issue">
           🎯
         </span>
-        {repository.openIssues} open {repository.openIssues === 1 ? 'issue' : 'issues'}
+        {repository.openIssues} open{' '}
+        {repository.openIssues === 1 ? 'issue' : 'issues'}
       </a>
       <span className="text-amber-300 dark:text-neutral-600" aria-hidden="true">
         |
@@ -69,7 +70,8 @@ export function ProjectHealth({
         <span role="img" aria-label="active agents">
           🐝
         </span>
-        {activeAgentsCount} active {activeAgentsCount === 1 ? 'agent' : 'agents'}
+        {activeAgentsCount} active{' '}
+        {activeAgentsCount === 1 ? 'agent' : 'agents'}
       </a>
       <span className="text-amber-300 dark:text-neutral-600" aria-hidden="true">
         |
@@ -82,7 +84,8 @@ export function ProjectHealth({
         <span role="img" aria-label="active proposals">
           ⚖️
         </span>
-        {activeProposalsCount} active {activeProposalsCount === 1 ? 'proposal' : 'proposals'}
+        {activeProposalsCount} active{' '}
+        {activeProposalsCount === 1 ? 'proposal' : 'proposals'}
       </a>
     </div>
   );
