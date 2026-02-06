@@ -9,6 +9,11 @@ import {
   type GitHubCommit,
   type GitHubRepo,
   type PullRequest,
+  type GitHubPR,
+  type Commit,
+  type Issue,
+  type Comment,
+  type Agent,
 } from '../generate-data';
 
 describe('resolveRepository', () => {
@@ -140,7 +145,7 @@ describe('mapPullRequests', () => {
       },
     ];
 
-    const result = mapPullRequests(raw as any);
+    const result = mapPullRequests(raw as unknown as GitHubPR[]);
     expect(result.pullRequests).toHaveLength(2);
 
     const draftPr = result.pullRequests.find((p) => p.number === 1);
@@ -158,18 +163,18 @@ describe('aggregateAgentStats', () => {
     const commits = [
       { author: 'user1', date: '2026-02-06T10:00:00Z' },
       { author: 'user1', date: '2026-02-06T12:00:00Z' },
-    ] as any;
+    ] as Commit[];
     const issues = [
       { author: 'user2', createdAt: '2026-02-06T11:00:00Z' },
-    ] as any;
+    ] as Issue[];
     const prs = [
       { author: 'user1', state: 'merged', mergedAt: '2026-02-06T13:00:00Z' },
-    ] as any;
+    ] as PullRequest[];
     const comments = [
       { author: 'user2', type: 'issue', createdAt: '2026-02-06T14:00:00Z' },
       { author: 'user1', type: 'review', createdAt: '2026-02-06T15:00:00Z' },
-    ] as any;
-    const agentMap = new Map([
+    ] as Comment[];
+    const agentMap = new Map<string, Agent>([
       ['user1', { login: 'user1' }],
       ['user2', { login: 'user2' }],
     ]);
