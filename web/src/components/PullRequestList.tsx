@@ -30,14 +30,14 @@ export function PullRequestList({
             href={`${repoUrl}/pull/${pr.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block"
+            className="group block transition-colors"
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-amber-700 dark:text-amber-300">
                 #{pr.number}
               </span>
               {pr.draft && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
                   draft
                 </span>
               )}

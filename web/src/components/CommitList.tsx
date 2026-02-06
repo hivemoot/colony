@@ -28,7 +28,7 @@ export function CommitList({
             href={`${repoUrl}/commit/${commit.sha}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block"
+            className="group block transition-colors"
           >
             <code className="text-xs text-amber-700 dark:text-amber-300 font-mono group-hover:underline">
               {commit.sha}

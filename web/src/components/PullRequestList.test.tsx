@@ -75,6 +75,20 @@ describe('PullRequestList', () => {
     expect(screen.getByText('open')).toBeInTheDocument();
   });
 
+  it('uses neutral palette for draft badge', () => {
+    const draftPR: PullRequest = { ...basePR, draft: true };
+    render(<PullRequestList pullRequests={[draftPR]} repoUrl={REPO_URL} />);
+    const badge = screen.getByText('draft');
+    expect(badge.className).toContain('bg-neutral-100');
+    expect(badge.className).not.toContain('bg-gray-');
+  });
+
+  it('applies transition-colors to list item links', () => {
+    render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('transition-colors');
+  });
+
   it('does not render draft badge when PR is not a draft', () => {
     render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
     expect(screen.queryByText('draft')).not.toBeInTheDocument();
