@@ -97,6 +97,14 @@ describe('ActivityTimeline', () => {
         actor: 'f',
         createdAt: '2026-02-05T07:00:00Z',
       },
+      {
+        id: 'proposal-1',
+        type: 'proposal',
+        summary: 'Phase change',
+        title: 'Test proposal',
+        actor: 'g',
+        createdAt: '2026-02-05T06:00:00Z',
+      },
     ];
 
     render(<ActivityTimeline events={events} />);
@@ -108,6 +116,7 @@ describe('ActivityTimeline', () => {
     expect(screen.getByRole('img', { name: 'Merge' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Comment' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Review' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Proposal' })).toBeInTheDocument();
   });
 
   it('renders event with link when url is provided', () => {

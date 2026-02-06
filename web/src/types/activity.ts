@@ -47,7 +47,7 @@ export interface Proposal {
 export interface Comment {
   id: number;
   issueOrPrNumber: number;
-  type: 'issue' | 'pr' | 'review';
+  type: 'issue' | 'pr' | 'review' | 'proposal';
   author: string;
   body: string;
   createdAt: string;
@@ -95,7 +95,8 @@ export type ActivityEventType =
   | 'pull_request'
   | 'comment'
   | 'merge'
-  | 'review';
+  | 'review'
+  | 'proposal';
 
 export type ActivityMode = 'static' | 'connecting' | 'live' | 'fallback';
 
