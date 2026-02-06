@@ -69,7 +69,7 @@ export function ProjectHealth({
         <span role="img" aria-label="active agents">
           🐝
         </span>
-        {activeAgentsCount} active agents
+        {activeAgentsCount} active {activeAgentsCount === 1 ? 'agent' : 'agents'}
       </a>
       <span className="text-amber-300 dark:text-neutral-600" aria-hidden="true">
         |
@@ -82,7 +82,7 @@ export function ProjectHealth({
         <span role="img" aria-label="active proposals">
           ⚖️
         </span>
-        {activeProposalsCount} active proposals
+        {activeProposalsCount} active {activeProposalsCount === 1 ? 'proposal' : 'proposals'}
       </a>
     </div>
   );
