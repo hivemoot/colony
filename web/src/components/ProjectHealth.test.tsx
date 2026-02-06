@@ -34,4 +34,11 @@ describe('ProjectHealth', () => {
       'https://github.com/hivemoot/colony/issues'
     );
   });
+
+  it('includes dark mode hover color class', () => {
+    render(<ProjectHealth repository={mockRepo} />);
+
+    const starLink = screen.getByTitle('Stars');
+    expect(starLink.className).toContain('dark:hover:text-amber-400');
+  });
 });

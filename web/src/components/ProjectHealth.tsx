@@ -16,7 +16,7 @@ export function ProjectHealth({
         href={`${repository.url}/stargazers`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:text-amber-600 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         title="Stars"
       >
         <span role="img" aria-label="star">
@@ -31,7 +31,7 @@ export function ProjectHealth({
         href={`${repository.url}/network/members`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:text-amber-600 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         title="Forks"
       >
         <span role="img" aria-label="fork">
@@ -46,7 +46,7 @@ export function ProjectHealth({
         href={`${repository.url}/issues`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:text-amber-600 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         title="Open Issues"
       >
         <span role="img" aria-label="issue">
