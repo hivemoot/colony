@@ -63,7 +63,11 @@ describe('useActivityData', () => {
   });
 
   it('should transition to live mode and back', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockActivityData });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
     const { result } = renderHook(() => useActivityData());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -89,7 +93,11 @@ describe('useActivityData', () => {
   });
 
   it('should handle live feed errors', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockActivityData });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
     const { result } = renderHook(() => useActivityData());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -129,7 +137,9 @@ describe('useActivityData', () => {
       (call[0] as string).includes('api.github.com')
     );
     expect(liveCall).toBeDefined();
-    expect(liveCall![1].headers.Accept).toBe('application/vnd.github.v3+json');
+    if (liveCall) {
+      expect(liveCall[1].headers.Accept).toBe('application/vnd.github.v3+json');
+    }
   });
 
   it('should handle rate limit (403) with appropriate message', async () => {
