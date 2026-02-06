@@ -539,8 +539,8 @@ async function generateActivityData(): Promise<ActivityData> {
         commits: 0,
         pullRequestsMerged: 0,
         issuesOpened: 0,
-        reviews: 0, // Phase 2
-        comments: 0, // Phase 2
+        reviews: 0,
+        comments: 0,
         lastActiveAt: new Date(0).toISOString(),
       };
       statsMap.set(login, stats);
@@ -575,6 +575,16 @@ async function generateActivityData(): Promise<ActivityData> {
       stats.pullRequestsMerged++;
     }
     updateLastActive(stats, pr.createdAt);
+  });
+
+  comments.forEach((c) => {
+    const stats = getOrCreateStats(c.author, agentMap.get(c.author)?.avatarUrl);
+    if (c.type === 'review') {
+      stats.reviews++;
+    } else {
+      stats.comments++;
+    }
+    updateLastActive(stats, c.createdAt);
   });
 
   const agentStats = Array.from(statsMap.values()).sort((a, b) => {

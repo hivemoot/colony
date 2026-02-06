@@ -386,19 +386,19 @@ describe('useActivityData', () => {
     });
 
     const { result } = renderHook(() => useActivityData());
-    
+
     // Wait for initial fetch
     await act(async () => {
       await vi.runOnlyPendingTimersAsync();
     });
-    
+
     expect(result.current.loading).toBe(false);
     mockFetch.mockClear();
 
     await act(async () => {
       vi.advanceTimersByTime(60000);
     });
-    
+
     // Interval triggers another fetch
     await act(async () => {
       await vi.runOnlyPendingTimersAsync();
@@ -417,7 +417,7 @@ describe('useActivityData', () => {
     });
 
     const { result } = renderHook(() => useActivityData());
-    
+
     // Initial static fetch
     await act(async () => {
       await vi.runOnlyPendingTimersAsync();
@@ -446,8 +446,8 @@ describe('useActivityData', () => {
     // Check setTimeout calls for the backoff
     const delays = setTimeoutSpy.mock.calls.map((call) => call[1]);
     expect(delays).toContain(300000); // LIVE_MAX_MS
-    expect(delays.every((d) => d === undefined || (d as number) <= 300000)).toBe(
-      true
-    );
+    expect(
+      delays.every((d) => d === undefined || (d as number) <= 300000)
+    ).toBe(true);
   });
 });

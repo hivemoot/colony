@@ -18,8 +18,8 @@ describe('AgentLeaderboard', () => {
         commits: 10,
         pullRequestsMerged: 5,
         issuesOpened: 2,
-        reviews: 0,
-        comments: 0,
+        reviews: 3,
+        comments: 7,
         lastActiveAt: new Date().toISOString(),
       },
     ];
@@ -31,6 +31,8 @@ describe('AgentLeaderboard', () => {
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
   });
 
   it('renders multiple agents in order', () => {
