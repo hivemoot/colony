@@ -88,4 +88,10 @@ describe('AgentList', () => {
     expect(selectedWrapper).not.toBeNull();
     expect(selectedWrapper?.className).not.toContain('opacity-40');
   });
+
+  it('marks the bee badge as decorative with aria-hidden', () => {
+    const { container } = render(<AgentList agents={[{ login: 'agent-1' }]} />);
+    const badge = container.querySelector('.bg-amber-500');
+    expect(badge).toHaveAttribute('aria-hidden', 'true');
+  });
 });
