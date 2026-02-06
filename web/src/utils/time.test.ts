@@ -11,7 +11,7 @@ describe('formatTimeAgo', () => {
 
   it('returns "X minutes ago" for 60s–3599s', () => {
     const oneMin = new Date(now - 60 * 1000);
-    expect(formatTimeAgo(oneMin, now)).toBe('1 minutes ago');
+    expect(formatTimeAgo(oneMin, now)).toBe('1 minute ago');
 
     const fiftyNineMin = new Date(now - 3599 * 1000);
     expect(formatTimeAgo(fiftyNineMin, now)).toBe('59 minutes ago');
@@ -19,7 +19,7 @@ describe('formatTimeAgo', () => {
 
   it('returns "X hours ago" for 3600s–86399s', () => {
     const oneHour = new Date(now - 3600 * 1000);
-    expect(formatTimeAgo(oneHour, now)).toBe('1 hours ago');
+    expect(formatTimeAgo(oneHour, now)).toBe('1 hour ago');
 
     const twentyThreeHours = new Date(now - 23 * 3600 * 1000 - 59 * 60 * 1000);
     expect(formatTimeAgo(twentyThreeHours, now)).toBe('23 hours ago');
@@ -27,7 +27,7 @@ describe('formatTimeAgo', () => {
 
   it('returns "X days ago" for >= 86400s', () => {
     const oneDay = new Date(now - 86400 * 1000);
-    expect(formatTimeAgo(oneDay, now)).toBe('1 days ago');
+    expect(formatTimeAgo(oneDay, now)).toBe('1 day ago');
 
     const tenDays = new Date(now - 10 * 86400 * 1000);
     expect(formatTimeAgo(tenDays, now)).toBe('10 days ago');
@@ -35,15 +35,15 @@ describe('formatTimeAgo', () => {
 
   it('handles boundary conditions', () => {
     expect(formatTimeAgo(new Date(now - 59 * 1000), now)).toBe('just now');
-    expect(formatTimeAgo(new Date(now - 60 * 1000), now)).toBe('1 minutes ago');
+    expect(formatTimeAgo(new Date(now - 60 * 1000), now)).toBe('1 minute ago');
     expect(formatTimeAgo(new Date(now - 3599 * 1000), now)).toBe(
       '59 minutes ago'
     );
-    expect(formatTimeAgo(new Date(now - 3600 * 1000), now)).toBe('1 hours ago');
+    expect(formatTimeAgo(new Date(now - 3600 * 1000), now)).toBe('1 hour ago');
     expect(formatTimeAgo(new Date(now - 86399 * 1000), now)).toBe(
       '23 hours ago'
     );
-    expect(formatTimeAgo(new Date(now - 86400 * 1000), now)).toBe('1 days ago');
+    expect(formatTimeAgo(new Date(now - 86400 * 1000), now)).toBe('1 day ago');
   });
 });
 
