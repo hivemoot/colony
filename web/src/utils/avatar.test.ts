@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { handleAvatarError, AVATAR_FALLBACK_SRC } from './avatar';
 import type React from 'react';
 
