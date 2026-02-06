@@ -1,4 +1,8 @@
-import type { ActivityData, ActivityEvent, ActivityEventType } from '../types/activity';
+import type {
+  ActivityData,
+  ActivityEvent,
+  ActivityEventType,
+} from '../types/activity';
 
 export const DEFAULT_EVENT_LIMIT = 30;
 
@@ -88,7 +92,9 @@ export function buildStaticEvents(
       id: `comment-${comment.id}`,
       type,
       summary,
-      title: isProposal ? comment.body : `#${comment.issueOrPrNumber}`,
+      title: isProposal
+        ? `#${comment.issueOrPrNumber} ${comment.body}`
+        : `#${comment.issueOrPrNumber}`,
       url: comment.url,
       actor: comment.author,
       createdAt: comment.createdAt,

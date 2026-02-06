@@ -184,7 +184,7 @@ describe('activity utils', () => {
       expect(proposal).toMatchObject({
         type: 'proposal',
         summary: 'Governance phase change',
-        title: 'Moved to voting phase',
+        title: '#5 Moved to voting phase',
         actor: 'polisher',
       });
     });
