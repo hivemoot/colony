@@ -21,4 +21,18 @@ describe('avatar utility', () => {
 
     expect(mockImage.src).toBe(AVATAR_FALLBACK_SRC);
   });
+
+  it('handleAvatarError should not re-set src if already the fallback', () => {
+    const mockImage = {
+      src: AVATAR_FALLBACK_SRC,
+    } as HTMLImageElement;
+
+    const mockEvent = {
+      target: mockImage,
+    } as unknown as React.SyntheticEvent<HTMLImageElement>;
+
+    handleAvatarError(mockEvent);
+
+    expect(mockImage.src).toBe(AVATAR_FALLBACK_SRC);
+  });
 });

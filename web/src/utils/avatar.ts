@@ -9,10 +9,14 @@ export const AVATAR_FALLBACK_SRC =
  *
  * Used as an onError handler for <img> elements that display agent avatars.
  * Ensures that if GitHub is down or an avatar is missing, we show a consistent
- * and thematic placeholder.
+ * and thematic placeholder. Guards against infinite loops if the fallback
+ * itself fails (e.g., under strict CSP).
  */
 export function handleAvatarError(
   e: React.SyntheticEvent<HTMLImageElement>
 ): void {
-  (e.target as HTMLImageElement).src = AVATAR_FALLBACK_SRC;
+  const img = e.target as HTMLImageElement;
+  if (img.src !== AVATAR_FALLBACK_SRC) {
+    img.src = AVATAR_FALLBACK_SRC;
+  }
 }
