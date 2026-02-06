@@ -577,6 +577,16 @@ async function generateActivityData(): Promise<ActivityData> {
     updateLastActive(stats, pr.createdAt);
   });
 
+  comments.forEach((c) => {
+    const stats = getOrCreateStats(c.author, agentMap.get(c.author)?.avatarUrl);
+    if (c.type === 'review') {
+      stats.reviews++;
+    } else {
+      stats.comments++;
+    }
+    updateLastActive(stats, c.createdAt);
+  });
+
   const agentStats = Array.from(statsMap.values()).sort((a, b) => {
     return (
       new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()
