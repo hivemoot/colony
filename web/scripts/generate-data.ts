@@ -38,6 +38,7 @@ interface Issue {
   labels: string[];
   author: string;
   createdAt: string;
+  closedAt?: string;
 }
 
 interface PullRequest {
@@ -47,6 +48,8 @@ interface PullRequest {
   draft?: boolean;
   author: string;
   createdAt: string;
+  closedAt?: string;
+  mergedAt?: string;
 }
 
 interface Proposal {
@@ -124,6 +127,7 @@ interface GitHubIssue {
   state: string;
   labels: Array<{ name: string }>;
   created_at: string;
+  closed_at: string | null;
   user: { login: string };
   comments: number;
   pull_request?: unknown;
@@ -249,6 +253,7 @@ async function fetchIssues(): Promise<{
     labels: i.labels.map((l) => l.name),
     author: i.user.login,
     createdAt: i.created_at,
+    ...(i.closed_at ? { closedAt: i.closed_at } : {}),
   }));
 
   return { issues, rawIssues: allIssues };
@@ -264,6 +269,7 @@ async function fetchPullRequests(): Promise<{
     state: string;
     draft: boolean;
     merged_at: string | null;
+    closed_at: string | null;
     user: {
       login: string;
       avatar_url: string;
@@ -295,6 +301,8 @@ async function fetchPullRequests(): Promise<{
     draft: pr.draft || undefined,
     author: pr.user.login,
     createdAt: pr.created_at,
+    ...(pr.merged_at ? { mergedAt: pr.merged_at } : {}),
+    ...(pr.closed_at ? { closedAt: pr.closed_at } : {}),
   }));
 
   const agents: Agent[] = allPRs.map((pr) => ({
@@ -563,7 +571,7 @@ async function generateActivityData(): Promise<ActivityData> {
   issues.forEach((i) => {
     const stats = getOrCreateStats(i.author, agentMap.get(i.author)?.avatarUrl);
     stats.issuesOpened++;
-    updateLastActive(stats, i.createdAt);
+    updateLastActive(stats, i.closedAt ?? i.createdAt);
   });
 
   pullRequests.forEach((pr) => {
@@ -574,7 +582,7 @@ async function generateActivityData(): Promise<ActivityData> {
     if (pr.state === 'merged') {
       stats.pullRequestsMerged++;
     }
-    updateLastActive(stats, pr.createdAt);
+    updateLastActive(stats, pr.mergedAt ?? pr.closedAt ?? pr.createdAt);
   });
 
   const agentStats = Array.from(statsMap.values()).sort((a, b) => {
