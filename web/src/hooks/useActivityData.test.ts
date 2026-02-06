@@ -293,4 +293,86 @@ describe('useActivityData', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toContain('500');
   });
+
+  it('should preserve stale data when static refetch fails', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
+
+    const { result } = renderHook(() => useActivityData());
+
+    // Initial load
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.data).toEqual(mockActivityData);
+
+    // Now switch to fake timers for polling
+    vi.useFakeTimers();
+
+    // Refetch fails
+    mockFetch.mockRejectedValue(new Error('Fetch failed'));
+
+    await act(async () => {
+      vi.advanceTimersByTime(60000); // STATIC_POLL_MS
+    });
+
+    // Data should still be there
+    expect(result.current.data).toEqual(mockActivityData);
+    expect(result.current.error).toBe(null);
+  });
+
+  it('should handle 304 Not Modified in live mode', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
+    const { result } = renderHook(() => useActivityData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // First live fetch returns data and ETag
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'etag' ? 'v1' : null),
+      },
+      json: async () => [mockEvent],
+    });
+
+    await act(async () => {
+      result.current.setLiveEnabled(true);
+    });
+
+    await waitFor(() => expect(result.current.mode).toBe('live'));
+    expect(result.current.events[0].title).toBe('123 Live commit');
+
+    // Second live fetch returns 304
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 304,
+      headers: { get: () => null },
+    });
+
+    // Clean up
+    await act(async () => {
+      result.current.setLiveEnabled(false);
+    });
+  });
+
+  it('should cleanup intervals and timeouts on unmount', async () => {
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
+
+    const { unmount } = renderHook(() => useActivityData());
+
+    unmount();
+    expect(clearIntervalSpy).toHaveBeenCalled();
+  });
 });
