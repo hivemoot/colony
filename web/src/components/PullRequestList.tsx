@@ -1,4 +1,5 @@
 import type { PullRequest } from '../types/activity';
+import { handleAvatarError } from '../utils/avatar';
 
 interface PullRequestListProps {
   pullRequests: PullRequest[];
@@ -53,10 +54,7 @@ export function PullRequestList({
                 src={`https://github.com/${pr.author}.png`}
                 alt={pr.author}
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐝</text></svg>';
-                }}
+                onError={handleAvatarError}
               />
               <p className="text-xs text-amber-600 dark:text-amber-400">
                 {pr.author}
