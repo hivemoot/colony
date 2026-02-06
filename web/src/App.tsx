@@ -1,6 +1,7 @@
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App(): React.ReactElement {
   const {
@@ -75,15 +76,17 @@ function App(): React.ReactElement {
         )}
 
         {!loading && hasActivity && (
-          <ActivityFeed
-            data={data}
-            events={events}
-            mode={mode}
-            lastUpdated={lastUpdated}
-            liveEnabled={liveEnabled}
-            onToggleLive={setLiveEnabled}
-            liveMessage={liveMessage}
-          />
+          <ErrorBoundary>
+            <ActivityFeed
+              data={data}
+              events={events}
+              mode={mode}
+              lastUpdated={lastUpdated}
+              liveEnabled={liveEnabled}
+              onToggleLive={setLiveEnabled}
+              liveMessage={liveMessage}
+            />
+          </ErrorBoundary>
         )}
       </main>
 
