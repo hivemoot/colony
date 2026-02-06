@@ -50,6 +50,13 @@ const EVENT_STYLES: Record<
       'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200',
     label: 'Review',
   },
+  proposal: {
+    icon: '⚖️',
+    dotClass: 'bg-purple-500',
+    badgeClass:
+      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    label: 'Proposal',
+  },
 };
 
 export function ActivityTimeline({

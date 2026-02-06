@@ -164,6 +164,31 @@ describe('activity utils', () => {
       });
     });
 
+    it('includes proposal events from comments', () => {
+      const dataWithProposal: ActivityData = {
+        ...mockActivityData,
+        comments: [
+          {
+            id: 123,
+            issueOrPrNumber: 5,
+            type: 'proposal',
+            author: 'polisher',
+            body: 'Moved to voting phase',
+            createdAt: '2026-02-05T13:00:00Z',
+            url: 'url',
+          },
+        ],
+      };
+      const events = buildStaticEvents(dataWithProposal);
+      const proposal = events.find((e) => e.type === 'proposal');
+      expect(proposal).toMatchObject({
+        type: 'proposal',
+        summary: 'Governance phase change',
+        title: 'Moved to voting phase',
+        actor: 'polisher',
+      });
+    });
+
     it('returns events sorted by date (most recent first)', () => {
       const events = buildStaticEvents(mockActivityData);
       const dates = events.map((e) => new Date(e.createdAt).getTime());
@@ -244,6 +269,28 @@ describe('activity utils', () => {
         type: 'issue',
         summary: 'Issue Opened',
         title: '#5 I haz bug',
+      });
+    });
+
+    it('maps labeled IssuesEvent as proposal correctly', () => {
+      const raw = [
+        {
+          id: '8',
+          type: 'IssuesEvent',
+          actor: { login: 'polisher' },
+          created_at: '2026-02-05T12:00:00Z',
+          payload: {
+            action: 'labeled',
+            issue: { number: 5, title: 'I haz bug', html_url: 'url' },
+            label: { name: 'phase:voting' },
+          },
+        },
+      ];
+      const events = buildLiveEvents(raw, fallbackUrl);
+      expect(events[0]).toMatchObject({
+        type: 'proposal',
+        summary: 'Governance phase change',
+        title: '#5 I haz bug moved to voting phase',
       });
     });
 

@@ -1,4 +1,4 @@
-import type { ActivityData, ActivityEvent } from '../types/activity';
+import type { ActivityData, ActivityEvent, ActivityEventType } from '../types/activity';
 
 export const DEFAULT_EVENT_LIMIT = 30;
 
@@ -73,16 +73,22 @@ export function buildStaticEvents(
 
   const commentEvents = data.comments.map((comment) => {
     const isReview = comment.type === 'review';
+    const isProposal = comment.type === 'proposal';
     const typeLabel = comment.type === 'pr' ? 'PR' : comment.type;
-    const summary = isReview
-      ? 'PR review submitted'
-      : `Commented on ${typeLabel}`;
+
+    let summary = `Commented on ${typeLabel}`;
+    if (isReview) summary = 'PR review submitted';
+    if (isProposal) summary = 'Governance phase change';
+
+    let type: ActivityEventType = 'comment';
+    if (isReview) type = 'review';
+    if (isProposal) type = 'proposal';
 
     return {
       id: `comment-${comment.id}`,
-      type: isReview ? ('review' as const) : ('comment' as const),
+      type,
       summary,
-      title: `#${comment.issueOrPrNumber}`,
+      title: isProposal ? comment.body : `#${comment.issueOrPrNumber}`,
       url: comment.url,
       actor: comment.author,
       createdAt: comment.createdAt,
@@ -140,8 +146,26 @@ function mapGitHubEvent(
       const payload = event.payload as {
         action?: string;
         issue?: { number: number; title: string; html_url: string };
+        label?: { name: string };
       };
       if (!payload.issue) return null;
+
+      if (
+        payload.action === 'labeled' &&
+        payload.label?.name.startsWith('phase:')
+      ) {
+        const phase = payload.label.name.replace('phase:', '');
+        return {
+          id: event.id,
+          type: 'proposal',
+          summary: 'Governance phase change',
+          title: `#${payload.issue.number} ${payload.issue.title} moved to ${phase} phase`,
+          url: payload.issue.html_url,
+          actor,
+          createdAt,
+        };
+      }
+
       return {
         id: event.id,
         type: 'issue',

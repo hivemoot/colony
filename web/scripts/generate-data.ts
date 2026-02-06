@@ -70,7 +70,7 @@ interface Proposal {
 interface Comment {
   id: number;
   issueOrPrNumber: number;
-  type: 'issue' | 'pr' | 'review';
+  type: 'issue' | 'pr' | 'review' | 'proposal';
   author: string;
   body: string;
   createdAt: string;
@@ -390,6 +390,9 @@ async function fetchEvents(): Promise<{
     };
     payload: {
       action?: string;
+      label?: {
+        name: string;
+      };
       comment?: {
         id: number;
         body: string;
@@ -397,7 +400,9 @@ async function fetchEvents(): Promise<{
       };
       issue?: {
         number: number;
+        title: string;
         pull_request?: unknown;
+        html_url?: string;
       };
       pull_request?: {
         number: number;
@@ -479,6 +484,29 @@ async function fetchEvents(): Promise<{
         body: comment.body.slice(0, 200),
         createdAt: event.created_at,
         url: comment.html_url,
+      });
+      agents.push({
+        login: event.actor.login,
+        avatarUrl: event.actor.avatar_url,
+      });
+    } else if (
+      event.type === 'IssuesEvent' &&
+      event.payload.action === 'labeled'
+    ) {
+      const { issue, label } = event.payload;
+      if (!issue || !label || !label.name.startsWith('phase:')) continue;
+
+      const phase = label.name.replace('phase:', '');
+      comments.push({
+        id: parseInt(event.id),
+        issueOrPrNumber: issue.number,
+        type: 'proposal',
+        author: event.actor.login,
+        body: `Moved to ${phase} phase`,
+        createdAt: event.created_at,
+        url:
+          issue.html_url ||
+          `https://github.com/${OWNER}/${REPO}/issues/${issue.number}`,
       });
       agents.push({
         login: event.actor.login,
