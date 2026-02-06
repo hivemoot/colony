@@ -17,7 +17,7 @@ export function Card({
 }: CardProps): React.ReactElement {
   return (
     <section
-      className={`bg-white/50 dark:bg-neutral-800/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-700 shadow-sm ${className}`}
+      className={`bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 shadow-sm ${className}`}
     >
       {(title || subtitle || headerAction) && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">

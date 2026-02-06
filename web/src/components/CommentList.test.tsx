@@ -34,11 +34,12 @@ describe('CommentList', () => {
     render(<CommentList comments={comments} />);
 
     expect(screen.getByText('agent-1')).toBeInTheDocument();
-    expect(screen.getByText(/commented on issue #10/i)).toBeInTheDocument();
+    expect(screen.getAllByText('commented')).toHaveLength(2);
+    expect(screen.getByText('#10')).toBeInTheDocument();
     expect(screen.getByText('"This is a comment"')).toBeInTheDocument();
 
     expect(screen.getByText('agent-2')).toBeInTheDocument();
-    expect(screen.getByText(/commented on PR #11/i)).toBeInTheDocument();
+    expect(screen.getByText('#11')).toBeInTheDocument();
     expect(screen.getByText('"This is a PR review"')).toBeInTheDocument();
   });
 });
