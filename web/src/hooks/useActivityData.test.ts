@@ -34,6 +34,7 @@ describe('useActivityData', () => {
   const mockFetch = vi.fn();
 
   beforeEach(() => {
+    mockFetch.mockClear();
     vi.stubGlobal('fetch', mockFetch);
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -374,5 +375,79 @@ describe('useActivityData', () => {
 
     unmount();
     expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it('should poll static data every 60 seconds', async () => {
+    vi.useFakeTimers();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
+
+    const { result } = renderHook(() => useActivityData());
+    
+    // Wait for initial fetch
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+    
+    expect(result.current.loading).toBe(false);
+    mockFetch.mockClear();
+
+    await act(async () => {
+      vi.advanceTimersByTime(60000);
+    });
+    
+    // Interval triggers another fetch
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+    expect(mockFetch).toHaveBeenCalled();
+  });
+
+  it('should cap exponential backoff at 5 minutes', async () => {
+    vi.useFakeTimers();
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout');
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockActivityData,
+    });
+
+    const { result } = renderHook(() => useActivityData());
+    
+    // Initial static fetch
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    // Trigger series of rate limits to increase backoff
+    mockFetch.mockResolvedValue({ ok: false, status: 403 });
+
+    await act(async () => {
+      result.current.setLiveEnabled(true);
+    });
+
+    // Run the initial live fetch
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    // Advance through failures to increase backoff
+    // Base 20s -> 40s -> 80s -> 160s -> 320s (capped at 300s)
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await vi.runOnlyPendingTimersAsync();
+      });
+    }
+
+    // Check setTimeout calls for the backoff
+    const delays = setTimeoutSpy.mock.calls.map((call) => call[1]);
+    expect(delays).toContain(300000); // LIVE_MAX_MS
+    expect(delays.every((d) => d === undefined || (d as number) <= 300000)).toBe(
+      true
+    );
   });
 });
