@@ -12,7 +12,7 @@ export function ProposalList({
 }: ProposalListProps): React.ReactElement {
   if (proposals.length === 0) {
     return (
-      <p className="text-sm text-amber-600 dark:text-amber-400 italic text-center py-4">
+      <p className="text-sm text-amber-600 dark:text-amber-400 italic">
         No active proposals
       </p>
     );
