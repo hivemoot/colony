@@ -29,7 +29,7 @@ export function CommitList({
             href={`${repoUrl}/commit/${commit.sha}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            className="group block transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
           >
             <code className="text-xs text-amber-700 dark:text-amber-300 font-mono group-hover:underline">
               {commit.sha}

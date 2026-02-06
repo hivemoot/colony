@@ -118,5 +118,9 @@ describe('CommitList', () => {
 
     const link = screen.getByRole('link');
     expect(link.className).toContain('focus-visible:ring-2');
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
   });
 });

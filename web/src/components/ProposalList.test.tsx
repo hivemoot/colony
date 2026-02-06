@@ -183,4 +183,26 @@ describe('ProposalList', () => {
     );
     expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
   });
+
+  it('includes focus indicators on link elements', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Test proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('focus-visible:ring-2');
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
+  });
 });
