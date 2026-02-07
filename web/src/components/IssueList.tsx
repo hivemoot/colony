@@ -1,4 +1,5 @@
 import type { Issue } from '../types/activity';
+import { handleAvatarError } from '../utils/avatar';
 
 interface IssueListProps {
   issues: Issue[];
@@ -61,6 +62,17 @@ export function IssueList({
                 ))}
               </div>
             )}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <img
+                src={`https://github.com/${issue.author}.png`}
+                alt={issue.author}
+                className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
+                onError={handleAvatarError}
+              />
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {issue.author}
+              </p>
+            </div>
           </a>
         </li>
       ))}
