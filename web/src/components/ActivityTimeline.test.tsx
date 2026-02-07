@@ -142,6 +142,28 @@ describe('ActivityTimeline', () => {
     expect(link.className).toContain('motion-safe:transition-colors');
   });
 
+  it('includes focus ring offset on event links', () => {
+    const events: ActivityEvent[] = [
+      {
+        id: 'commit-1',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Test commit',
+        url: 'https://github.com/hivemoot/colony/commit/abc123',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
+    render(<ActivityTimeline events={events} />);
+
+    const link = screen.getByRole('link', { name: 'Test commit' });
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
+  });
+
   it('renders event without link when url is not provided', () => {
     const events: ActivityEvent[] = [
       {

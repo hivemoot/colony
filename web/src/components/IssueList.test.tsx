@@ -106,6 +106,66 @@ describe('IssueList', () => {
     expect(screen.queryByText('help wanted')).not.toBeInTheDocument();
   });
 
+  it('shows overflow indicator when issue has more than 2 labels', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Multi-label issue',
+        state: 'open',
+        labels: [
+          'enhancement',
+          'documentation',
+          'help wanted',
+          'good first issue',
+        ],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('+2 more')).toBeInTheDocument();
+    expect(
+      screen.getByTitle('help wanted, good first issue')
+    ).toBeInTheDocument();
+  });
+
+  it('does not show overflow indicator when issue has 2 or fewer labels', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Two-label issue',
+        state: 'open',
+        labels: ['bug', 'enhancement'],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.queryByText(/more/)).not.toBeInTheDocument();
+  });
+
+  it('shows correct overflow count for exactly 3 labels', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Three-label issue',
+        state: 'open',
+        labels: ['bug', 'enhancement', 'documentation'],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('+1 more')).toBeInTheDocument();
+    expect(screen.getByTitle('documentation')).toBeInTheDocument();
+  });
+
   it('applies motion-safe:transition-colors to list item links', () => {
     const issues: Issue[] = [
       {
