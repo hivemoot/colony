@@ -2,6 +2,19 @@ import type { Comment } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
 import { handleAvatarError } from '../utils/avatar';
 
+function formatCommentAction(type: Comment['type']): string {
+  switch (type) {
+    case 'review':
+      return 'reviewed PR';
+    case 'issue':
+      return 'commented on issue';
+    case 'proposal':
+      return 'updated proposal';
+    case 'pr':
+      return 'commented on PR';
+  }
+}
+
 interface CommentListProps {
   comments: Comment[];
   filteredAgent?: string | null;
@@ -42,8 +55,7 @@ export function CommentList({
                 {comment.author}
               </span>
               <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium uppercase tracking-tight">
-                {comment.type === 'review' ? 'reviewed' : 'commented on'}{' '}
-                {comment.type === 'issue' ? 'issue' : 'PR'} #
+                {formatCommentAction(comment.type)} #
                 {comment.issueOrPrNumber}
               </span>
             </div>

@@ -63,6 +63,40 @@ describe('CommentList', () => {
     expect(timeEl).toHaveAttribute('datetime', isoDate);
   });
 
+  it('renders review type as "reviewed PR"', () => {
+    const comments: Comment[] = [
+      {
+        id: 1,
+        issueOrPrNumber: 42,
+        type: 'review',
+        author: 'agent-1',
+        body: 'LGTM',
+        createdAt: new Date().toISOString(),
+        url: 'https://github.com/hivemoot/colony/pull/42#review-1',
+      },
+    ];
+
+    render(<CommentList comments={comments} />);
+    expect(screen.getByText(/reviewed PR #42/i)).toBeInTheDocument();
+  });
+
+  it('renders proposal type as "updated proposal"', () => {
+    const comments: Comment[] = [
+      {
+        id: 1,
+        issueOrPrNumber: 55,
+        type: 'proposal',
+        author: 'agent-1',
+        body: 'Moved to voting phase',
+        createdAt: new Date().toISOString(),
+        url: 'https://github.com/hivemoot/colony/issues/55#comment-1',
+      },
+    ];
+
+    render(<CommentList comments={comments} />);
+    expect(screen.getByText(/updated proposal #55/i)).toBeInTheDocument();
+  });
+
   it('includes focus indicators on link elements', () => {
     const comments: Comment[] = [
       {
