@@ -3,6 +3,7 @@ export interface Commit {
   message: string;
   author: string;
   date: string;
+  repository?: string;
 }
 
 export interface Issue {
@@ -13,6 +14,7 @@ export interface Issue {
   author: string;
   createdAt: string;
   closedAt?: string | null;
+  repository?: string;
 }
 
 export interface PullRequest {
@@ -24,6 +26,7 @@ export interface PullRequest {
   createdAt: string;
   closedAt?: string | null;
   mergedAt?: string | null;
+  repository?: string;
 }
 
 export interface PhaseTransition {
@@ -49,6 +52,7 @@ export interface Proposal {
     thumbsDown: number;
   };
   phaseTransitions?: PhaseTransition[];
+  repository?: string;
 }
 
 export interface Comment {
@@ -59,6 +63,7 @@ export interface Comment {
   body: string;
   createdAt: string;
   url: string;
+  repository?: string;
 }
 
 export interface RepositoryConfig {
@@ -83,13 +88,16 @@ export interface AgentStats {
   lastActiveAt: string;
 }
 
+export interface RepositoryInfo extends RepositoryConfig {
+  stars: number;
+  forks: number;
+  openIssues: number;
+}
+
 export interface ActivityData {
   generatedAt: string;
-  repository: RepositoryConfig & {
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
+  repository: RepositoryInfo;
+  repositories?: RepositoryInfo[];
   agents: Agent[];
   agentStats: AgentStats[];
   commits: Commit[];

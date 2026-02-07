@@ -41,6 +41,7 @@ jobs:
         run: npm run generate-data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COLONY_REPOSITORIES: ${{ vars.COLONY_REPOSITORIES || '' }}
 
       - name: Build
         run: npm run build

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveRepository,
+  resolveRepositories,
   mapCommits,
   mapPullRequests,
   aggregateAgentStats,
@@ -44,6 +45,46 @@ describe('resolveRepository', () => {
 
   it('should throw on invalid format', () => {
     expect(() => resolveRepository({ COLONY_REPOSITORY: 'invalid' })).toThrow();
+  });
+});
+
+describe('resolveRepositories', () => {
+  it('should fall back to resolveRepository when COLONY_REPOSITORIES is not set', () => {
+    const result = resolveRepositories({});
+    expect(result).toEqual([{ owner: 'hivemoot', repo: 'colony' }]);
+  });
+
+  it('should parse a single repository from COLONY_REPOSITORIES', () => {
+    const result = resolveRepositories({
+      COLONY_REPOSITORIES: 'hivemoot/colony',
+    });
+    expect(result).toEqual([{ owner: 'hivemoot', repo: 'colony' }]);
+  });
+
+  it('should parse multiple comma-separated repositories', () => {
+    const result = resolveRepositories({
+      COLONY_REPOSITORIES: 'hivemoot/colony, hivemoot/hivemoot',
+    });
+    expect(result).toEqual([
+      { owner: 'hivemoot', repo: 'colony' },
+      { owner: 'hivemoot', repo: 'hivemoot' },
+    ]);
+  });
+
+  it('should trim whitespace around entries', () => {
+    const result = resolveRepositories({
+      COLONY_REPOSITORIES: '  org/repo1 , org/repo2 ',
+    });
+    expect(result).toEqual([
+      { owner: 'org', repo: 'repo1' },
+      { owner: 'org', repo: 'repo2' },
+    ]);
+  });
+
+  it('should throw on invalid format in COLONY_REPOSITORIES', () => {
+    expect(() =>
+      resolveRepositories({ COLONY_REPOSITORIES: 'valid/repo,invalid' })
+    ).toThrow('Invalid repository "invalid"');
   });
 });
 
