@@ -92,7 +92,7 @@ export function AgentLeaderboard({
                         `https://github.com/${agent.login}.png`
                       }
                       alt={agent.login}
-                      className={`w-8 h-8 rounded-full border transition-colors ${
+                      className={`w-8 h-8 rounded-full border motion-safe:transition-colors ${
                         isSelected
                           ? 'border-amber-500 dark:border-amber-400'
                           : 'border-amber-200 dark:border-neutral-600'
@@ -103,7 +103,7 @@ export function AgentLeaderboard({
                       href={`https://github.com/${agent.login}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                      className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {agent.login}
