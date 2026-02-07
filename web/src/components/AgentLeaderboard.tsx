@@ -103,7 +103,7 @@ export function AgentLeaderboard({
                       href={`https://github.com/${agent.login}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                      className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {agent.login}
