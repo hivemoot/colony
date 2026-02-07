@@ -1,5 +1,6 @@
 import type { Proposal } from '../types/activity';
 import { handleAvatarError } from '../utils/avatar';
+import { formatTimeAgo } from '../utils/time';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -52,6 +53,18 @@ export function ProposalList({
               <span className="text-xs text-amber-600 dark:text-amber-400">
                 @{proposal.author}
               </span>
+              <span
+                className="text-amber-400 dark:text-amber-500"
+                aria-hidden="true"
+              >
+                ·
+              </span>
+              <time
+                dateTime={proposal.createdAt}
+                className="text-[10px] text-amber-500 dark:text-amber-400"
+              >
+                {formatTimeAgo(new Date(proposal.createdAt))}
+              </time>
             </div>
             <div className="flex items-center gap-3">
               {proposal.votesSummary && (
