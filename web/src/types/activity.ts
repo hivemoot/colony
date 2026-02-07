@@ -34,7 +34,8 @@ export interface Proposal {
     | 'voting'
     | 'ready-to-implement'
     | 'implemented'
-    | 'rejected';
+    | 'rejected'
+    | 'inconclusive';
   author: string;
   createdAt: string;
   commentCount: number;
