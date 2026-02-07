@@ -44,6 +44,23 @@ export function ActivityFeed({
     ? events.filter((e) => e.actor === selectedAgent)
     : events;
 
+  const filteredCommits = data
+    ? filterByAuthor(data.commits, selectedAgent)
+    : [];
+  const filteredIssues = data
+    ? filterByAuthor(data.issues, selectedAgent)
+    : [];
+  const filteredPRs = data
+    ? filterByAuthor(data.pullRequests, selectedAgent)
+    : [];
+  const nonProposalComments = data
+    ? data.comments.filter((c) => c.type !== 'proposal')
+    : [];
+  const filteredComments = filterByAuthor(nonProposalComments, selectedAgent);
+  const filteredProposals = data
+    ? filterByAuthor(data.proposals, selectedAgent)
+    : [];
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
       <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
@@ -144,9 +161,14 @@ export function ActivityFeed({
               ⚖️
             </span>
             Governance Status
+            <SectionCount
+              filtered={filteredProposals.length}
+              total={data.proposals.length}
+              isFiltered={Boolean(selectedAgent)}
+            />
           </h2>
           <ProposalList
-            proposals={filterByAuthor(data.proposals, selectedAgent)}
+            proposals={filteredProposals}
             repoUrl={data.repository.url}
             filteredAgent={selectedAgent}
           />
@@ -161,9 +183,14 @@ export function ActivityFeed({
                 📝
               </span>
               Recent Commits
+              <SectionCount
+                filtered={filteredCommits.length}
+                total={data.commits.length}
+                isFiltered={Boolean(selectedAgent)}
+              />
             </h2>
             <CommitList
-              commits={filterByAuthor(data.commits, selectedAgent).slice(0, 5)}
+              commits={filteredCommits.slice(0, 5)}
               repoUrl={data.repository.url}
               filteredAgent={selectedAgent}
             />
@@ -175,9 +202,14 @@ export function ActivityFeed({
                 🎯
               </span>
               Issues
+              <SectionCount
+                filtered={filteredIssues.length}
+                total={data.issues.length}
+                isFiltered={Boolean(selectedAgent)}
+              />
             </h2>
             <IssueList
-              issues={filterByAuthor(data.issues, selectedAgent).slice(0, 5)}
+              issues={filteredIssues.slice(0, 5)}
               repoUrl={data.repository.url}
               filteredAgent={selectedAgent}
             />
@@ -189,12 +221,14 @@ export function ActivityFeed({
                 🔀
               </span>
               Pull Requests
+              <SectionCount
+                filtered={filteredPRs.length}
+                total={data.pullRequests.length}
+                isFiltered={Boolean(selectedAgent)}
+              />
             </h2>
             <PullRequestList
-              pullRequests={filterByAuthor(
-                data.pullRequests,
-                selectedAgent
-              ).slice(0, 5)}
+              pullRequests={filteredPRs.slice(0, 5)}
               repoUrl={data.repository.url}
               filteredAgent={selectedAgent}
             />
@@ -206,18 +240,39 @@ export function ActivityFeed({
                 💬
               </span>
               Discussion
+              <SectionCount
+                filtered={filteredComments.length}
+                total={nonProposalComments.length}
+                isFiltered={Boolean(selectedAgent)}
+              />
             </h2>
             <CommentList
-              comments={filterByAuthor(
-                data.comments.filter((c) => c.type !== 'proposal'),
-                selectedAgent
-              ).slice(0, 5)}
+              comments={filteredComments.slice(0, 5)}
               filteredAgent={selectedAgent}
             />
           </section>
         </div>
       )}
     </div>
+  );
+}
+
+function SectionCount({
+  filtered,
+  total,
+  isFiltered,
+}: {
+  filtered: number;
+  total: number;
+  isFiltered: boolean;
+}): React.ReactElement {
+  const label = isFiltered
+    ? `${filtered} of ${total}`
+    : `${total}`;
+  return (
+    <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+      ({label})
+    </span>
   );
 }
 
