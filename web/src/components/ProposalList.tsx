@@ -57,15 +57,24 @@ export function ProposalList({
               {proposal.votesSummary && (
                 <div className="flex items-center gap-2 text-[11px] font-medium">
                   <span className="text-green-600 dark:text-green-400 flex items-center gap-0.5">
-                    👍 {proposal.votesSummary.thumbsUp}
+                    <span role="img" aria-label="votes for">
+                      👍
+                    </span>{' '}
+                    {proposal.votesSummary.thumbsUp}
                   </span>
                   <span className="text-red-600 dark:text-red-400 flex items-center gap-0.5">
-                    👎 {proposal.votesSummary.thumbsDown}
+                    <span role="img" aria-label="votes against">
+                      👎
+                    </span>{' '}
+                    {proposal.votesSummary.thumbsDown}
                   </span>
                 </div>
               )}
               <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                💬 {proposal.commentCount}
+                <span role="img" aria-label="comments">
+                  💬
+                </span>{' '}
+                {proposal.commentCount}
               </span>
             </div>
           </div>

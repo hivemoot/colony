@@ -157,6 +157,26 @@ describe('ProposalList', () => {
     expect(screen.getByText('rejected')).toBeInTheDocument();
   });
 
+  it('renders vote and comment emojis with aria-labels', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Test',
+        phase: 'voting',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 5,
+        votesSummary: { thumbsUp: 3, thumbsDown: 1 },
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(screen.getByLabelText('votes for')).toBeInTheDocument();
+    expect(screen.getByLabelText('votes against')).toBeInTheDocument();
+    expect(screen.getByLabelText('comments')).toBeInTheDocument();
+  });
+
   it('renders "No proposals from {agent}" when filtered and empty', () => {
     render(
       <ProposalList proposals={[]} repoUrl={repoUrl} filteredAgent="worker" />
