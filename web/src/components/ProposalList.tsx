@@ -1,5 +1,6 @@
 import type { Proposal } from '../types/activity';
 import { handleAvatarError } from '../utils/avatar';
+import { formatDuration } from '../utils/time';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -36,7 +37,10 @@ export function ProposalList({
             <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
               #{proposal.number}
             </span>
-            <PhaseBadge phase={proposal.phase} />
+            <div className="flex items-center gap-1.5">
+              <LifecycleDuration proposal={proposal} />
+              <PhaseBadge phase={proposal.phase} />
+            </div>
           </div>
           <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 group-hover:text-amber-700 dark:group-hover:text-amber-200 mb-3 line-clamp-2">
             {proposal.title}
@@ -81,6 +85,33 @@ export function ProposalList({
         </a>
       ))}
     </div>
+  );
+}
+
+function LifecycleDuration({
+  proposal,
+}: {
+  proposal: Proposal;
+}): React.ReactElement | null {
+  const transitions = proposal.phaseTransitions;
+  if (!transitions || transitions.length < 2) return null;
+
+  const first = transitions[0].enteredAt;
+  const last = transitions[transitions.length - 1].enteredAt;
+  const duration = formatDuration(first, last);
+
+  if (!duration) return null;
+
+  return (
+    <span
+      className="text-[10px] text-amber-600 dark:text-amber-400 font-mono"
+      title={`Lifecycle: ${transitions.length} phases in ${duration}`}
+    >
+      <span role="img" aria-label="lifecycle duration">
+        ⏱
+      </span>{' '}
+      {duration}
+    </span>
   );
 }
 

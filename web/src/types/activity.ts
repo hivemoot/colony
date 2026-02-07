@@ -26,6 +26,11 @@ export interface PullRequest {
   mergedAt?: string | null;
 }
 
+export interface PhaseTransition {
+  phase: string;
+  enteredAt: string;
+}
+
 export interface Proposal {
   number: number;
   title: string;
@@ -43,6 +48,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: PhaseTransition[];
 }
 
 export interface Comment {

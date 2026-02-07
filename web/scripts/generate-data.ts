@@ -50,6 +50,11 @@ export interface PullRequest {
   mergedAt?: string;
 }
 
+export interface PhaseTransition {
+  phase: string;
+  enteredAt: string;
+}
+
 export interface Proposal {
   number: number;
   title: string;
@@ -67,6 +72,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: PhaseTransition[];
 }
 
 export interface Comment {
@@ -203,6 +209,12 @@ export interface GitHubEvent {
       state?: string;
     };
   };
+  created_at: string;
+}
+
+export interface GitHubTimelineEvent {
+  event: string;
+  label?: { name: string };
   created_at: string;
 }
 
@@ -468,6 +480,47 @@ async function fetchProposals(
     .slice(0, 20);
 }
 
+export function extractPhaseTransitions(
+  timelineEvents: GitHubTimelineEvent[]
+): PhaseTransition[] {
+  return timelineEvents
+    .filter(
+      (event) =>
+        event.event === 'labeled' && event.label?.name?.startsWith('phase:')
+    )
+    .map((event) => ({
+      phase: event.label?.name.replace('phase:', '') ?? '',
+      enteredAt: event.created_at,
+    }))
+    .sort(
+      (a, b) =>
+        new Date(a.enteredAt).getTime() - new Date(b.enteredAt).getTime()
+    );
+}
+
+async function fetchPhaseTransitions(
+  owner: string,
+  repo: string,
+  proposals: Proposal[]
+): Promise<void> {
+  await Promise.all(
+    proposals.map(async (proposal) => {
+      try {
+        const timeline = await fetchJson<GitHubTimelineEvent[]>(
+          `/repos/${owner}/${repo}/issues/${proposal.number}/timeline?per_page=100`
+        );
+
+        const transitions = extractPhaseTransitions(timeline);
+        if (transitions.length > 0) {
+          proposal.phaseTransitions = transitions;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch timeline for #${proposal.number}`, e);
+      }
+    })
+  );
+}
+
 export function mapEvents(
   ghEvents: GitHubEvent[],
   owner: string,
@@ -700,6 +753,7 @@ async function generateActivityData(): Promise<ActivityData> {
   const issues = issueResult.issues;
   const pullRequests = prResult.pullRequests;
   const proposals = await fetchProposals(owner, repo, issueResult.rawIssues);
+  await fetchPhaseTransitions(owner, repo, proposals);
   const comments = eventResult.comments;
 
   const openIssues = calculateOpenIssues(repoMetadata, pullRequests);

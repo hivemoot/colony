@@ -193,6 +193,70 @@ describe('ProposalList', () => {
     expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
   });
 
+  it('renders lifecycle duration when phaseTransitions span multiple phases', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Lifecycle proposal',
+        phase: 'implemented',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 5,
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T16:00:00Z' },
+          { phase: 'implemented', enteredAt: '2026-02-05T18:00:00Z' },
+        ],
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(screen.getByLabelText('lifecycle duration')).toBeInTheDocument();
+    expect(screen.getByText('4h')).toBeInTheDocument();
+  });
+
+  it('does not render lifecycle duration with fewer than 2 transitions', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Single phase proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
+        ],
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.queryByLabelText('lifecycle duration')
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not render lifecycle duration when phaseTransitions is absent', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'No transitions proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.queryByLabelText('lifecycle duration')
+    ).not.toBeInTheDocument();
+  });
+
   it('includes focus indicators on link elements', () => {
     const proposals: Proposal[] = [
       {
