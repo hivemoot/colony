@@ -6,6 +6,7 @@ export interface ProposalPipelineCounts {
   readyToImplement: number;
   implemented: number;
   rejected: number;
+  inconclusive: number;
   total: number;
 }
 
@@ -14,7 +15,8 @@ export type AgentRole = 'coder' | 'reviewer' | 'proposer' | 'discussant';
 export interface AgentRoleProfile {
   login: string;
   avatarUrl?: string;
-  primaryRole: AgentRole;
+  /** null when the agent has zero activity across all categories */
+  primaryRole: AgentRole | null;
   /** Scores normalized 0–1 within this agent's own activities */
   scores: Record<AgentRole, number>;
 }
@@ -70,6 +72,7 @@ export function computePipeline(proposals: Proposal[]): ProposalPipelineCounts {
     readyToImplement: 0,
     implemented: 0,
     rejected: 0,
+    inconclusive: 0,
     total: proposals.length,
   };
 
@@ -89,6 +92,9 @@ export function computePipeline(proposals: Proposal[]): ProposalPipelineCounts {
         break;
       case 'rejected':
         counts.rejected++;
+        break;
+      case 'inconclusive':
+        counts.inconclusive++;
         break;
     }
   }
@@ -119,13 +125,13 @@ export function computeAgentRoles(
     const proposerScore = proposalCounts.get(agent.login) ?? 0;
     const discussantScore = agent.comments;
 
-    const maxScore = Math.max(
+    const rawMax = Math.max(
       coderScore,
       reviewerScore,
       proposerScore,
-      discussantScore,
-      1 // avoid division by zero
+      discussantScore
     );
+    const maxScore = Math.max(rawMax, 1); // avoid division by zero
 
     const scores: Record<AgentRole, number> = {
       coder: coderScore / maxScore,
@@ -134,12 +140,13 @@ export function computeAgentRoles(
       discussant: discussantScore / maxScore,
     };
 
-    // Primary role is the highest-scoring category
-    const primaryRole = (
-      Object.entries(scores) as Array<[AgentRole, number]>
-    ).reduce((best, [role, score]) =>
-      score > best[1] ? [role, score] : best
-    )[0] as AgentRole;
+    // Agents with zero activity across all categories have no meaningful role
+    const primaryRole: AgentRole | null =
+      rawMax === 0
+        ? null
+        : ((Object.entries(scores) as Array<[AgentRole, number]>).reduce(
+            (best, [role, score]) => (score > best[1] ? [role, score] : best)
+          )[0] as AgentRole);
 
     return {
       login: agent.login,

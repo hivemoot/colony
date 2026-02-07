@@ -63,6 +63,7 @@ describe('computePipeline', () => {
       readyToImplement: 0,
       implemented: 0,
       rejected: 0,
+      inconclusive: 0,
       total: 0,
     });
   });
@@ -77,6 +78,7 @@ describe('computePipeline', () => {
       makeProposal({ number: 6, phase: 'implemented' }),
       makeProposal({ number: 7, phase: 'implemented' }),
       makeProposal({ number: 8, phase: 'rejected' }),
+      makeProposal({ number: 9, phase: 'inconclusive' }),
     ];
 
     const result = computePipeline(proposals);
@@ -86,7 +88,8 @@ describe('computePipeline', () => {
       readyToImplement: 1,
       implemented: 3,
       rejected: 1,
-      total: 8,
+      inconclusive: 1,
+      total: 9,
     });
   });
 
@@ -181,7 +184,8 @@ describe('computeAgentRoles', () => {
     const stats = [makeAgentStats({ login: 'idle-bot' })];
     const result = computeAgentRoles(stats, []);
 
-    // All scores should be 0, primary role defaults to first max (coder at 0)
+    // All scores should be 0, primary role is null (no meaningful classification)
+    expect(result[0].primaryRole).toBeNull();
     expect(result[0].scores.coder).toBe(0);
     expect(result[0].scores.reviewer).toBe(0);
     expect(result[0].scores.proposer).toBe(0);

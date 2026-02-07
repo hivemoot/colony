@@ -104,6 +104,10 @@ const PHASE_COLORS: Record<
     bg: 'bg-red-400 dark:bg-red-500',
     label: 'Rejected',
   },
+  inconclusive: {
+    bg: 'bg-orange-300 dark:bg-orange-500',
+    label: 'Inconclusive',
+  },
 };
 
 function ProposalPipeline({
@@ -214,7 +218,9 @@ function AgentRoleBar({
   agent: AgentRoleProfile;
 }): React.ReactElement {
   const totalScore = Object.values(agent.scores).reduce((a, b) => a + b, 0);
-  const roleLabel = ROLE_CONFIG[agent.primaryRole].label;
+  const roleLabel = agent.primaryRole
+    ? ROLE_CONFIG[agent.primaryRole].label
+    : 'Inactive';
 
   return (
     <div className="flex items-center gap-3">

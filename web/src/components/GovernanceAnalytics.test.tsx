@@ -121,6 +121,56 @@ describe('GovernanceAnalytics', () => {
     expect(screen.getByText('Implemented')).toBeInTheDocument();
   });
 
+  it('renders inconclusive proposals in the pipeline', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'A',
+          phase: 'inconclusive',
+          author: 'bot',
+          createdAt: '2026-02-05T09:00:00Z',
+          commentCount: 3,
+        },
+        {
+          number: 2,
+          title: 'B',
+          phase: 'discussion',
+          author: 'bot',
+          createdAt: '2026-02-05T08:00:00Z',
+          commentCount: 1,
+        },
+      ],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    expect(screen.getByText('Inconclusive')).toBeInTheDocument();
+    expect(screen.getByText('Discussion')).toBeInTheDocument();
+  });
+
+  it('shows Inactive label for agents with zero activity', () => {
+    const data = makeData({
+      agentStats: [
+        {
+          login: 'idle-bot',
+          commits: 0,
+          pullRequestsMerged: 0,
+          issuesOpened: 0,
+          reviews: 0,
+          comments: 0,
+          lastActiveAt: '2026-02-05T09:00:00Z',
+        },
+      ],
+      proposals: [],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    expect(screen.getByText('idle-bot')).toBeInTheDocument();
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+  });
+
   it('renders pipeline with aria-label for accessibility', () => {
     const data = makeData({
       proposals: [
