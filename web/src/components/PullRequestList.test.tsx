@@ -89,6 +89,27 @@ describe('PullRequestList', () => {
     expect(link.className).toContain('transition-colors');
   });
 
+  it('includes focus indicators on link elements', () => {
+    const prs: PullRequest[] = [
+      {
+        number: 1,
+        title: 'New feature',
+        state: 'open',
+        author: 'worker',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    render(<PullRequestList pullRequests={prs} repoUrl={REPO_URL} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('focus-visible:ring-2');
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
+  });
+
   it('does not render draft badge when PR is not a draft', () => {
     render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
     expect(screen.queryByText('draft')).not.toBeInTheDocument();

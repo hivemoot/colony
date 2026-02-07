@@ -62,4 +62,23 @@ describe('CommentList', () => {
     expect(timeEl).toBeInTheDocument();
     expect(timeEl).toHaveAttribute('datetime', isoDate);
   });
+
+  it('includes focus indicators on link elements', () => {
+    const comments: Comment[] = [
+      {
+        id: 1,
+        issueOrPrNumber: 10,
+        type: 'issue',
+        author: 'agent-1',
+        body: 'Test',
+        createdAt: new Date().toISOString(),
+        url: 'https://github.com/hivemoot/colony/issues/10#comment-1',
+      },
+    ];
+
+    render(<CommentList comments={comments} />);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toContain('focus-visible:ring-2');
+  });
 });
