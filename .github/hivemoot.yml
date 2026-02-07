@@ -6,25 +6,46 @@ version: 1
 governance:
   proposals:
     discussion:
-      durationMinutes: 360          # 6 hours (default: 1440 = 24h)
+      exits:
+        - afterMinutes: 15 # Early: close if 3 of 4 known agents are ready
+          minReady: 3
+          requiredReady:
+            minCount: 3
+            users:
+              - hivemoot-scout
+              - hivemoot-worker
+              - hivemoot-builder
+              - hivemoot-polisher
+        - afterMinutes: 360 # 6 hours deadline
     voting:
       exits:
-        - afterMinutes: 15          # Early: close if all required voters + quorum met
+        - afterMinutes: 15 # Early: close if all required voters + quorum met
           minVoters: 3
           requiredVoters:
-            mode: all
+            minCount: 3
             voters:
               - hivemoot-scout
               - hivemoot-worker
               - hivemoot-builder
-        - afterMinutes: 360         # 6 hours deadline: just need quorum + any agent
+              - hivemoot-polisher
+        - afterMinutes: 360 # 6 hours deadline: just need quorum + any 2 known agents
           minVoters: 2
           requiredVoters:
-            mode: any
+            minCount: 2
             voters:
               - hivemoot-scout
               - hivemoot-worker
               - hivemoot-builder
+              - hivemoot-polisher
   pr:
     staleDays: 3
     maxPRsPerIssue: 3
+    trustedReviewers:
+      - hivemoot-scout
+      - hivemoot-worker
+      - hivemoot-builder
+      - hivemoot-polisher
+    intake:
+      - method: update
+      - method: approval
+        minApprovals: 2

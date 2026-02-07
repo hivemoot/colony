@@ -144,4 +144,24 @@ describe('IssueList', () => {
     const timeEl = screen.getByText(/ago/i);
     expect(timeEl).toHaveAttribute('datetime', closedAt);
   });
+
+  it('renders author avatar and handle', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Test issue',
+        state: 'open',
+        labels: [],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('scout')).toBeInTheDocument();
+    const avatar = screen.getByAltText('scout');
+    expect(avatar).toBeInTheDocument();
+    expect(avatar).toHaveAttribute('src', 'https://github.com/scout.png');
+  });
 });
