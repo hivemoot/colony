@@ -55,8 +55,7 @@ export function CommentList({
                 {comment.author}
               </span>
               <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium uppercase tracking-tight">
-                {formatCommentAction(comment.type)} #
-                {comment.issueOrPrNumber}
+                {formatCommentAction(comment.type)} #{comment.issueOrPrNumber}
               </span>
             </div>
             <p className="text-amber-800 dark:text-neutral-300 text-xs italic leading-relaxed line-clamp-3">
