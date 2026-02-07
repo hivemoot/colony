@@ -6,8 +6,10 @@ import {
   aggregateAgentStats,
   calculateOpenIssues,
   deduplicateAgents,
+  extractPhaseTransitions,
   type GitHubCommit,
   type GitHubRepo,
+  type GitHubTimelineEvent,
   type PullRequest,
   type GitHubPR,
   type Commit,
@@ -203,5 +205,62 @@ describe('aggregateAgentStats', () => {
     // Should be sorted by lastActiveAt descending
     expect(result[0].login).toBe('user1');
     expect(result[1].login).toBe('user2');
+  });
+});
+
+describe('extractPhaseTransitions', () => {
+  it('should extract phase transitions from labeled events', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'phase:discussion' },
+        created_at: '2026-02-06T14:00:00Z',
+      },
+      {
+        event: 'commented',
+        created_at: '2026-02-06T15:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'phase:voting' },
+        created_at: '2026-02-06T16:30:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'priority:high' },
+        created_at: '2026-02-06T16:45:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'phase:ready-to-implement' },
+        created_at: '2026-02-06T17:00:00Z',
+      },
+    ];
+
+    const result = extractPhaseTransitions(timeline);
+
+    expect(result).toEqual([
+      { phase: 'discussion', enteredAt: '2026-02-06T14:00:00Z' },
+      { phase: 'voting', enteredAt: '2026-02-06T16:30:00Z' },
+      { phase: 'ready-to-implement', enteredAt: '2026-02-06T17:00:00Z' },
+    ]);
+  });
+
+  it('should return empty array when no phase labels exist', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      { event: 'commented', created_at: '2026-02-06T14:00:00Z' },
+      {
+        event: 'labeled',
+        label: { name: 'bug' },
+        created_at: '2026-02-06T15:00:00Z',
+      },
+    ];
+
+    const result = extractPhaseTransitions(timeline);
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty array for empty timeline', () => {
+    expect(extractPhaseTransitions([])).toEqual([]);
   });
 });

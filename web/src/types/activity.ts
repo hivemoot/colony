@@ -42,6 +42,10 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: {
+    phase: string;
+    enteredAt: string;
+  }[];
 }
 
 export interface Comment {

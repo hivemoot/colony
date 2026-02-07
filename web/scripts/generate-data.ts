@@ -66,6 +66,10 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: {
+    phase: string;
+    enteredAt: string;
+  }[];
 }
 
 export interface Comment {
@@ -202,6 +206,12 @@ export interface GitHubEvent {
       state?: string;
     };
   };
+  created_at: string;
+}
+
+export interface GitHubTimelineEvent {
+  event: string;
+  label?: { name: string };
   created_at: string;
 }
 
@@ -416,11 +426,12 @@ async function fetchProposals(
     });
   }
 
-  // Fetch votes in parallel for all voting-phase proposals
+  // Fetch votes and phase transitions in parallel
   const votingProposals = proposals.filter((p) => p.phase === 'voting');
 
-  await Promise.all(
-    votingProposals.map(async (proposal) => {
+  await Promise.all([
+    // Fetch votes for voting-phase proposals
+    ...votingProposals.map(async (proposal) => {
       try {
         const comments = await fetchJson<GitHubComment[]>(
           `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
@@ -444,8 +455,25 @@ async function fetchProposals(
           e
         );
       }
-    })
-  );
+    }),
+    // Fetch phase transition timestamps for all proposals
+    ...proposals.map(async (proposal) => {
+      try {
+        const timeline = await fetchJson<GitHubTimelineEvent[]>(
+          `/repos/${owner}/${repo}/issues/${proposal.number}/timeline?per_page=100`
+        );
+        const transitions = extractPhaseTransitions(timeline);
+        if (transitions.length > 0) {
+          proposal.phaseTransitions = transitions;
+        }
+      } catch (e) {
+        console.warn(
+          `Failed to fetch timeline for #${proposal.number}`,
+          e
+        );
+      }
+    }),
+  ]);
 
   return proposals
     .sort(
@@ -453,6 +481,21 @@ async function fetchProposals(
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
     .slice(0, 10);
+}
+
+export function extractPhaseTransitions(
+  timeline: GitHubTimelineEvent[]
+): { phase: string; enteredAt: string }[] {
+  return timeline
+    .filter(
+      (event) =>
+        event.event === 'labeled' &&
+        event.label?.name?.startsWith('phase:')
+    )
+    .map((event) => ({
+      phase: event.label!.name.replace('phase:', ''),
+      enteredAt: event.created_at,
+    }));
 }
 
 export function mapEvents(
