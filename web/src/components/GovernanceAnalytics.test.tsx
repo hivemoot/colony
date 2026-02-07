@@ -173,9 +173,7 @@ describe('GovernanceAnalytics', () => {
 
     render(<GovernanceAnalytics data={data} />);
 
-    expect(
-      screen.queryByText('Agent Specializations')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Agent Specializations')).not.toBeInTheDocument();
   });
 
   it('renders top proposers section', () => {

@@ -32,9 +32,7 @@ function makeAgentStats(overrides: Partial<AgentStats> = {}): AgentStats {
   };
 }
 
-function makeActivityData(
-  overrides: Partial<ActivityData> = {}
-): ActivityData {
+function makeActivityData(overrides: Partial<ActivityData> = {}): ActivityData {
   return {
     generatedAt: '2026-02-05T10:00:00Z',
     repository: {
@@ -319,7 +317,11 @@ describe('computeGovernanceMetrics', () => {
         makeProposal({ number: 3, phase: 'discussion', author: 'scout' }),
       ],
       agentStats: [
-        makeAgentStats({ login: 'builder', commits: 20, pullRequestsMerged: 5 }),
+        makeAgentStats({
+          login: 'builder',
+          commits: 20,
+          pullRequestsMerged: 5,
+        }),
         makeAgentStats({ login: 'scout', reviews: 15 }),
       ],
     });

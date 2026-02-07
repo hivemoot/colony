@@ -63,9 +63,7 @@ export function computeGovernanceMetrics(
   };
 }
 
-export function computePipeline(
-  proposals: Proposal[]
-): ProposalPipelineCounts {
+export function computePipeline(proposals: Proposal[]): ProposalPipelineCounts {
   const counts: ProposalPipelineCounts = {
     discussion: 0,
     voting: 0,

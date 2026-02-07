@@ -47,7 +47,10 @@ function SummaryCards({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <StatCard label="Total Proposals" value={String(metrics.totalProposals)} />
+      <StatCard
+        label="Total Proposals"
+        value={String(metrics.totalProposals)}
+      />
       <StatCard label="Success Rate" value={successDisplay} />
       <StatCard label="Active Now" value={String(metrics.activeProposals)} />
       <StatCard
@@ -217,9 +220,7 @@ function AgentRoleBar({
     <div className="flex items-center gap-3">
       <div className="flex items-center gap-1.5 w-36 min-w-0 shrink-0">
         <img
-          src={
-            agent.avatarUrl ?? `https://github.com/${agent.login}.png`
-          }
+          src={agent.avatarUrl ?? `https://github.com/${agent.login}.png`}
           alt={agent.login}
           className="w-5 h-5 rounded-full border border-amber-200 dark:border-neutral-600"
           onError={handleAvatarError}
