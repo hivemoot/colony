@@ -416,8 +416,19 @@ async function fetchProposals(
     });
   }
 
-  // Fetch votes in parallel for all voting-phase proposals
-  const votingProposals = proposals.filter((p) => p.phase === 'voting');
+  // Fetch votes for all proposals that have been through a voting round.
+  // The Queen's voting comment persists after phase transitions, so we can
+  // retrieve tallies for proposals that already passed or failed voting.
+  const votablePhases: readonly string[] = [
+    'voting',
+    'ready-to-implement',
+    'implemented',
+    'rejected',
+    'inconclusive',
+  ];
+  const votingProposals = proposals.filter((p) =>
+    votablePhases.includes(p.phase)
+  );
 
   await Promise.all(
     votingProposals.map(async (proposal) => {
