@@ -3,6 +3,7 @@ import type {
   ActivityEvent,
   ActivityMode,
 } from '../types/activity';
+import { ActivityHeatmap } from './ActivityHeatmap';
 import { ActivityTimeline } from './ActivityTimeline';
 import { CommitList } from './CommitList';
 import { IssueList } from './IssueList';
@@ -113,6 +114,18 @@ export function ActivityFeed({
           <ActivityTimeline events={filteredEvents} />
         </div>
       </section>
+
+      {data && (
+        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+            <span role="img" aria-label="calendar">
+              📅
+            </span>
+            Activity Heatmap
+          </h2>
+          <ActivityHeatmap data={data} selectedAgent={selectedAgent} />
+        </section>
+      )}
 
       {data && (
         <section
