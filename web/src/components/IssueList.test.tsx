@@ -106,7 +106,7 @@ describe('IssueList', () => {
     expect(screen.queryByText('help wanted')).not.toBeInTheDocument();
   });
 
-  it('applies transition-colors to list item links', () => {
+  it('applies motion-safe:transition-colors to list item links', () => {
     const issues: Issue[] = [
       {
         number: 1,
@@ -121,6 +121,6 @@ describe('IssueList', () => {
     render(<IssueList issues={issues} repoUrl={repoUrl} />);
 
     const link = screen.getByRole('link');
-    expect(link.className).toContain('transition-colors');
+    expect(link.className).toContain('motion-safe:transition-colors');
   });
 });

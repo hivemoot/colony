@@ -29,7 +29,7 @@ export function CommentList({
             href={comment.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block bg-amber-50/30 dark:bg-neutral-800/30 rounded p-2.5 border border-amber-100/50 dark:border-neutral-700/50 hover:border-amber-300 dark:hover:border-neutral-500 transition-colors"
+            className="group block bg-amber-50/30 dark:bg-neutral-800/30 rounded p-2.5 border border-amber-100/50 dark:border-neutral-700/50 hover:border-amber-300 dark:hover:border-neutral-500 motion-safe:transition-colors"
           >
             <div className="flex items-center gap-1.5 mb-2">
               <img

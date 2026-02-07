@@ -83,10 +83,10 @@ describe('PullRequestList', () => {
     expect(badge.className).not.toContain('bg-gray-');
   });
 
-  it('applies transition-colors to list item links', () => {
+  it('applies motion-safe:transition-colors to list item links', () => {
     render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
     const link = screen.getByRole('link');
-    expect(link.className).toContain('transition-colors');
+    expect(link.className).toContain('motion-safe:transition-colors');
   });
 
   it('does not render draft badge when PR is not a draft', () => {

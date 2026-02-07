@@ -27,7 +27,7 @@ export function IssueList({
             href={`${repoUrl}/issues/${issue.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block transition-colors"
+            className="group block motion-safe:transition-colors"
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-amber-700 dark:text-amber-300">
