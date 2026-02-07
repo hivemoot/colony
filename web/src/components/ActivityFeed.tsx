@@ -47,9 +47,7 @@ export function ActivityFeed({
   const filteredCommits = data
     ? filterByAuthor(data.commits, selectedAgent)
     : [];
-  const filteredIssues = data
-    ? filterByAuthor(data.issues, selectedAgent)
-    : [];
+  const filteredIssues = data ? filterByAuthor(data.issues, selectedAgent) : [];
   const filteredPRs = data
     ? filterByAuthor(data.pullRequests, selectedAgent)
     : [];
@@ -266,9 +264,7 @@ function SectionCount({
   total: number;
   isFiltered: boolean;
 }): React.ReactElement {
-  const label = isFiltered
-    ? `${filtered} of ${total}`
-    : `${total}`;
+  const label = isFiltered ? `${filtered} of ${total}` : `${total}`;
   return (
     <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
       ({label})
