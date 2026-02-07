@@ -20,6 +20,7 @@ const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
+const DEFAULT_REPOSITORIES = ['hivemoot/colony', 'hivemoot/hivemoot'];
 
 // Data types matching the schema from Issue #3 and #13 discussion
 export interface Commit {
@@ -27,6 +28,7 @@ export interface Commit {
   message: string;
   author: string;
   date: string;
+  repository?: string;
 }
 
 export interface Issue {
@@ -37,6 +39,7 @@ export interface Issue {
   author: string;
   createdAt: string;
   closedAt?: string;
+  repository?: string;
 }
 
 export interface PullRequest {
@@ -48,6 +51,7 @@ export interface PullRequest {
   createdAt: string;
   closedAt?: string;
   mergedAt?: string;
+  repository?: string;
 }
 
 export interface Proposal {
@@ -66,6 +70,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  repository?: string;
 }
 
 export interface Comment {
@@ -76,6 +81,16 @@ export interface Comment {
   body: string;
   createdAt: string;
   url: string;
+  repository?: string;
+}
+
+export interface RepositoryInfo {
+  owner: string;
+  name: string;
+  url: string;
+  stars: number;
+  forks: number;
+  openIssues: number;
 }
 
 export interface Agent {
@@ -96,14 +111,8 @@ export interface AgentStats {
 
 export interface ActivityData {
   generatedAt: string;
-  repository: {
-    owner: string;
-    name: string;
-    url: string;
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
+  repository: RepositoryInfo;
+  repositories?: RepositoryInfo[];
   agents: Agent[];
   agentStats: AgentStats[];
   commits: Commit[];
@@ -250,7 +259,39 @@ export function resolveRepository(env = process.env): {
   return { owner, repo };
 }
 
-export function mapCommits(ghCommits: GitHubCommit[]): {
+/**
+ * Resolve the list of repositories to track.
+ *
+ * COLONY_REPOSITORIES (comma-separated) takes priority, then falls back
+ * to the default list. Each entry must be "owner/repo" format.
+ */
+export function resolveRepositories(
+  env = process.env
+): Array<{ owner: string; repo: string }> {
+  const raw = env.COLONY_REPOSITORIES;
+
+  const entries = raw
+    ? raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : DEFAULT_REPOSITORIES;
+
+  return entries.map((entry) => {
+    const [owner, repo] = entry.split('/');
+    if (!owner || !repo) {
+      throw new Error(
+        `Invalid repository "${entry}". Expected format "owner/repo".`
+      );
+    }
+    return { owner, repo };
+  });
+}
+
+export function mapCommits(
+  ghCommits: GitHubCommit[],
+  repoSlug?: string
+): {
   commits: Commit[];
   agents: Agent[];
 } {
@@ -259,6 +300,7 @@ export function mapCommits(ghCommits: GitHubCommit[]): {
     message: c.commit.message.split('\n')[0],
     author: c.author?.login ?? c.commit.author.name,
     date: c.commit.author.date,
+    ...(repoSlug ? { repository: repoSlug } : {}),
   }));
 
   const agents: Agent[] = ghCommits
@@ -283,7 +325,10 @@ async function fetchCommits(
   return mapCommits(ghCommits);
 }
 
-export function mapIssues(ghIssues: GitHubIssue[]): {
+export function mapIssues(
+  ghIssues: GitHubIssue[],
+  repoSlug?: string
+): {
   issues: Issue[];
   rawIssues: GitHubIssue[];
 } {
@@ -304,6 +349,7 @@ export function mapIssues(ghIssues: GitHubIssue[]): {
     author: i.user.login,
     createdAt: i.created_at,
     ...(i.closed_at ? { closedAt: i.closed_at } : {}),
+    ...(repoSlug ? { repository: repoSlug } : {}),
   }));
 
   return { issues, rawIssues: allIssues };
@@ -329,7 +375,10 @@ async function fetchIssues(
   return mapIssues([...openIssues, ...closedIssues]);
 }
 
-export function mapPullRequests(ghPRs: GitHubPR[]): {
+export function mapPullRequests(
+  ghPRs: GitHubPR[],
+  repoSlug?: string
+): {
   pullRequests: PullRequest[];
   agents: Agent[];
 } {
@@ -349,6 +398,7 @@ export function mapPullRequests(ghPRs: GitHubPR[]): {
     createdAt: pr.created_at,
     ...(pr.merged_at ? { mergedAt: pr.merged_at } : {}),
     ...(pr.closed_at ? { closedAt: pr.closed_at } : {}),
+    ...(repoSlug ? { repository: repoSlug } : {}),
   }));
 
   const agents: Agent[] = allPRs.map((pr) => ({
@@ -382,7 +432,8 @@ async function fetchPullRequests(
 async function fetchProposals(
   owner: string,
   repo: string,
-  rawIssues: GitHubIssue[]
+  rawIssues: GitHubIssue[],
+  repoSlug?: string
 ): Promise<Proposal[]> {
   const proposalIssues = rawIssues.filter((i) =>
     i.labels.some((l) => l.name.startsWith('phase:'))
@@ -413,6 +464,7 @@ async function fetchProposals(
       author: i.user.login,
       createdAt: i.created_at,
       commentCount: i.comments,
+      ...(repoSlug ? { repository: repoSlug } : {}),
     });
   }
 
@@ -458,13 +510,15 @@ async function fetchProposals(
 export function mapEvents(
   ghEvents: GitHubEvent[],
   owner: string,
-  repo: string
+  repo: string,
+  repoSlug?: string
 ): {
   comments: Comment[];
   agents: Agent[];
 } {
   const comments: Comment[] = [];
   const agents: Agent[] = [];
+  const repoTag = repoSlug ? { repository: repoSlug } : {};
 
   for (const event of ghEvents) {
     if (
@@ -481,6 +535,7 @@ export function mapEvents(
         body: comment.body.slice(0, 200),
         createdAt: event.created_at,
         url: comment.html_url,
+        ...repoTag,
       });
       agents.push({
         login: event.actor.login,
@@ -507,6 +562,7 @@ export function mapEvents(
         body,
         createdAt: event.created_at,
         url: review.html_url,
+        ...repoTag,
       });
       agents.push({
         login: event.actor.login,
@@ -526,6 +582,7 @@ export function mapEvents(
         body: comment.body.slice(0, 200),
         createdAt: event.created_at,
         url: comment.html_url,
+        ...repoTag,
       });
       agents.push({
         login: event.actor.login,
@@ -549,6 +606,7 @@ export function mapEvents(
         url:
           issue.html_url ||
           `https://github.com/${owner}/${repo}/issues/${issue.number}`,
+        ...repoTag,
       });
       agents.push({
         login: event.actor.login,
@@ -670,9 +728,24 @@ export function aggregateAgentStats(
   });
 }
 
-async function generateActivityData(): Promise<ActivityData> {
-  const { owner, repo } = resolveRepository();
-  console.log(`Fetching activity for ${owner}/${repo}...`);
+/**
+ * Fetch all activity data for a single repository and tag each
+ * entity with the repo slug (owner/name).
+ */
+async function fetchRepoActivity(
+  owner: string,
+  repo: string
+): Promise<{
+  repoInfo: RepositoryInfo;
+  commits: Commit[];
+  issues: Issue[];
+  pullRequests: PullRequest[];
+  proposals: Proposal[];
+  comments: Comment[];
+  agents: Agent[];
+}> {
+  const slug = `${owner}/${repo}`;
+  console.log(`Fetching activity for ${slug}...`);
 
   const [repoMetadata, commitResult, issueResult, prResult, eventResult] =
     await Promise.all([
@@ -683,53 +756,129 @@ async function generateActivityData(): Promise<ActivityData> {
       fetchEvents(owner, repo),
     ]);
 
-  const commits = commitResult.commits;
-  const issues = issueResult.issues;
-  const pullRequests = prResult.pullRequests;
-  const proposals = await fetchProposals(owner, repo, issueResult.rawIssues);
-  const comments = eventResult.comments;
+  // Tag entities with repository slug
+  const taggedCommits = commitResult.commits.map((c) => ({
+    ...c,
+    repository: slug,
+  }));
+  const taggedIssues = issueResult.issues.map((i) => ({
+    ...i,
+    repository: slug,
+  }));
+  const prMapped = prResult.pullRequests.map((pr) => ({
+    ...pr,
+    repository: slug,
+  }));
+  const proposals = await fetchProposals(
+    owner,
+    repo,
+    issueResult.rawIssues,
+    slug
+  );
+  const taggedComments = eventResult.comments.map((c) => ({
+    ...c,
+    repository: slug,
+  }));
 
-  const openIssues = calculateOpenIssues(repoMetadata, pullRequests);
+  const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
 
-  const allAgents = [
+  const repoInfo: RepositoryInfo = {
+    owner,
+    name: repo,
+    url: `https://github.com/${owner}/${repo}`,
+    stars: repoMetadata.stargazers_count,
+    forks: repoMetadata.forks_count,
+    openIssues,
+  };
+
+  const agents = [
     ...commitResult.agents,
     ...prResult.agents,
     ...eventResult.agents,
   ];
-  const agents = deduplicateAgents(allAgents);
+
+  console.log(
+    `  ${slug}: ${taggedCommits.length} commits, ${taggedIssues.length} issues, ${prMapped.length} PRs, ${proposals.length} proposals, ${taggedComments.length} comments`
+  );
+
+  return {
+    repoInfo,
+    commits: taggedCommits,
+    issues: taggedIssues,
+    pullRequests: prMapped,
+    proposals,
+    comments: taggedComments,
+    agents,
+  };
+}
+
+async function generateActivityData(): Promise<ActivityData> {
+  const repos = resolveRepositories();
+  const multiRepo = repos.length > 1;
+
+  // Fetch all repos in parallel
+  const repoResults = await Promise.all(
+    repos.map((r) => fetchRepoActivity(r.owner, r.repo))
+  );
+
+  // Merge results across repos
+  const allCommits = repoResults.flatMap((r) => r.commits);
+  const allIssues = repoResults.flatMap((r) => r.issues);
+  const allPRs = repoResults.flatMap((r) => r.pullRequests);
+  const allProposals = repoResults.flatMap((r) => r.proposals);
+  const allComments = repoResults.flatMap((r) => r.comments);
+  const allAgentSources = repoResults.flatMap((r) => r.agents);
+  const allRepoInfos = repoResults.map((r) => r.repoInfo);
+
+  // Sort merged arrays by date descending
+  allCommits.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  allIssues.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  allPRs.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  allProposals.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  allComments.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const agents = deduplicateAgents(allAgentSources);
 
   const agentMap = new Map<string, Agent>();
   agents.forEach((a) => agentMap.set(a.login, a));
 
+  // Agent stats are aggregated across all repos
   const agentStats = aggregateAgentStats(
-    commits,
-    issues,
-    pullRequests,
-    comments,
+    allCommits,
+    allIssues,
+    allPRs,
+    allComments,
     agentMap
   );
 
   console.log(
-    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${proposals.length} proposals, ${comments.length} comments, ${agents.length} agents`
+    `Total: ${allCommits.length} commits, ${allIssues.length} issues, ${allPRs.length} PRs, ${allProposals.length} proposals, ${allComments.length} comments, ${agents.length} agents across ${repos.length} repos`
   );
+
+  // Primary repository is the first in the list
+  const primaryRepo = allRepoInfos[0];
 
   return {
     generatedAt: new Date().toISOString(),
-    repository: {
-      owner: owner,
-      name: repo,
-      url: `https://github.com/${owner}/${repo}`,
-      stars: repoMetadata.stargazers_count,
-      forks: repoMetadata.forks_count,
-      openIssues,
-    },
+    repository: primaryRepo,
+    ...(multiRepo ? { repositories: allRepoInfos } : {}),
     agents,
     agentStats,
-    commits,
-    issues,
-    pullRequests,
-    comments,
-    proposals,
+    commits: allCommits,
+    issues: allIssues,
+    pullRequests: allPRs,
+    comments: allComments,
+    proposals: allProposals,
   };
 }
 

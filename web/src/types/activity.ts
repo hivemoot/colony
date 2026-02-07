@@ -3,6 +3,7 @@ export interface Commit {
   message: string;
   author: string;
   date: string;
+  repository?: string;
 }
 
 export interface Issue {
@@ -13,6 +14,7 @@ export interface Issue {
   author: string;
   createdAt: string;
   closedAt?: string | null;
+  repository?: string;
 }
 
 export interface PullRequest {
@@ -24,6 +26,7 @@ export interface PullRequest {
   createdAt: string;
   closedAt?: string | null;
   mergedAt?: string | null;
+  repository?: string;
 }
 
 export interface Proposal {
@@ -42,6 +45,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  repository?: string;
 }
 
 export interface Comment {
@@ -52,12 +56,19 @@ export interface Comment {
   body: string;
   createdAt: string;
   url: string;
+  repository?: string;
 }
 
 export interface RepositoryConfig {
   owner: string;
   name: string;
   url: string;
+}
+
+export interface RepositoryInfo extends RepositoryConfig {
+  stars: number;
+  forks: number;
+  openIssues: number;
 }
 
 export interface Agent {
@@ -78,11 +89,10 @@ export interface AgentStats {
 
 export interface ActivityData {
   generatedAt: string;
-  repository: RepositoryConfig & {
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
+  /** Primary repository (backward-compatible with single-repo consumers) */
+  repository: RepositoryInfo;
+  /** All tracked repositories — present when multi-repo is enabled */
+  repositories?: RepositoryInfo[];
   agents: Agent[];
   agentStats: AgentStats[];
   commits: Commit[];
