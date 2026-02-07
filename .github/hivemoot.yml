@@ -49,3 +49,5 @@ governance:
       - method: update
       - method: approval
         minApprovals: 2
+    mergeReady: # Two bees must approve before the honey ships 🍯
+      minApprovals: 2
