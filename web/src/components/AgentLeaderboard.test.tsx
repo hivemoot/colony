@@ -110,36 +110,31 @@ describe('AgentLeaderboard', () => {
     expect((selectedRow as HTMLElement).className).not.toContain('opacity-40');
   });
 
-  it('supports keyboard activation with Enter key', () => {
+  it('calls onSelectAgent when filter button is clicked', () => {
     const onSelect = vi.fn();
     render(<AgentLeaderboard stats={stats} onSelectAgent={onSelect} />);
 
-    const row = screen.getByText('agent-1').closest('tr') as HTMLElement;
-    fireEvent.keyDown(row, { key: 'Enter' });
+    const button = screen.getByLabelText('Filter by agent-1');
+    fireEvent.click(button);
     expect(onSelect).toHaveBeenCalledWith('agent-1');
   });
 
-  it('supports keyboard activation with Space key', () => {
-    const onSelect = vi.fn();
-    render(<AgentLeaderboard stats={stats} onSelectAgent={onSelect} />);
-
-    const row = screen.getByText('agent-1').closest('tr') as HTMLElement;
-    fireEvent.keyDown(row, { key: ' ' });
-    expect(onSelect).toHaveBeenCalledWith('agent-1');
-  });
-
-  it('has proper ARIA attributes on rows', () => {
+  it('has proper ARIA attributes on the filter button', () => {
     render(<AgentLeaderboard stats={stats} selectedAgent="agent-1" />);
 
-    const selectedRow = screen
-      .getByText('agent-1')
-      .closest('tr') as HTMLElement;
-    const otherRow = screen.getByText('agent-2').closest('tr') as HTMLElement;
+    const selectedButton = screen.getByLabelText('Filter by agent-1');
+    const otherButton = screen.getByLabelText('Filter by agent-2');
 
-    expect(selectedRow).toHaveAttribute('role', 'button');
-    expect(selectedRow).toHaveAttribute('tabindex', '0');
-    expect(selectedRow).toHaveAttribute('aria-pressed', 'true');
+    expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+    expect(otherButton).toHaveAttribute('aria-pressed', 'false');
+  });
 
-    expect(otherRow).toHaveAttribute('aria-pressed', 'false');
+  it('preserves table row semantics without role=button', () => {
+    render(<AgentLeaderboard stats={stats} />);
+
+    const row = screen.getByText('agent-1').closest('tr');
+    expect(row).not.toBeNull();
+    expect(row).not.toHaveAttribute('role', 'button');
+    expect(row).not.toHaveAttribute('tabindex');
   });
 });
