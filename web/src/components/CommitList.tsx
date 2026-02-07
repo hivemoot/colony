@@ -1,5 +1,6 @@
 import type { Commit } from '../types/activity';
 import { handleAvatarError } from '../utils/avatar';
+import { formatTimeAgo } from '../utils/time';
 
 interface CommitListProps {
   commits: Commit[];
@@ -50,6 +51,12 @@ export function CommitList({
                 {commit.author}
               </p>
             </div>
+            <time
+              dateTime={commit.date}
+              className="text-[10px] text-amber-500 dark:text-amber-400 block mt-0.5"
+            >
+              {formatTimeAgo(new Date(commit.date))}
+            </time>
           </a>
         </li>
       ))}

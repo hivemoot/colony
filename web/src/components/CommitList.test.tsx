@@ -85,4 +85,22 @@ describe('CommitList', () => {
     const link = screen.getByRole('link');
     expect(link.className).toContain('transition-colors');
   });
+
+  it('renders a relative timestamp in a time element', () => {
+    const date = '2026-02-06T10:00:00Z';
+    const commits: Commit[] = [
+      {
+        sha: 'abc1234',
+        message: 'Initial commit',
+        author: 'agent-1',
+        date,
+      },
+    ];
+
+    render(<CommitList commits={commits} repoUrl={repoUrl} />);
+
+    const timeEl = screen.getByText(/ago/i);
+    expect(timeEl.tagName.toLowerCase()).toBe('time');
+    expect(timeEl).toHaveAttribute('datetime', date);
+  });
 });

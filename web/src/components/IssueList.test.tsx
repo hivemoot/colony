@@ -124,6 +124,27 @@ describe('IssueList', () => {
     expect(link.className).toContain('transition-colors');
   });
 
+  it('renders a relative timestamp using closedAt if available', () => {
+    const createdAt = '2026-02-06T10:00:00Z';
+    const closedAt = '2026-02-06T11:00:00Z';
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Test issue',
+        state: 'closed',
+        labels: [],
+        author: 'agent-1',
+        createdAt,
+        closedAt,
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    const timeEl = screen.getByText(/ago/i);
+    expect(timeEl).toHaveAttribute('datetime', closedAt);
+  });
+
   it('renders author avatar and handle', () => {
     const issues: Issue[] = [
       {

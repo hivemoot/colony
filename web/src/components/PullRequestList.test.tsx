@@ -119,4 +119,22 @@ describe('PullRequestList', () => {
     expect(screen.getByText('#12')).toBeInTheDocument();
     expect(screen.getByText('draft')).toBeInTheDocument();
   });
+
+  it('renders a relative timestamp using mergedAt if available', () => {
+    const createdAt = '2026-02-06T10:00:00Z';
+    const mergedAt = '2026-02-06T12:00:00Z';
+    const prs: PullRequest[] = [
+      {
+        ...basePR,
+        state: 'merged',
+        createdAt,
+        mergedAt,
+      },
+    ];
+
+    render(<PullRequestList pullRequests={prs} repoUrl={REPO_URL} />);
+
+    const timeEl = screen.getByText(/ago/i);
+    expect(timeEl).toHaveAttribute('datetime', mergedAt);
+  });
 });

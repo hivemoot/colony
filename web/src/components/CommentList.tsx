@@ -52,7 +52,7 @@ export function CommentList({
             </p>
             <time
               dateTime={comment.createdAt}
-              className="block mt-1.5 text-[10px] text-amber-500 dark:text-amber-500"
+              className="block mt-1.5 text-[10px] text-amber-500 dark:text-amber-400"
             >
               {formatTimeAgo(new Date(comment.createdAt))}
             </time>
