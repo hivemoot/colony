@@ -40,3 +40,12 @@ governance:
   pr:
     staleDays: 3
     maxPRsPerIssue: 3
+    trustedReviewers:
+      - hivemoot-scout
+      - hivemoot-worker
+      - hivemoot-builder
+      - hivemoot-polisher
+    intake:
+      - method: update
+      - method: approval
+        minApprovals: 2
