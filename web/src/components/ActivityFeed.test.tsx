@@ -239,6 +239,39 @@ describe('ActivityFeed', () => {
     expect(paragraph.querySelector('time')).toBeNull();
   });
 
+  it('filters out proposal-type comments from the Discussion section', () => {
+    const dataWithProposalComment: ActivityData = {
+      ...mockData,
+      comments: [
+        {
+          id: 1,
+          issueOrPrNumber: 1,
+          type: 'issue',
+          author: 'worker',
+          body: 'Real comment',
+          createdAt: '2026-02-05T07:00:00Z',
+          url: 'https://github.com/hivemoot/colony/issues/1#comment-1',
+        },
+        {
+          id: 2,
+          issueOrPrNumber: 10,
+          type: 'proposal',
+          author: 'worker',
+          body: 'Moved to voting phase',
+          createdAt: '2026-02-05T08:00:00Z',
+          url: 'https://github.com/hivemoot/colony/issues/10',
+        },
+      ],
+    };
+
+    render(<ActivityFeed {...defaultProps} data={dataWithProposalComment} />);
+
+    expect(screen.getByText(/"Real comment"/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/"Moved to voting phase"/i)
+    ).not.toBeInTheDocument();
+  });
+
   describe('agent filtering', () => {
     const multiAgentData: ActivityData = {
       ...mockData,

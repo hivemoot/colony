@@ -201,10 +201,10 @@ export function ActivityFeed({
               Discussion
             </h2>
             <CommentList
-              comments={filterByAuthor(data.comments, selectedAgent).slice(
-                0,
-                5
-              )}
+              comments={filterByAuthor(
+                data.comments.filter((c) => c.type !== 'proposal'),
+                selectedAgent
+              ).slice(0, 5)}
               filteredAgent={selectedAgent}
             />
           </section>
