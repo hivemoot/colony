@@ -146,6 +146,14 @@ describe('ProposalList', () => {
         createdAt: '2026-02-05T05:00:00Z',
         commentCount: 1,
       },
+      {
+        number: 6,
+        title: 'Inconclusive phase',
+        phase: 'inconclusive',
+        author: 'f',
+        createdAt: '2026-02-05T04:00:00Z',
+        commentCount: 1,
+      },
     ];
 
     render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
@@ -155,6 +163,7 @@ describe('ProposalList', () => {
     expect(screen.getByText('ready to implement')).toBeInTheDocument();
     expect(screen.getByText('implemented')).toBeInTheDocument();
     expect(screen.getByText('rejected')).toBeInTheDocument();
+    expect(screen.getByText('inconclusive')).toBeInTheDocument();
   });
 
   it('renders vote and comment emojis with aria-labels', () => {
