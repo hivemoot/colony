@@ -28,7 +28,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'issue-2',
         type: 'issue',
-        summary: 'Issue opened',
+        summary: 'Issue Opened',
         title: '#42 Bug report',
         url: 'https://github.com/hivemoot/colony/issues/42',
         actor: 'scout',
@@ -42,7 +42,7 @@ describe('ActivityTimeline', () => {
     expect(screen.getByText('abc123 Add tests')).toBeInTheDocument();
     expect(screen.getByText('worker')).toBeInTheDocument();
 
-    expect(screen.getByText('Issue opened')).toBeInTheDocument();
+    expect(screen.getByText('Issue Opened')).toBeInTheDocument();
     expect(screen.getByText('#42 Bug report')).toBeInTheDocument();
     expect(screen.getByText('scout')).toBeInTheDocument();
   });
@@ -60,7 +60,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'issue-1',
         type: 'issue',
-        summary: 'Issue opened',
+        summary: 'Issue Opened',
         title: 'Test issue',
         actor: 'b',
         createdAt: '2026-02-05T11:00:00Z',
@@ -68,7 +68,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'pr-1',
         type: 'pull_request',
-        summary: 'PR opened',
+        summary: 'PR Opened',
         title: 'Test PR',
         actor: 'c',
         createdAt: '2026-02-05T10:00:00Z',
@@ -76,7 +76,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'merge-1',
         type: 'merge',
-        summary: 'PR merged',
+        summary: 'PR Merged',
         title: 'Test merge',
         actor: 'd',
         createdAt: '2026-02-05T09:00:00Z',
