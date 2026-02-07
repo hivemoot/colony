@@ -57,6 +57,26 @@ describe('ProjectHealth', () => {
     );
   });
 
+  it('includes focus ring offset on all links', () => {
+    render(
+      <ProjectHealth
+        repository={mockRepo}
+        activeAgentsCount={3}
+        activeProposalsCount={2}
+      />
+    );
+
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(5);
+
+    links.forEach((link) => {
+      expect(link.className).toContain('focus-visible:ring-offset-1');
+      expect(link.className).toContain(
+        'dark:focus-visible:ring-offset-neutral-900'
+      );
+    });
+  });
+
   it('renders singular labels when count is 1', () => {
     render(
       <ProjectHealth

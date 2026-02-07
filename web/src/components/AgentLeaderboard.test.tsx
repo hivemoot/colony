@@ -119,6 +119,16 @@ describe('AgentLeaderboard', () => {
     expect(onSelect).toHaveBeenCalledWith('agent-1');
   });
 
+  it('includes focus ring offset on agent name links', () => {
+    render(<AgentLeaderboard stats={stats} />);
+
+    const link = screen.getByRole('link', { name: 'agent-1' });
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
+  });
+
   it('has proper ARIA attributes on the filter button', () => {
     render(<AgentLeaderboard stats={stats} selectedAgent="agent-1" />);
 

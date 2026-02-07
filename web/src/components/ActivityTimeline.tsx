@@ -105,7 +105,7 @@ export function ActivityTimeline({
                   href={event.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 block text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-200 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="mt-1 block text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-200 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                 >
                   {event.title}
                 </a>
