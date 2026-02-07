@@ -201,23 +201,36 @@ describe('ActivityFeed', () => {
   it('renders all data sections when data is provided', () => {
     render(<ActivityFeed {...defaultProps} />);
 
-    expect(screen.getByText('Recent Commits')).toBeInTheDocument();
-    // 'Issues' appears twice (in leaderboard table header and in the Issues section)
+    expect(
+      screen.getByRole('heading', { name: /recent commits/i })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /issues/i })
     ).toBeInTheDocument();
-    expect(screen.getByText('Pull Requests')).toBeInTheDocument();
-    expect(screen.getByText('Discussion')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /pull requests/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /discussion/i })
+    ).toBeInTheDocument();
   });
 
   it('does not render data sections when data is null', () => {
     render(<ActivityFeed {...defaultProps} data={null} />);
 
     expect(screen.queryByText('Active Agents')).not.toBeInTheDocument();
-    expect(screen.queryByText('Recent Commits')).not.toBeInTheDocument();
-    expect(screen.queryByText('Issues')).not.toBeInTheDocument();
-    expect(screen.queryByText('Pull Requests')).not.toBeInTheDocument();
-    expect(screen.queryByText('Discussion')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /recent commits/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /issues/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /pull requests/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /discussion/i })
+    ).not.toBeInTheDocument();
   });
 
   it('displays "unknown" when lastUpdated is null', () => {
@@ -382,6 +395,89 @@ describe('ActivityFeed', () => {
 
       fireEvent.click(screen.getByText('Clear filter'));
       expect(onSelectAgent).toHaveBeenCalledWith(null);
+    });
+
+    it('shows filtered counts in section headings when agent is selected', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+        />
+      );
+
+      // worker has 1 of 2 commits
+      expect(screen.getByText('(1 of 2)')).toBeInTheDocument();
+      // Multiple sections show (0 of 1) when worker owns none
+      // (issues: scout owns it, discussion: scout owns the comment)
+      const zeroOfOnes = screen.getAllByText('(0 of 1)');
+      expect(zeroOfOnes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows total counts without filter text when no agent is selected', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent={null}
+        />
+      );
+
+      // 2 commits total
+      expect(screen.getByText('(2)')).toBeInTheDocument();
+      // 1 issue total
+      const onesInParens = screen.getAllByText('(1)');
+      expect(onesInParens.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('section item counts', () => {
+    it('displays total counts for each grid section', () => {
+      render(<ActivityFeed {...defaultProps} />);
+
+      // mockData has 1 commit, 1 issue, 1 PR, 1 comment, 1 proposal
+      const ones = screen.getAllByText('(1)');
+      // Should have counts for: commits, issues, PRs, discussion, proposals
+      expect(ones.length).toBe(5);
+    });
+
+    it('displays "X of Y" counts when agent filter is active', () => {
+      const dataWithMixedAuthors: ActivityData = {
+        ...mockData,
+        commits: [
+          {
+            sha: 'a1',
+            message: 'C1',
+            author: 'worker',
+            date: '2026-02-05T10:00:00Z',
+          },
+          {
+            sha: 'a2',
+            message: 'C2',
+            author: 'scout',
+            date: '2026-02-05T09:00:00Z',
+          },
+          {
+            sha: 'a3',
+            message: 'C3',
+            author: 'scout',
+            date: '2026-02-05T08:00:00Z',
+          },
+        ],
+      };
+
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={dataWithMixedAuthors}
+          selectedAgent="worker"
+        />
+      );
+
+      // worker has 1 of 3 commits
+      expect(screen.getByText('(1 of 3)')).toBeInTheDocument();
     });
   });
 });
