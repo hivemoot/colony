@@ -77,7 +77,11 @@ export function ActivityFeed({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className={`text-xs px-2 py-1 rounded-full ${statusStyles}`}>
+            <span
+              role="status"
+              aria-live="polite"
+              className={`text-xs px-2 py-1 rounded-full ${statusStyles}`}
+            >
               {statusLabel}
             </span>
             <label className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-200">
