@@ -3,6 +3,7 @@ import type {
   ActivityData,
   ActivityEvent,
   ActivityMode,
+  RepositoryConfig,
 } from '../types/activity';
 import {
   buildLiveEvents,
@@ -22,7 +23,7 @@ interface UseActivityDataResult {
   liveMessage: string | null;
 }
 
-const DEFAULT_REPOSITORY = {
+const DEFAULT_REPOSITORY: RepositoryConfig = {
   owner: 'hivemoot',
   name: 'colony',
   url: 'https://github.com/hivemoot/colony',
@@ -33,7 +34,9 @@ const LIVE_BASE_MS = 20_000;
 const LIVE_MAX_MS = 5 * 60_000;
 const LIVE_EVENTS_ENDPOINT = 'https://api.github.com/repos';
 
-export function useActivityData(): UseActivityDataResult {
+export function useActivityData(config?: {
+  repository?: RepositoryConfig;
+}): UseActivityDataResult {
   const [data, setData] = useState<ActivityData | null>(null);
   const [staticEvents, setStaticEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,8 @@ export function useActivityData(): UseActivityDataResult {
   const backoffRef = useRef<number>(LIVE_BASE_MS);
   const hasDataRef = useRef(false);
   const initialFetchRef = useRef(true);
-  const repository = data?.repository ?? DEFAULT_REPOSITORY;
+  const repository =
+    data?.repository ?? config?.repository ?? DEFAULT_REPOSITORY;
   const { owner, name, url } = repository;
 
   useEffect(() => {

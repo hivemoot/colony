@@ -54,6 +54,12 @@ export interface Comment {
   url: string;
 }
 
+export interface RepositoryConfig {
+  owner: string;
+  name: string;
+  url: string;
+}
+
 export interface Agent {
   login: string;
   avatarUrl?: string;
@@ -72,10 +78,7 @@ export interface AgentStats {
 
 export interface ActivityData {
   generatedAt: string;
-  repository: {
-    owner: string;
-    name: string;
-    url: string;
+  repository: RepositoryConfig & {
     stars: number;
     forks: number;
     openIssues: number;
