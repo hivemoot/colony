@@ -100,7 +100,10 @@ export function ActivityFeed({
       </section>
 
       {data && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+        <section
+          id="agents"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        >
           <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
             <span role="img" aria-label="bees">
               🐝
@@ -132,7 +135,10 @@ export function ActivityFeed({
       )}
 
       {data && data.proposals && data.proposals.length > 0 && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+        <section
+          id="proposals"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        >
           <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
             <span role="img" aria-label="governance">
               ⚖️
@@ -142,6 +148,7 @@ export function ActivityFeed({
           <ProposalList
             proposals={filterByAuthor(data.proposals, selectedAgent)}
             repoUrl={data.repository.url}
+            filteredAgent={selectedAgent}
           />
         </section>
       )}
@@ -201,10 +208,10 @@ export function ActivityFeed({
               Discussion
             </h2>
             <CommentList
-              comments={filterByAuthor(data.comments, selectedAgent).slice(
-                0,
-                5
-              )}
+              comments={filterByAuthor(
+                data.comments.filter((c) => c.type !== 'proposal'),
+                selectedAgent
+              ).slice(0, 5)}
               filteredAgent={selectedAgent}
             />
           </section>

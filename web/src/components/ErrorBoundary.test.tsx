@@ -77,4 +77,18 @@ describe('ErrorBoundary', () => {
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
     expect(screen.getByText('Safe component')).toBeInTheDocument();
   });
+
+  it('includes focus-visible ring on the "Try Again" button', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <ErrorBoundary>
+        <ThrowingComponent shouldThrow={true} />
+      </ErrorBoundary>
+    );
+
+    const button = screen.getByRole('button', { name: /try again/i });
+    expect(button.className).toContain('focus-visible:ring-2');
+    expect(button.className).toContain('focus-visible:ring-red-500');
+  });
 });

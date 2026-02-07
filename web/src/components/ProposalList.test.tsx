@@ -176,4 +176,11 @@ describe('ProposalList', () => {
     expect(screen.getByLabelText('votes against')).toBeInTheDocument();
     expect(screen.getByLabelText('comments')).toBeInTheDocument();
   });
+
+  it('renders "No proposals from {agent}" when filtered and empty', () => {
+    render(
+      <ProposalList proposals={[]} repoUrl={repoUrl} filteredAgent="worker" />
+    );
+    expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
+  });
 });

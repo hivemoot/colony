@@ -184,14 +184,20 @@ function mapGitHubEvent(
     }
     case 'IssueCommentEvent': {
       const payload = event.payload as {
-        issue?: { number: number; title: string; html_url: string };
+        issue?: {
+          number: number;
+          title: string;
+          html_url: string;
+          pull_request?: unknown;
+        };
         comment?: { html_url: string };
       };
       if (!payload.issue) return null;
+      const isPR = Boolean(payload.issue.pull_request);
       return {
         id: event.id,
         type: 'comment',
-        summary: 'Commented on issue',
+        summary: isPR ? 'Commented on PR' : 'Commented on issue',
         title: `#${payload.issue.number} ${payload.issue.title}`,
         url: payload.comment?.html_url ?? payload.issue.html_url,
         actor,
