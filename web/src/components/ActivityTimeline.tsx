@@ -93,7 +93,7 @@ export function ActivityTimeline({
                   {event.summary}
                 </span>
                 <span
-                  className="text-amber-400 dark:text-amber-500"
+                  className="text-amber-400 dark:text-amber-600"
                   aria-hidden="true"
                 >
                   •
