@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveRepository,
+  resolveRepositories,
   mapCommits,
+  mapIssues,
   mapPullRequests,
+  mapEvents,
   aggregateAgentStats,
   calculateOpenIssues,
   deduplicateAgents,
   type GitHubCommit,
+  type GitHubIssue,
   type GitHubRepo,
+  type GitHubEvent,
   type PullRequest,
   type GitHubPR,
   type Commit,
@@ -203,5 +208,134 @@ describe('aggregateAgentStats', () => {
     // Should be sorted by lastActiveAt descending
     expect(result[0].login).toBe('user1');
     expect(result[1].login).toBe('user2');
+  });
+});
+
+describe('resolveRepositories', () => {
+  it('should return default repositories when no env var set', () => {
+    const result = resolveRepositories({});
+    expect(result).toEqual([
+      { owner: 'hivemoot', repo: 'colony' },
+      { owner: 'hivemoot', repo: 'hivemoot' },
+    ]);
+  });
+
+  it('should parse COLONY_REPOSITORIES as comma-separated list', () => {
+    const result = resolveRepositories({
+      COLONY_REPOSITORIES: 'org/repo1, org/repo2, org/repo3',
+    });
+    expect(result).toEqual([
+      { owner: 'org', repo: 'repo1' },
+      { owner: 'org', repo: 'repo2' },
+      { owner: 'org', repo: 'repo3' },
+    ]);
+  });
+
+  it('should handle single repository in COLONY_REPOSITORIES', () => {
+    const result = resolveRepositories({
+      COLONY_REPOSITORIES: 'org/single',
+    });
+    expect(result).toEqual([{ owner: 'org', repo: 'single' }]);
+  });
+
+  it('should throw on invalid format in COLONY_REPOSITORIES', () => {
+    expect(() =>
+      resolveRepositories({ COLONY_REPOSITORIES: 'valid/repo,invalid' })
+    ).toThrow();
+  });
+});
+
+describe('repository tagging in map functions', () => {
+  const sampleCommit: GitHubCommit = {
+    sha: '1234567890abcdef',
+    commit: {
+      message: 'test commit',
+      author: { name: 'User', date: '2026-02-06T10:00:00Z' },
+    },
+    author: { login: 'user1', avatar_url: 'https://avatar.com/u1' },
+  };
+
+  const sampleIssue: GitHubIssue = {
+    number: 1,
+    title: 'Test issue',
+    state: 'open',
+    labels: [],
+    created_at: '2026-02-06T10:00:00Z',
+    closed_at: null,
+    user: { login: 'user1' },
+    comments: 0,
+  };
+
+  const samplePR: GitHubPR = {
+    number: 1,
+    title: 'Test PR',
+    state: 'open',
+    draft: false,
+    merged_at: null,
+    closed_at: null,
+    user: { login: 'user1', avatar_url: 'url1' },
+    created_at: '2026-02-06T10:00:00Z',
+  };
+
+  it('mapCommits should tag commits with repository when provided', () => {
+    const result = mapCommits([sampleCommit], 'org/repo');
+    expect(result.commits[0].repository).toBe('org/repo');
+  });
+
+  it('mapCommits should omit repository when not provided', () => {
+    const result = mapCommits([sampleCommit]);
+    expect(result.commits[0]).not.toHaveProperty('repository');
+  });
+
+  it('mapIssues should tag issues with repository when provided', () => {
+    const result = mapIssues([sampleIssue], 'org/repo');
+    expect(result.issues[0].repository).toBe('org/repo');
+  });
+
+  it('mapIssues should omit repository when not provided', () => {
+    const result = mapIssues([sampleIssue]);
+    expect(result.issues[0]).not.toHaveProperty('repository');
+  });
+
+  it('mapPullRequests should tag PRs with repository when provided', () => {
+    const result = mapPullRequests([samplePR] as GitHubPR[], 'org/repo');
+    expect(result.pullRequests[0].repository).toBe('org/repo');
+  });
+
+  it('mapPullRequests should omit repository when not provided', () => {
+    const result = mapPullRequests([samplePR] as GitHubPR[]);
+    expect(result.pullRequests[0]).not.toHaveProperty('repository');
+  });
+
+  it('mapEvents should tag comments with repository when provided', () => {
+    const event: GitHubEvent = {
+      id: '1',
+      type: 'IssueCommentEvent',
+      actor: { login: 'user1', avatar_url: 'url' },
+      payload: {
+        action: 'created',
+        comment: { id: 1, body: 'test', html_url: 'https://example.com' },
+        issue: { number: 1, title: 'test' },
+      },
+      created_at: '2026-02-06T10:00:00Z',
+    };
+    const result = mapEvents([event], 'org', 'repo', 'org/repo');
+    expect(result.comments[0].repository).toBe('org/repo');
+  });
+
+  it('mapEvents should omit repository when not provided', () => {
+    const event: GitHubEvent = {
+      id: '1',
+      type: 'IssueCommentEvent',
+      actor: { login: 'user1', avatar_url: 'url' },
+      payload: {
+        action: 'created',
+        comment: { id: 1, body: 'test', html_url: 'https://example.com' },
+        issue: { number: 1, title: 'test' },
+      },
+      created_at: '2026-02-06T10:00:00Z',
+    };
+    const result = mapEvents([event], 'org', 'repo');
+    expect(result.comments[0]).not.toHaveProperty('repository');
   });
 });
