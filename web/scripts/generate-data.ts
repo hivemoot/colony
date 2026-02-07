@@ -58,7 +58,8 @@ export interface Proposal {
     | 'voting'
     | 'ready-to-implement'
     | 'implemented'
-    | 'rejected';
+    | 'rejected'
+    | 'inconclusive';
   author: string;
   createdAt: string;
   commentCount: number;
@@ -395,6 +396,7 @@ async function fetchProposals(
     'ready-to-implement',
     'implemented',
     'rejected',
+    'inconclusive',
   ] as const;
 
   for (const i of proposalIssues) {
@@ -452,7 +454,7 @@ async function fetchProposals(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-    .slice(0, 10);
+    .slice(0, 20);
 }
 
 export function mapEvents(
