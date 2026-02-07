@@ -467,10 +467,7 @@ async function fetchProposals(
           proposal.phaseTransitions = transitions;
         }
       } catch (e) {
-        console.warn(
-          `Failed to fetch timeline for #${proposal.number}`,
-          e
-        );
+        console.warn(`Failed to fetch timeline for #${proposal.number}`, e);
       }
     }),
   ]);
@@ -488,12 +485,12 @@ export function extractPhaseTransitions(
 ): { phase: string; enteredAt: string }[] {
   return timeline
     .filter(
-      (event) =>
+      (event): event is GitHubTimelineEvent & { label: { name: string } } =>
         event.event === 'labeled' &&
-        event.label?.name?.startsWith('phase:')
+        event.label?.name?.startsWith('phase:') === true
     )
     .map((event) => ({
-      phase: event.label!.name.replace('phase:', ''),
+      phase: event.label.name.replace('phase:', ''),
       enteredAt: event.created_at,
     }));
 }
