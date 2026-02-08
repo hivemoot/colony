@@ -257,6 +257,26 @@ describe('ProposalList', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('renders a relative timestamp in a time element', () => {
+    const createdAt = '2026-02-05T09:00:00Z';
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Timestamp test',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt,
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    const timeEl = screen.getByText(/ago/i);
+    expect(timeEl.tagName.toLowerCase()).toBe('time');
+    expect(timeEl).toHaveAttribute('datetime', createdAt);
+  });
+
   it('includes focus indicators on link elements', () => {
     const proposals: Proposal[] = [
       {
