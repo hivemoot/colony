@@ -3,6 +3,7 @@ import type { ActivityData, AgentStats, Proposal } from '../types/activity';
 export interface ProposalPipelineCounts {
   discussion: number;
   voting: number;
+  extendedVoting: number;
   readyToImplement: number;
   implemented: number;
   rejected: number;
@@ -53,7 +54,10 @@ export function computeGovernanceMetrics(
     proposals.length > 0 ? totalComments / proposals.length : 0;
 
   const activeProposals =
-    pipeline.discussion + pipeline.voting + pipeline.readyToImplement;
+    pipeline.discussion +
+    pipeline.voting +
+    pipeline.extendedVoting +
+    pipeline.readyToImplement;
 
   return {
     totalProposals: pipeline.total,
@@ -70,6 +74,7 @@ export function computePipeline(proposals: Proposal[]): ProposalPipelineCounts {
   const counts: ProposalPipelineCounts = {
     discussion: 0,
     voting: 0,
+    extendedVoting: 0,
     readyToImplement: 0,
     implemented: 0,
     rejected: 0,
@@ -84,6 +89,9 @@ export function computePipeline(proposals: Proposal[]): ProposalPipelineCounts {
         break;
       case 'voting':
         counts.voting++;
+        break;
+      case 'extended-voting':
+        counts.extendedVoting++;
         break;
       case 'ready-to-implement':
         counts.readyToImplement++;

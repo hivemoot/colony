@@ -336,6 +336,7 @@ async function fetchProposals(
   const validPhases = [
     'discussion',
     'voting',
+    'extended-voting',
     'ready-to-implement',
     'implemented',
     'rejected',
@@ -374,6 +375,7 @@ async function fetchProposals(
   // retrieve tallies for proposals that already passed or failed voting.
   const votablePhases: readonly string[] = [
     'voting',
+    'extended-voting',
     'ready-to-implement',
     'implemented',
     'rejected',

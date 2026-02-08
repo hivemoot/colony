@@ -149,6 +149,34 @@ describe('GovernanceAnalytics', () => {
     expect(screen.getByText('Discussion')).toBeInTheDocument();
   });
 
+  it('renders extended-voting proposals in the pipeline', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'A',
+          phase: 'extended-voting',
+          author: 'bot',
+          createdAt: '2026-02-05T09:00:00Z',
+          commentCount: 2,
+        },
+        {
+          number: 2,
+          title: 'B',
+          phase: 'voting',
+          author: 'bot',
+          createdAt: '2026-02-05T08:00:00Z',
+          commentCount: 1,
+        },
+      ],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    expect(screen.getByText('Extended Voting')).toBeInTheDocument();
+    expect(screen.getByText('Voting')).toBeInTheDocument();
+  });
+
   it('shows Inactive label for agents with zero activity', () => {
     const data = makeData({
       agentStats: [

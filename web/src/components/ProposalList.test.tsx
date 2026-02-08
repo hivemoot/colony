@@ -123,6 +123,14 @@ describe('ProposalList', () => {
         commentCount: 1,
       },
       {
+        number: 7,
+        title: 'Extended voting phase',
+        phase: 'extended-voting',
+        author: 'g',
+        createdAt: '2026-02-05T07:30:00Z',
+        commentCount: 1,
+      },
+      {
         number: 3,
         title: 'Ready phase',
         phase: 'ready-to-implement',
@@ -160,6 +168,7 @@ describe('ProposalList', () => {
 
     expect(screen.getByText('discussion')).toBeInTheDocument();
     expect(screen.getByText('voting')).toBeInTheDocument();
+    expect(screen.getByText('extended voting')).toBeInTheDocument();
     expect(screen.getByText('ready to implement')).toBeInTheDocument();
     expect(screen.getByText('implemented')).toBeInTheDocument();
     expect(screen.getByText('rejected')).toBeInTheDocument();

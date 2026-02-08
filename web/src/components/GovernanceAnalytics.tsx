@@ -92,6 +92,10 @@ const PHASE_COLORS: Record<
     bg: 'bg-blue-400 dark:bg-blue-500',
     label: 'Voting',
   },
+  extendedVoting: {
+    bg: 'bg-indigo-400 dark:bg-indigo-500',
+    label: 'Extended Voting',
+  },
   readyToImplement: {
     bg: 'bg-green-400 dark:bg-green-500',
     label: 'Ready',

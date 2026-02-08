@@ -37,6 +37,7 @@ export interface Proposal {
   phase:
     | 'discussion'
     | 'voting'
+    | 'extended-voting'
     | 'ready-to-implement'
     | 'implemented'
     | 'rejected'
