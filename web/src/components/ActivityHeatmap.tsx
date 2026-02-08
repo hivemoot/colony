@@ -58,7 +58,9 @@ export function ActivityHeatmap({
     <div>
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-amber-700 dark:text-amber-300">
-          {totalActivity} {totalActivity === 1 ? 'contribution' : 'contributions'} in the last {heatmap.length} days
+          {totalActivity}{' '}
+          {totalActivity === 1 ? 'contribution' : 'contributions'} in the last{' '}
+          {heatmap.length} days
         </p>
         <p className="text-xs text-amber-600 dark:text-amber-400">
           {activeDays} active {activeDays === 1 ? 'day' : 'days'}
