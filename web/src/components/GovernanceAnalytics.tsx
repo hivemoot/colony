@@ -227,7 +227,8 @@ function AgentRoleBar({
       <div className="flex items-center gap-1.5 w-36 min-w-0 shrink-0">
         <img
           src={agent.avatarUrl ?? `https://github.com/${agent.login}.png`}
-          alt={agent.login}
+          alt=""
+          loading="lazy"
           className="w-5 h-5 rounded-full border border-amber-200 dark:border-neutral-600"
           onError={handleAvatarError}
         />

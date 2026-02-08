@@ -217,12 +217,16 @@ describe('IssueList', () => {
       },
     ];
 
-    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+    const { container } = render(
+      <IssueList issues={issues} repoUrl={repoUrl} />
+    );
 
     expect(screen.getByText('scout')).toBeInTheDocument();
-    const avatar = screen.getByAltText('scout');
+    const avatar = container.querySelector('img');
     expect(avatar).toBeInTheDocument();
     expect(avatar).toHaveAttribute('src', 'https://github.com/scout.png');
+    expect(avatar).toHaveAttribute('alt', '');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
   });
 
   it('includes focus indicators on link elements', () => {

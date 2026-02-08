@@ -49,7 +49,8 @@ export function ProposalList({
             <div className="flex items-center gap-2">
               <img
                 src={`https://github.com/${proposal.author}.png`}
-                alt={proposal.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

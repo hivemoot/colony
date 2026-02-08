@@ -47,7 +47,8 @@ export function CommentList({
             <div className="flex items-center gap-1.5 mb-2">
               <img
                 src={`https://github.com/${comment.author}.png`}
-                alt={comment.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

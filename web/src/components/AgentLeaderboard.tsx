@@ -92,7 +92,8 @@ export function AgentLeaderboard({
                         agent.avatarUrl ||
                         `https://github.com/${agent.login}.png`
                       }
-                      alt={agent.login}
+                      alt=""
+                      loading="lazy"
                       className={`w-8 h-8 rounded-full border motion-safe:transition-colors ${
                         isSelected
                           ? 'border-amber-500 dark:border-amber-400'

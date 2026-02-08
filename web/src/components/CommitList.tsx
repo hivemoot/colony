@@ -43,7 +43,8 @@ export function CommitList({
             <div className="flex items-center gap-1.5 mt-1">
               <img
                 src={`https://github.com/${commit.author}.png`}
-                alt={commit.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

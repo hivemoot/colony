@@ -74,7 +74,8 @@ export function IssueList({
             <div className="flex items-center gap-1.5 mt-1.5">
               <img
                 src={`https://github.com/${issue.author}.png`}
-                alt={issue.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

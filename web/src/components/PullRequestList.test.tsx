@@ -58,13 +58,17 @@ describe('PullRequestList', () => {
   });
 
   it('renders author avatar images', () => {
-    render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
+    const { container } = render(
+      <PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />
+    );
 
-    const avatar = screen.getByAltText('hivemoot-builder');
+    const avatar = container.querySelector('img');
     expect(avatar).toHaveAttribute(
       'src',
       'https://github.com/hivemoot-builder.png'
     );
+    expect(avatar).toHaveAttribute('alt', '');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
   });
 
   it('renders draft badge when PR is a draft', () => {
