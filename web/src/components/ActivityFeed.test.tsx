@@ -389,6 +389,20 @@ describe('ActivityFeed', () => {
       expect(screen.queryByText('Clear filter')).not.toBeInTheDocument();
     });
 
+    it('renders Clear filter as type="button" to prevent accidental form submission', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+        />
+      );
+
+      const clearButton = screen.getByText('Clear filter');
+      expect(clearButton).toHaveAttribute('type', 'button');
+    });
+
     it('includes focus ring offset on Clear filter button', () => {
       render(
         <ActivityFeed

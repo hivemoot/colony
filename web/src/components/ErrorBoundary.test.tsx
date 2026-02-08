@@ -78,6 +78,19 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Safe component')).toBeInTheDocument();
   });
 
+  it('renders "Try Again" button with type="button"', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <ErrorBoundary>
+        <ThrowingComponent shouldThrow={true} />
+      </ErrorBoundary>
+    );
+
+    const button = screen.getByRole('button', { name: /try again/i });
+    expect(button).toHaveAttribute('type', 'button');
+  });
+
   it('includes focus-visible ring on the "Try Again" button', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 

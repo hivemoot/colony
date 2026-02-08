@@ -108,6 +108,7 @@ export function ActivityFeed({
               Filtered by: <strong>{selectedAgent}</strong>
             </span>
             <button
+              type="button"
               onClick={() => onSelectAgent(null)}
               className="text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
             >

@@ -71,7 +71,7 @@ export function ActivityTimeline({
   }
 
   return (
-    <ul className="space-y-5">
+    <ul className="space-y-5" aria-label="Recent activity events">
       {events.map((event) => {
         const style = EVENT_STYLES[event.type];
         const eventDate = new Date(event.createdAt);
