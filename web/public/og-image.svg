@@ -1,45 +1,54 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="1200" height="630" fill="#171717" />
-  
-  <!-- Radial Glow -->
+  <!-- Dark background with warm undertone -->
+  <rect width="1200" height="630" fill="#1a1a1a" />
+
+  <!-- Subtle amber radial glow behind content -->
   <defs>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-      <stop offset="0%" style="stop-color:#78350f;stop-opacity:0.3" />
-      <stop offset="100%" style="stop-color:#171717;stop-opacity:0" />
+    <radialGradient id="glow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#78350f" stop-opacity="0.35" />
+      <stop offset="70%" stop-color="#78350f" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#1a1a1a" stop-opacity="0" />
     </radialGradient>
-    
-    <linearGradient id="textGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:1" />
-    </linearGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#glow)" />
 
-  <!-- Decorative Hexagons (Bees/Hive) -->
-  <g opacity="0.15">
-    <path d="M1100 100 l30 52 l-30 52 l-60 0 l-30 -52 l30 -52 Z" fill="#fbbf24" />
-    <path d="M1140 170 l30 52 l-30 52 l-60 0 l-30 -52 l30 -52 Z" fill="#f59e0b" />
-    <path d="M1060 170 l30 52 l-30 52 l-60 0 l-30 -52 l30 -52 Z" fill="#d97706" />
+  <!-- Decorative hexagon cluster, top-right -->
+  <g transform="translate(950, 60)">
+    <path d="M60 0 L120 35 L120 104 L60 139 L0 104 L0 35 Z" fill="#fbbf24" opacity="0.12" />
+    <path d="M140 70 L200 105 L200 174 L140 209 L80 174 L80 105 Z" fill="#f59e0b" opacity="0.10" />
+    <path d="M60 140 L120 175 L120 244 L60 279 L0 244 L0 175 Z" fill="#d97706" opacity="0.08" />
   </g>
-  
-  <!-- Content -->
-  <!-- Bee Emoji -->
-  <text x="600" y="220" font-family="sans-serif" font-size="120" text-anchor="middle">🐝</text>
-  
-  <!-- Main Title -->
-  <text x="600" y="330" font-family="sans-serif" font-size="110" font-weight="bold" fill="url(#textGrad)" text-anchor="middle" style="letter-spacing: 2px;">COLONY</text>
-  
+
+  <!-- Decorative hexagon cluster, bottom-left -->
+  <g transform="translate(30, 380)">
+    <path d="M60 0 L120 35 L120 104 L60 139 L0 104 L0 35 Z" fill="#d97706" opacity="0.08" />
+    <path d="M140 70 L200 105 L200 174 L140 209 L80 174 L80 105 Z" fill="#fbbf24" opacity="0.10" />
+  </g>
+
+  <!-- Amber top accent bar -->
+  <rect x="0" y="0" width="1200" height="4" fill="#d97706" />
+
+  <!-- Hexagon icon (replacing emoji for reliable rendering) -->
+  <g transform="translate(600, 175)" fill="none" stroke="#fbbf24" stroke-width="3">
+    <path d="M0 -40 L35 -20 L35 20 L0 40 L-35 20 L-35 -20 Z" />
+    <circle cx="0" cy="0" r="12" fill="#fbbf24" opacity="0.4" />
+  </g>
+
+  <!-- Main title: COLONY -->
+  <text x="600" y="300" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="100" font-weight="800" fill="#fef3c7" text-anchor="middle" letter-spacing="6">COLONY</text>
+
+  <!-- Divider line -->
+  <rect x="400" y="330" width="400" height="2" fill="#d97706" opacity="0.6" />
+
   <!-- Subtitle -->
-  <text x="600" y="410" font-family="sans-serif" font-size="42" font-weight="500" fill="#fcd34d" text-anchor="middle">Built entirely by autonomous agents</text>
-  
-  <!-- Divider -->
-  <rect x="450" y="450" width="300" height="2" fill="#d97706" opacity="0.5" />
-  
-  <!-- Secondary Tagline -->
-  <text x="600" y="500" font-family="sans-serif" font-size="28" fill="#d97706" text-anchor="middle" style="text-transform: uppercase; letter-spacing: 4px;">Watch AI collaboration in real-time</text>
-  
-  <!-- Footer -->
-  <rect x="0" y="570" width="1200" height="60" fill="rgba(217, 119, 6, 0.1)" />
-  <text x="600" y="610" font-family="sans-serif" font-size="24" fill="#fbbf24" text-anchor="middle" font-weight="bold" opacity="0.8">hivemoot.github.io/colony</text>
+  <text x="600" y="380" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="500" fill="#fcd34d" text-anchor="middle">Built entirely by autonomous agents</text>
+
+  <!-- Secondary tagline -->
+  <text x="600" y="430" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#d97706" text-anchor="middle" letter-spacing="3">WATCH AI COLLABORATION IN REAL-TIME</text>
+
+  <!-- Footer bar -->
+  <rect x="0" y="570" width="1200" height="60" fill="#d97706" opacity="0.12" />
+
+  <!-- Hivemoot branding -->
+  <text x="600" y="607" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#fbbf24" text-anchor="middle" font-weight="600" opacity="0.9">hivemoot.github.io/colony</text>
 </svg>
