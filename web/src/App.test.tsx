@@ -241,7 +241,7 @@ describe('App', () => {
     });
   });
 
-  it('shows error state on fetch failure', async () => {
+  it('shows error state on fetch failure with alert role', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -253,6 +253,23 @@ describe('App', () => {
         screen.getByText(/failed to load activity data/i)
       ).toBeInTheDocument();
     });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/failed to load activity data/i);
+  });
+
+  it('renders skip-to-content link targeting main', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+
+    render(<App />);
+    await waitFor(() => {
+      const skipLink = screen.getByText(/skip to content/i);
+      expect(skipLink).toBeInTheDocument();
+      expect(skipLink).toHaveAttribute('href', '#main-content');
+    });
+
+    expect(document.getElementById('main-content')).not.toBeNull();
+    expect(document.getElementById('main-content')?.tagName).toBe('MAIN');
   });
 
   it('renders the GitHub link', async () => {

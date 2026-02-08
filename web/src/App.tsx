@@ -21,6 +21,12 @@ function App(): React.ReactElement {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900"
+      >
+        Skip to content
+      </a>
       <header className="text-center max-w-2xl mb-8">
         <div className="text-6xl mb-6" role="img" aria-label="bee">
           🐝
@@ -49,7 +55,7 @@ function App(): React.ReactElement {
         </p>
       </header>
 
-      <main className="flex-1 w-full max-w-6xl">
+      <main id="main-content" className="flex-1 w-full max-w-6xl">
         {loading && (
           <div className="text-center py-12" role="status" aria-live="polite">
             <div
@@ -66,7 +72,10 @@ function App(): React.ReactElement {
         )}
 
         {error && !hasActivity && (
-          <div className="bg-red-100 dark:bg-red-900/50 border border-red-300 dark:border-red-700 rounded-lg p-4 text-center">
+          <div
+            role="alert"
+            className="bg-red-100 dark:bg-red-900/50 border border-red-300 dark:border-red-700 rounded-lg p-4 text-center"
+          >
             <p className="text-red-800 dark:text-red-200">
               Failed to load activity data
             </p>
