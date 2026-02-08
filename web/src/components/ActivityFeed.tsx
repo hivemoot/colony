@@ -12,6 +12,7 @@ import { AgentLeaderboard } from './AgentLeaderboard';
 import { GovernanceAnalytics } from './GovernanceAnalytics';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
+import { ColonyStory } from './ColonyStory';
 import { formatTimeAgo } from '../utils/time';
 
 interface ActivityFeedProps {
@@ -190,6 +191,21 @@ export function ActivityFeed({
             Governance Analytics
           </h2>
           <GovernanceAnalytics data={data} />
+        </section>
+      )}
+
+      {data && (
+        <section
+          id="story"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        >
+          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+            <span role="img" aria-label="story">
+              📖
+            </span>
+            Colony Story
+          </h2>
+          <ColonyStory data={data} />
         </section>
       )}
 
