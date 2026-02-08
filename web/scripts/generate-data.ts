@@ -54,6 +54,11 @@ export interface PullRequest {
   repository?: string;
 }
 
+export interface PhaseTransition {
+  phase: string;
+  enteredAt: string;
+}
+
 export interface Proposal {
   number: number;
   title: string;
@@ -62,7 +67,8 @@ export interface Proposal {
     | 'voting'
     | 'ready-to-implement'
     | 'implemented'
-    | 'rejected';
+    | 'rejected'
+    | 'inconclusive';
   author: string;
   createdAt: string;
   commentCount: number;
@@ -70,6 +76,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: PhaseTransition[];
   repository?: string;
 }
 
@@ -211,6 +218,12 @@ export interface GitHubEvent {
       state?: string;
     };
   };
+  created_at: string;
+}
+
+export interface GitHubTimelineEvent {
+  event: string;
+  label?: { name: string };
   created_at: string;
 }
 
@@ -435,8 +448,10 @@ async function fetchProposals(
   rawIssues: GitHubIssue[],
   repoSlug?: string
 ): Promise<Proposal[]> {
-  const proposalIssues = rawIssues.filter((i) =>
-    i.labels.some((l) => l.name.startsWith('phase:'))
+  const proposalIssues = rawIssues.filter(
+    (i) =>
+      i.labels.some((l) => l.name.startsWith('phase:')) ||
+      i.labels.some((l) => l.name === 'inconclusive')
   );
 
   const proposals: Proposal[] = [];
@@ -446,11 +461,17 @@ async function fetchProposals(
     'ready-to-implement',
     'implemented',
     'rejected',
+    'inconclusive',
   ] as const;
 
   for (const i of proposalIssues) {
+    // Check for phase: prefixed label first, then standalone inconclusive label
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
-    const phaseName = phaseLabel?.replace('phase:', '');
+    const phaseName =
+      phaseLabel?.replace('phase:', '') ??
+      (i.labels.some((l) => l.name === 'inconclusive')
+        ? 'inconclusive'
+        : undefined);
 
     if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
       continue;
@@ -468,8 +489,19 @@ async function fetchProposals(
     });
   }
 
-  // Fetch votes in parallel for all voting-phase proposals
-  const votingProposals = proposals.filter((p) => p.phase === 'voting');
+  // Fetch votes for all proposals that have been through a voting round.
+  // The Queen's voting comment persists after phase transitions, so we can
+  // retrieve tallies for proposals that already passed or failed voting.
+  const votablePhases: readonly string[] = [
+    'voting',
+    'ready-to-implement',
+    'implemented',
+    'rejected',
+    'inconclusive',
+  ];
+  const votingProposals = proposals.filter((p) =>
+    votablePhases.includes(p.phase)
+  );
 
   await Promise.all(
     votingProposals.map(async (proposal) => {
@@ -504,7 +536,48 @@ async function fetchProposals(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-    .slice(0, 10);
+    .slice(0, 20);
+}
+
+export function extractPhaseTransitions(
+  timelineEvents: GitHubTimelineEvent[]
+): PhaseTransition[] {
+  return timelineEvents
+    .filter(
+      (event) =>
+        event.event === 'labeled' && event.label?.name?.startsWith('phase:')
+    )
+    .map((event) => ({
+      phase: event.label?.name.replace('phase:', '') ?? '',
+      enteredAt: event.created_at,
+    }))
+    .sort(
+      (a, b) =>
+        new Date(a.enteredAt).getTime() - new Date(b.enteredAt).getTime()
+    );
+}
+
+async function fetchPhaseTransitions(
+  owner: string,
+  repo: string,
+  proposals: Proposal[]
+): Promise<void> {
+  await Promise.all(
+    proposals.map(async (proposal) => {
+      try {
+        const timeline = await fetchJson<GitHubTimelineEvent[]>(
+          `/repos/${owner}/${repo}/issues/${proposal.number}/timeline?per_page=100`
+        );
+
+        const transitions = extractPhaseTransitions(timeline);
+        if (transitions.length > 0) {
+          proposal.phaseTransitions = transitions;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch timeline for #${proposal.number}`, e);
+      }
+    })
+  );
 }
 
 export function mapEvents(
@@ -775,6 +848,7 @@ async function fetchRepoActivity(
     issueResult.rawIssues,
     slug
   );
+  await fetchPhaseTransitions(owner, repo, proposals);
   const taggedComments = eventResult.comments.map((c) => ({
     ...c,
     repository: slug,

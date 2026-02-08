@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatTimeAgo } from './time';
+import { formatTimeAgo, formatDuration } from './time';
 
 describe('formatTimeAgo', () => {
   const now = new Date('2026-02-05T12:00:00Z').getTime();
@@ -44,5 +44,60 @@ describe('formatTimeAgo', () => {
       '23 hours ago'
     );
     expect(formatTimeAgo(new Date(now - 86400 * 1000), now)).toBe('1 days ago');
+  });
+});
+
+describe('formatDuration', () => {
+  it('returns minutes for short durations', () => {
+    expect(formatDuration('2026-02-06T14:00:00Z', '2026-02-06T14:30:00Z')).toBe(
+      '30m'
+    );
+  });
+
+  it('returns hours and minutes for medium durations', () => {
+    expect(formatDuration('2026-02-06T14:00:00Z', '2026-02-06T16:30:00Z')).toBe(
+      '2h 30m'
+    );
+  });
+
+  it('returns hours without minutes when exact', () => {
+    expect(formatDuration('2026-02-06T14:00:00Z', '2026-02-06T17:00:00Z')).toBe(
+      '3h'
+    );
+  });
+
+  it('returns days and hours for long durations', () => {
+    expect(formatDuration('2026-02-06T14:00:00Z', '2026-02-08T18:00:00Z')).toBe(
+      '2d 4h'
+    );
+  });
+
+  it('returns days without hours when exact', () => {
+    expect(formatDuration('2026-02-06T14:00:00Z', '2026-02-08T14:00:00Z')).toBe(
+      '2d'
+    );
+  });
+
+  it('returns "<1m" for very short durations', () => {
+    expect(formatDuration('2026-02-06T14:00:00Z', '2026-02-06T14:00:30Z')).toBe(
+      '<1m'
+    );
+  });
+
+  it('returns null when end is before start', () => {
+    expect(
+      formatDuration('2026-02-06T16:00:00Z', '2026-02-06T14:00:00Z')
+    ).toBeNull();
+  });
+
+  it('returns null for equal timestamps', () => {
+    expect(
+      formatDuration('2026-02-06T14:00:00Z', '2026-02-06T14:00:00Z')
+    ).toBeNull();
+  });
+
+  it('returns null for invalid dates', () => {
+    expect(formatDuration('invalid', '2026-02-06T14:00:00Z')).toBeNull();
+    expect(formatDuration('2026-02-06T14:00:00Z', 'invalid')).toBeNull();
   });
 });

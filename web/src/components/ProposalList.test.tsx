@@ -146,6 +146,14 @@ describe('ProposalList', () => {
         createdAt: '2026-02-05T05:00:00Z',
         commentCount: 1,
       },
+      {
+        number: 6,
+        title: 'Inconclusive phase',
+        phase: 'inconclusive',
+        author: 'f',
+        createdAt: '2026-02-05T04:00:00Z',
+        commentCount: 1,
+      },
     ];
 
     render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
@@ -155,6 +163,7 @@ describe('ProposalList', () => {
     expect(screen.getByText('ready to implement')).toBeInTheDocument();
     expect(screen.getByText('implemented')).toBeInTheDocument();
     expect(screen.getByText('rejected')).toBeInTheDocument();
+    expect(screen.getByText('inconclusive')).toBeInTheDocument();
   });
 
   it('renders vote and comment emojis with aria-labels', () => {
@@ -182,6 +191,90 @@ describe('ProposalList', () => {
       <ProposalList proposals={[]} repoUrl={repoUrl} filteredAgent="worker" />
     );
     expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
+  });
+
+  it('renders lifecycle duration when phaseTransitions span multiple phases', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Lifecycle proposal',
+        phase: 'implemented',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 5,
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T16:00:00Z' },
+          { phase: 'implemented', enteredAt: '2026-02-05T18:00:00Z' },
+        ],
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(screen.getByLabelText('lifecycle duration')).toBeInTheDocument();
+    expect(screen.getByText('4h')).toBeInTheDocument();
+  });
+
+  it('does not render lifecycle duration with fewer than 2 transitions', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Single phase proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
+        ],
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.queryByLabelText('lifecycle duration')
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not render lifecycle duration when phaseTransitions is absent', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'No transitions proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.queryByLabelText('lifecycle duration')
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders a relative timestamp in a time element', () => {
+    const createdAt = '2026-02-05T09:00:00Z';
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Timestamp test',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt,
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    const timeEl = screen.getByText(/ago/i);
+    expect(timeEl.tagName.toLowerCase()).toBe('time');
+    expect(timeEl).toHaveAttribute('datetime', createdAt);
   });
 
   it('includes focus indicators on link elements', () => {

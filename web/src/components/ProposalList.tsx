@@ -1,5 +1,6 @@
 import type { Proposal } from '../types/activity';
 import { handleAvatarError } from '../utils/avatar';
+import { formatDuration, formatTimeAgo } from '../utils/time';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -30,13 +31,16 @@ export function ProposalList({
           href={`${repoUrl}/issues/${proposal.number}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
         >
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-mono text-amber-700 dark:text-amber-400">
               #{proposal.number}
             </span>
-            <PhaseBadge phase={proposal.phase} />
+            <div className="flex items-center gap-1.5">
+              <LifecycleDuration proposal={proposal} />
+              <PhaseBadge phase={proposal.phase} />
+            </div>
           </div>
           <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 group-hover:text-amber-700 dark:group-hover:text-amber-200 mb-3 line-clamp-2">
             {proposal.title}
@@ -52,6 +56,18 @@ export function ProposalList({
               <span className="text-xs text-amber-600 dark:text-amber-400">
                 @{proposal.author}
               </span>
+              <span
+                className="text-amber-400 dark:text-amber-600"
+                aria-hidden="true"
+              >
+                ·
+              </span>
+              <time
+                dateTime={proposal.createdAt}
+                className="text-[10px] text-amber-500 dark:text-amber-400"
+              >
+                {formatTimeAgo(new Date(proposal.createdAt))}
+              </time>
             </div>
             <div className="flex items-center gap-3">
               {proposal.votesSummary && (
@@ -84,6 +100,33 @@ export function ProposalList({
   );
 }
 
+function LifecycleDuration({
+  proposal,
+}: {
+  proposal: Proposal;
+}): React.ReactElement | null {
+  const transitions = proposal.phaseTransitions;
+  if (!transitions || transitions.length < 2) return null;
+
+  const first = transitions[0].enteredAt;
+  const last = transitions[transitions.length - 1].enteredAt;
+  const duration = formatDuration(first, last);
+
+  if (!duration) return null;
+
+  return (
+    <span
+      className="text-[10px] text-amber-600 dark:text-amber-400 font-mono"
+      title={`Lifecycle: ${transitions.length} phases in ${duration}`}
+    >
+      <span role="img" aria-label="lifecycle duration">
+        ⏱
+      </span>{' '}
+      {duration}
+    </span>
+  );
+}
+
 function PhaseBadge({
   phase,
 }: {
@@ -100,6 +143,8 @@ function PhaseBadge({
       'bg-neutral-100 text-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-200 border-neutral-200 dark:border-neutral-800',
     rejected:
       'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200 border-red-200 dark:border-red-800',
+    inconclusive:
+      'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200 border-orange-200 dark:border-orange-800',
   };
 
   return (

@@ -29,6 +29,11 @@ export interface PullRequest {
   repository?: string;
 }
 
+export interface PhaseTransition {
+  phase: string;
+  enteredAt: string;
+}
+
 export interface Proposal {
   number: number;
   title: string;
@@ -37,7 +42,8 @@ export interface Proposal {
     | 'voting'
     | 'ready-to-implement'
     | 'implemented'
-    | 'rejected';
+    | 'rejected'
+    | 'inconclusive';
   author: string;
   createdAt: string;
   commentCount: number;
@@ -45,6 +51,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: PhaseTransition[];
   repository?: string;
 }
 
