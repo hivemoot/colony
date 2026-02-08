@@ -14,6 +14,24 @@ describe('ActivityTimeline', () => {
     expect(screen.getByText(/no recent activity yet/i)).toBeInTheDocument();
   });
 
+  it('labels the events list for screen readers', () => {
+    const events: ActivityEvent[] = [
+      {
+        id: 'commit-1',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Test',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
+    render(<ActivityTimeline events={events} />);
+
+    const list = screen.getByRole('list');
+    expect(list).toHaveAttribute('aria-label', 'Recent activity events');
+  });
+
   it('renders a list of activity events', () => {
     const events: ActivityEvent[] = [
       {

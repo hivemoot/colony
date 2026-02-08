@@ -112,6 +112,17 @@ describe('App', () => {
     });
   });
 
+  it('loading state has role="status" and aria-live for screen readers', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+
+    render(<App />);
+    await waitFor(() => {
+      const loadingRegion = screen.getByRole('status');
+      expect(loadingRegion).toBeInTheDocument();
+      expect(loadingRegion).toHaveAttribute('aria-live', 'polite');
+    });
+  });
+
   it('loading spinner respects reduced motion preference', async () => {
     vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
 
