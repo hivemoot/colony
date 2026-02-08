@@ -241,6 +241,66 @@ describe('App', () => {
     });
   });
 
+  it('counts extended-voting and ready-to-implement as active proposals', async () => {
+    const dataWithAllPhases: ActivityData = {
+      ...mockActivityData,
+      proposals: [
+        {
+          number: 1,
+          title: 'Discussion',
+          phase: 'discussion',
+          author: 'a',
+          createdAt: new Date().toISOString(),
+          commentCount: 1,
+        },
+        {
+          number: 2,
+          title: 'Voting',
+          phase: 'voting',
+          author: 'b',
+          createdAt: new Date().toISOString(),
+          commentCount: 1,
+        },
+        {
+          number: 3,
+          title: 'Extended Voting',
+          phase: 'extended-voting',
+          author: 'c',
+          createdAt: new Date().toISOString(),
+          commentCount: 1,
+        },
+        {
+          number: 4,
+          title: 'Ready',
+          phase: 'ready-to-implement',
+          author: 'd',
+          createdAt: new Date().toISOString(),
+          commentCount: 1,
+        },
+        {
+          number: 5,
+          title: 'Done',
+          phase: 'implemented',
+          author: 'e',
+          createdAt: new Date().toISOString(),
+          commentCount: 1,
+        },
+      ],
+    };
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(dataWithAllPhases),
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      // 4 active: discussion + voting + extended-voting + ready-to-implement
+      // 1 terminal: implemented (not counted)
+      expect(screen.getByText(/4 active proposals$/i)).toBeInTheDocument();
+    });
+  });
+
   it('shows error state on fetch failure with alert role', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,

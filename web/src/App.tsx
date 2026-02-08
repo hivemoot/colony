@@ -45,7 +45,12 @@ function App(): React.ReactElement {
             activeAgentsCount={data.agents.length}
             activeProposalsCount={
               data.proposals.filter((p) =>
-                ['discussion', 'voting'].includes(p.phase)
+                [
+                  'discussion',
+                  'voting',
+                  'extended-voting',
+                  'ready-to-implement',
+                ].includes(p.phase)
               ).length
             }
           />
