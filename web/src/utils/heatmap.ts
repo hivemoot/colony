@@ -11,6 +11,7 @@ export interface DayActivity {
     issues: number;
     prs: number;
     comments: number;
+    proposals: number;
   };
 }
 
@@ -35,7 +36,7 @@ export function computeActivityHeatmap(
     dayMap.set(key, {
       date: key,
       count: 0,
-      breakdown: { commits: 0, issues: 0, prs: 0, comments: 0 },
+      breakdown: { commits: 0, issues: 0, prs: 0, comments: 0, proposals: 0 },
     });
   }
 
@@ -55,6 +56,7 @@ export function computeActivityHeatmap(
   for (const i of data.issues) increment(i.createdAt, 'issues');
   for (const pr of data.pullRequests) increment(pr.createdAt, 'prs');
   for (const c of data.comments) increment(c.createdAt, 'comments');
+  for (const p of data.proposals) increment(p.createdAt, 'proposals');
 
   // Return oldest-first
   return Array.from(dayMap.values());

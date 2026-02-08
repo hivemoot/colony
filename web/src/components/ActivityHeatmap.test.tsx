@@ -61,7 +61,7 @@ describe('ActivityHeatmap', () => {
   it('renders heatmap with accessible role', () => {
     render(<ActivityHeatmap data={makeData()} selectedAgent={null} />);
 
-    const heatmap = screen.getByRole('img');
+    const heatmap = screen.getByRole('grid');
     expect(heatmap).toHaveAttribute(
       'aria-label',
       expect.stringContaining('Activity heatmap')
@@ -114,7 +114,7 @@ describe('ActivityHeatmap', () => {
     render(<ActivityHeatmap data={data} selectedAgent="builder" />);
 
     expect(
-      screen.getByText(/1 contributions in the last 14 days/i)
+      screen.getByText(/1 contribution in the last 14 days/i)
     ).toBeInTheDocument();
   });
 
@@ -141,6 +141,39 @@ describe('ActivityHeatmap', () => {
     expect(cells.length).toBeGreaterThan(0);
     expect(cells[0].getAttribute('title')).toContain('1 commit');
     expect(cells[0].getAttribute('title')).toContain('1 issue');
+  });
+
+  it('shows proposals in tooltip breakdown', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'p',
+          phase: 'discussion',
+          author: 'x',
+          createdAt: '2026-02-05T10:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+
+    render(<ActivityHeatmap data={data} selectedAgent={null} />);
+
+    const cell = document.querySelector('[title*="Feb 5"]');
+    expect(cell?.getAttribute('title')).toContain('1 proposal');
+  });
+
+  it('provides keyboard accessibility for cells', () => {
+    const data = makeData({
+      commits: [
+        { sha: 'a', message: 'm', author: 'x', date: '2026-02-07T10:00:00Z' },
+      ],
+    });
+
+    render(<ActivityHeatmap data={data} selectedAgent={null} />);
+
+    const cell = screen.getByRole('gridcell', { name: /Feb 7: 1/i });
+    expect(cell).toHaveAttribute('tabIndex', '0');
   });
 
   it('renders date labels at start and end', () => {
