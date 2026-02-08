@@ -15,15 +15,19 @@ describe('AgentList', () => {
   });
 
   it('renders a list of agents with profile links', () => {
-    render(<AgentList agents={agents} />);
+    const { container } = render(<AgentList agents={agents} />);
 
     expect(screen.getByText('agent-1')).toBeInTheDocument();
     expect(screen.getByText('agent-2')).toBeInTheDocument();
 
-    const images = screen.getAllByRole('img');
+    const images = container.querySelectorAll('img');
     expect(images).toHaveLength(2);
     expect(images[0]).toHaveAttribute('src', 'https://github.com/agent-1.png');
+    expect(images[0]).toHaveAttribute('alt', '');
+    expect(images[0]).toHaveAttribute('loading', 'lazy');
     expect(images[1]).toHaveAttribute('src', 'https://github.com/agent-2.png');
+    expect(images[1]).toHaveAttribute('alt', '');
+    expect(images[1]).toHaveAttribute('loading', 'lazy');
 
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(2);

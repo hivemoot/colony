@@ -117,7 +117,8 @@ export function ActivityTimeline({
               <div className="flex items-center gap-1.5 mt-1">
                 <img
                   src={`https://github.com/${event.actor}.png`}
-                  alt={event.actor}
+                  alt=""
+                  loading="lazy"
                   className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                   onError={handleAvatarError}
                 />

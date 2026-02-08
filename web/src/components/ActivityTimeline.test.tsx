@@ -215,10 +215,12 @@ describe('ActivityTimeline', () => {
       },
     ];
 
-    render(<ActivityTimeline events={events} />);
+    const { container } = render(<ActivityTimeline events={events} />);
 
-    const avatar = screen.getByAltText('worker');
+    const avatar = container.querySelector('img');
     expect(avatar).toHaveAttribute('src', 'https://github.com/worker.png');
+    expect(avatar).toHaveAttribute('alt', '');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
   });
 
   it('links actor names to GitHub profiles', () => {
