@@ -203,15 +203,24 @@ export function resolveRepositories(
     return [resolveRepository(env)];
   }
 
-  return repos.map((r) => {
+  const seen = new Set<string>();
+  const result: Array<{ owner: string; repo: string }> = [];
+
+  for (const r of repos) {
     const [owner, repo] = r.split('/');
     if (!owner || !repo) {
       throw new Error(
         `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
       );
     }
-    return { owner, repo };
-  });
+    const key = `${owner}/${repo}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push({ owner, repo });
+    }
+  }
+
+  return result;
 }
 
 export function mapCommits(
@@ -741,7 +750,7 @@ export function aggregateAgentStats(
 async function fetchRepoActivity(
   owner: string,
   repo: string,
-  repoTag: string
+  repoTag?: string
 ): Promise<{
   repoInfo: RepositoryInfo;
   commits: Commit[];
@@ -808,16 +817,30 @@ async function generateActivityData(): Promise<ActivityData> {
     `Fetching activity for ${repos.map((r) => `${r.owner}/${r.repo}`).join(', ')}...`
   );
 
-  // Fetch all repos in parallel
-  const repoResults = await Promise.all(
+  // Fetch all repos in parallel with graceful degradation
+  const settled = await Promise.allSettled(
     repos.map((r) =>
       fetchRepoActivity(
         r.owner,
         r.repo,
-        isMultiRepo ? `${r.owner}/${r.repo}` : `${r.owner}/${r.repo}`
+        isMultiRepo ? `${r.owner}/${r.repo}` : undefined
       )
     )
   );
+
+  const repoResults = settled
+    .map((result, i) => {
+      if (result.status === 'fulfilled') return result.value;
+      console.warn(
+        `Failed to fetch ${repos[i].owner}/${repos[i].repo}: ${result.reason}`
+      );
+      return null;
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  if (repoResults.length === 0) {
+    throw new Error('All repository fetches failed');
+  }
 
   // Merge results across all repos
   const allCommits = repoResults.flatMap((r) => r.commits);

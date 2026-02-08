@@ -107,6 +107,16 @@ describe('resolveRepositories', () => {
     });
     expect(result).toEqual([{ owner: 'hivemoot', repo: 'colony' }]);
   });
+
+  it('should deduplicate repeated repositories', () => {
+    const result = resolveRepositories({
+      COLONY_REPOSITORIES: 'hivemoot/colony,hivemoot/colony,hivemoot/hivemoot',
+    });
+    expect(result).toEqual([
+      { owner: 'hivemoot', repo: 'colony' },
+      { owner: 'hivemoot', repo: 'hivemoot' },
+    ]);
+  });
 });
 
 describe('mapCommits', () => {
