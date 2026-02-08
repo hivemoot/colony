@@ -1,1 +1,11 @@
 @import 'tailwindcss';
+
+/* Collaboration matrix cell: amber intensity that adapts to color scheme */
+.collaboration-cell {
+  background-color: rgba(245, 158, 11, var(--cell-intensity, 0));
+}
+@media (prefers-color-scheme: dark) {
+  .collaboration-cell {
+    background-color: rgba(251, 191, 36, var(--cell-intensity, 0));
+  }
+}
