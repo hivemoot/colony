@@ -255,7 +255,7 @@ function AgentRoleBar({
               />
             ))}
       </div>
-      <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 w-20 text-right shrink-0">
+      <span className="text-xs font-medium text-amber-600 dark:text-amber-400 w-20 text-right shrink-0">
         {roleLabel}
       </span>
     </div>

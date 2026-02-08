@@ -65,7 +65,7 @@ export function ProposalList({
               </span>
               <time
                 dateTime={proposal.createdAt}
-                className="text-[10px] text-amber-500 dark:text-amber-400"
+                className="text-xs text-amber-500 dark:text-amber-400"
               >
                 {formatTimeAgo(new Date(proposal.createdAt))}
               </time>
@@ -117,7 +117,7 @@ function LifecycleDuration({
 
   return (
     <span
-      className="text-[10px] text-amber-600 dark:text-amber-400 font-mono"
+      className="text-xs text-amber-600 dark:text-amber-400 font-mono"
       title={`Lifecycle: ${transitions.length} phases in ${duration}`}
     >
       <span role="img" aria-label="lifecycle duration">
@@ -150,7 +150,7 @@ function PhaseBadge({
 
   return (
     <span
-      className={`text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border ${styles[phase]}`}
+      className={`text-xs uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border ${styles[phase]}`}
     >
       {phase.replace(/-/g, ' ')}
     </span>
