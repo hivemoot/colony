@@ -389,6 +389,23 @@ describe('ActivityFeed', () => {
       expect(screen.queryByText('Clear filter')).not.toBeInTheDocument();
     });
 
+    it('includes focus ring offset on Clear filter button', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+        />
+      );
+
+      const clearButton = screen.getByText('Clear filter');
+      expect(clearButton.className).toContain('focus-visible:ring-offset-1');
+      expect(clearButton.className).toContain(
+        'dark:focus-visible:ring-offset-neutral-800'
+      );
+    });
+
     it('calls onSelectAgent(null) when Clear filter is clicked', () => {
       const onSelectAgent = vi.fn();
       render(

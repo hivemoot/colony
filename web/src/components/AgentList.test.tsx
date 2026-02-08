@@ -89,6 +89,16 @@ describe('AgentList', () => {
     expect(selectedWrapper?.className).not.toContain('opacity-40');
   });
 
+  it('includes focus ring offset on agent login links', () => {
+    render(<AgentList agents={[{ login: 'agent-1' }]} />);
+
+    const link = screen.getByRole('link', { name: 'agent-1' });
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
+  });
+
   it('marks the bee badge as decorative with aria-hidden', () => {
     const { container } = render(<AgentList agents={[{ login: 'agent-1' }]} />);
     const badge = container.querySelector('.bg-amber-500');

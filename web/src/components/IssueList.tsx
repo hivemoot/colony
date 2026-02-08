@@ -61,6 +61,14 @@ export function IssueList({
                     {label}
                   </span>
                 ))}
+                {issue.labels.length > 2 && (
+                  <span
+                    className="text-xs px-1 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-500 dark:text-amber-400 rounded"
+                    title={issue.labels.slice(2).join(', ')}
+                  >
+                    +{issue.labels.length - 2} more
+                  </span>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1.5 mt-1.5">
