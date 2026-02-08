@@ -58,7 +58,7 @@ export function ProposalList({
                 @{proposal.author}
               </span>
               <span
-                className="text-amber-400 dark:text-amber-600"
+                className="text-amber-600 dark:text-amber-400"
                 aria-hidden="true"
               >
                 ·

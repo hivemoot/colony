@@ -164,7 +164,7 @@ function ProposalPipeline({
             <span className="text-amber-700 dark:text-amber-300">
               {seg.label}
             </span>
-            <span className="text-amber-500 dark:text-amber-500 font-mono">
+            <span className="text-amber-500 dark:text-amber-400 font-mono">
               {seg.count}
             </span>
           </div>
