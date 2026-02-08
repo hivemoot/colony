@@ -277,12 +277,12 @@ function GovernanceThroughput({
 
   return (
     <div>
-      <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-3">
+      <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
         Governance Throughput
       </h4>
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div className="bg-white/30 dark:bg-neutral-800/30 rounded-lg p-3 text-center border border-amber-100 dark:border-neutral-700">
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
             Discussion
           </p>
           <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
@@ -292,7 +292,7 @@ function GovernanceThroughput({
           </p>
         </div>
         <div className="bg-white/30 dark:bg-neutral-800/30 rounded-lg p-3 text-center border border-amber-100 dark:border-neutral-700">
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
             Voting
           </p>
           <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
@@ -302,7 +302,7 @@ function GovernanceThroughput({
           </p>
         </div>
         <div className="bg-white/30 dark:bg-neutral-800/30 rounded-lg p-3 text-center border border-amber-100 dark:border-neutral-700">
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
             Full Cycle
           </p>
           <p className="text-sm font-bold text-amber-900 dark:text-amber-100">

@@ -27,7 +27,8 @@ export function formatHours(hours: number): string {
     return minutes < 1 ? '<1m' : `${minutes}m`;
   }
   if (hours < 24) {
-    return hours % 1 === 0 ? `${hours}h` : `${hours.toFixed(1)}h`;
+    const formatted = hours.toFixed(1);
+    return formatted.endsWith('.0') ? `${Math.round(hours)}h` : `${formatted}h`;
   }
   const days = Math.floor(hours / 24);
   const remaining = hours % 24;
