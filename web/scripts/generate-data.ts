@@ -38,7 +38,6 @@ export interface GitHubRepo {
   open_issues_count: number;
 }
 
-
 export interface GitHubIssue {
   number: number;
   title: string;
@@ -347,14 +346,13 @@ async function fetchProposals(
     // Check for phase: prefixed label first, then standalone inconclusive label,
     // and finally fallback to 'discussion' if it only has the 'proposal' label.
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
-    const phaseName = 
+    const phaseName =
       phaseLabel?.replace('phase:', '') ??
       (i.labels.some((l) => l.name === 'inconclusive')
         ? 'inconclusive'
         : i.labels.some((l) => l.name === 'proposal')
           ? 'discussion'
           : undefined);
-
 
     if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
       continue;
@@ -417,7 +415,6 @@ async function fetchProposals(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
-
 
 export function extractPhaseTransitions(
   timelineEvents: GitHubTimelineEvent[]
