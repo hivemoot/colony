@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatTimeAgo, formatDuration } from './time';
+import { formatTimeAgo, formatDuration, formatHours } from './time';
 
 describe('formatTimeAgo', () => {
   const now = new Date('2026-02-05T12:00:00Z').getTime();
@@ -99,5 +99,37 @@ describe('formatDuration', () => {
   it('returns null for invalid dates', () => {
     expect(formatDuration('invalid', '2026-02-06T14:00:00Z')).toBeNull();
     expect(formatDuration('2026-02-06T14:00:00Z', 'invalid')).toBeNull();
+  });
+});
+
+describe('formatHours', () => {
+  it('formats sub-hour durations as minutes', () => {
+    expect(formatHours(0.5)).toBe('30m');
+    expect(formatHours(0.25)).toBe('15m');
+  });
+
+  it('returns "<1m" for very small durations', () => {
+    expect(formatHours(0.001)).toBe('<1m');
+  });
+
+  it('formats whole hours without decimal', () => {
+    expect(formatHours(1)).toBe('1h');
+    expect(formatHours(6)).toBe('6h');
+    expect(formatHours(23)).toBe('23h');
+  });
+
+  it('formats fractional hours with one decimal', () => {
+    expect(formatHours(6.5)).toBe('6.5h');
+    expect(formatHours(14.3)).toBe('14.3h');
+  });
+
+  it('formats multi-day durations', () => {
+    expect(formatHours(48)).toBe('2d');
+    expect(formatHours(25.5)).toBe('1d 2h');
+    expect(formatHours(50)).toBe('2d 2h');
+  });
+
+  it('omits remaining hours when less than half an hour', () => {
+    expect(formatHours(24.2)).toBe('1d');
   });
 });

@@ -5,6 +5,7 @@ import {
   computePipeline,
   computeAgentRoles,
   computeTopProposers,
+  computeThroughput,
 } from './governance';
 
 function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
@@ -338,5 +339,238 @@ describe('computeGovernanceMetrics', () => {
     expect(metrics.agentRoles).toHaveLength(2);
     expect(metrics.topProposers[0]).toEqual({ login: 'builder', count: 2 });
     expect(metrics.topProposers[1]).toEqual({ login: 'scout', count: 1 });
+  });
+
+  it('includes throughput metrics', () => {
+    const data = makeActivityData();
+    const metrics = computeGovernanceMetrics(data);
+    expect(metrics.throughput).toBeDefined();
+    expect(metrics.throughput.resolvedCount).toBe(0);
+    expect(metrics.throughput.activeCount).toBe(0);
+  });
+});
+
+describe('computeThroughput', () => {
+  it('returns null medians for empty proposals', () => {
+    const result = computeThroughput([]);
+    expect(result).toEqual({
+      medianDiscussionHours: null,
+      medianVotingHours: null,
+      medianCycleHours: null,
+      resolvedCount: 0,
+      activeCount: 0,
+    });
+  });
+
+  it('returns null medians for proposals without transitions', () => {
+    const result = computeThroughput([
+      makeProposal({ number: 1, phase: 'discussion' }),
+    ]);
+    expect(result.medianDiscussionHours).toBeNull();
+    expect(result.medianCycleHours).toBeNull();
+    expect(result.activeCount).toBe(1);
+  });
+
+  it('computes discussion duration from discussion to voting', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'voting',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T06:00:00Z' },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    expect(result.medianDiscussionHours).toBe(6);
+    expect(result.activeCount).toBe(1);
+  });
+
+  it('computes voting duration from voting to terminal phase', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T06:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T14:00:00Z',
+          },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    expect(result.medianVotingHours).toBe(8);
+    expect(result.resolvedCount).toBe(1);
+  });
+
+  it('computes full cycle time from creation to terminal phase', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T06:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T14:00:00Z',
+          },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    expect(result.medianCycleHours).toBe(14);
+  });
+
+  it('computes median across multiple proposals', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T04:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T08:00:00Z',
+          },
+        ],
+      }),
+      makeProposal({
+        number: 2,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T08:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T20:00:00Z',
+          },
+        ],
+      }),
+      makeProposal({
+        number: 3,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T06:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T10:00:00Z',
+          },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    // Discussion durations: 4, 8, 6 → sorted: 4, 6, 8 → median: 6
+    expect(result.medianDiscussionHours).toBe(6);
+    // Voting durations: 4, 12, 4 → sorted: 4, 4, 12 → median: 4
+    expect(result.medianVotingHours).toBe(4);
+    // Cycle times: 8, 20, 10 → sorted: 8, 10, 20 → median: 10
+    expect(result.medianCycleHours).toBe(10);
+    expect(result.resolvedCount).toBe(3);
+  });
+
+  it('handles even number of values by averaging middle two', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'implemented',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T04:00:00Z' },
+          { phase: 'implemented', enteredAt: '2026-02-05T08:00:00Z' },
+        ],
+      }),
+      makeProposal({
+        number: 2,
+        phase: 'rejected',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T10:00:00Z' },
+          { phase: 'rejected', enteredAt: '2026-02-05T20:00:00Z' },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    // Discussion: 4, 10 → median: (4+10)/2 = 7
+    expect(result.medianDiscussionHours).toBe(7);
+    // Cycle: 8, 20 → median: (8+20)/2 = 14
+    expect(result.medianCycleHours).toBe(14);
+    expect(result.resolvedCount).toBe(2);
+  });
+
+  it('handles extended-voting phase as voting start', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'extended-voting', enteredAt: '2026-02-05T06:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T12:00:00Z',
+          },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    // Discussion: 0:00 to 6:00 = 6h
+    expect(result.medianDiscussionHours).toBe(6);
+    // Voting: 6:00 to 12:00 = 6h
+    expect(result.medianVotingHours).toBe(6);
+  });
+
+  it('counts active and resolved proposals separately', () => {
+    const proposals = [
+      makeProposal({ number: 1, phase: 'discussion' }),
+      makeProposal({ number: 2, phase: 'voting' }),
+      makeProposal({
+        number: 3,
+        phase: 'ready-to-implement',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T06:00:00Z' },
+          {
+            phase: 'ready-to-implement',
+            enteredAt: '2026-02-05T10:00:00Z',
+          },
+        ],
+      }),
+      makeProposal({
+        number: 4,
+        phase: 'inconclusive',
+        createdAt: '2026-02-05T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T04:00:00Z' },
+          { phase: 'inconclusive', enteredAt: '2026-02-05T08:00:00Z' },
+        ],
+      }),
+    ];
+
+    const result = computeThroughput(proposals);
+    expect(result.activeCount).toBe(2);
+    expect(result.resolvedCount).toBe(2);
   });
 });

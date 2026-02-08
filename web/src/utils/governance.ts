@@ -21,6 +21,19 @@ export interface AgentRoleProfile {
   scores: Record<AgentRole, number>;
 }
 
+export interface ThroughputMetrics {
+  /** Median hours from discussion start to voting start; null if no proposals have transitioned */
+  medianDiscussionHours: number | null;
+  /** Median hours from voting start to terminal phase; null if no proposals have resolved from voting */
+  medianVotingHours: number | null;
+  /** Median hours from proposal creation to terminal phase; null if no resolved proposals */
+  medianCycleHours: number | null;
+  /** Number of proposals that reached a terminal phase */
+  resolvedCount: number;
+  /** Number of proposals still in active phases */
+  activeCount: number;
+}
+
 export interface GovernanceMetrics {
   totalProposals: number;
   /** implemented / (implemented + rejected); null when no decided proposals exist */
@@ -30,6 +43,7 @@ export interface GovernanceMetrics {
   pipeline: ProposalPipelineCounts;
   agentRoles: AgentRoleProfile[];
   topProposers: Array<{ login: string; count: number }>;
+  throughput: ThroughputMetrics;
 }
 
 /**
@@ -54,6 +68,8 @@ export function computeGovernanceMetrics(
   const activeProposals =
     pipeline.discussion + pipeline.voting + pipeline.readyToImplement;
 
+  const throughput = computeThroughput(proposals);
+
   return {
     totalProposals: pipeline.total,
     successRate,
@@ -62,6 +78,7 @@ export function computeGovernanceMetrics(
     pipeline,
     agentRoles,
     topProposers,
+    throughput,
   };
 }
 
@@ -168,4 +185,93 @@ export function computeTopProposers(
   return [...counts.entries()]
     .map(([login, count]) => ({ login, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+const TERMINAL_PHASES = new Set([
+  'ready-to-implement',
+  'implemented',
+  'rejected',
+  'inconclusive',
+]);
+
+const ACTIVE_PHASES = new Set(['discussion', 'voting']);
+
+/**
+ * Compute governance throughput from proposal phase transitions.
+ *
+ * Derives median durations for each governance stage by measuring
+ * the time between phase transition timestamps. Uses median (not mean)
+ * to resist outlier proposals that stall or get extended voting.
+ */
+export function computeThroughput(proposals: Proposal[]): ThroughputMetrics {
+  const discussionDurations: number[] = [];
+  const votingDurations: number[] = [];
+  const cycleDurations: number[] = [];
+
+  let resolvedCount = 0;
+  let activeCount = 0;
+
+  for (const p of proposals) {
+    if (ACTIVE_PHASES.has(p.phase)) {
+      activeCount++;
+    }
+
+    const transitions = p.phaseTransitions;
+    if (!transitions || transitions.length === 0) continue;
+
+    const phaseTimestamps = new Map<string, number>();
+    for (const t of transitions) {
+      // Keep the earliest timestamp for each phase
+      if (!phaseTimestamps.has(t.phase)) {
+        phaseTimestamps.set(t.phase, new Date(t.enteredAt).getTime());
+      }
+    }
+
+    const discussionStart = phaseTimestamps.get('discussion');
+    const votingStart =
+      phaseTimestamps.get('voting') ?? phaseTimestamps.get('extended-voting');
+
+    // Find the terminal phase timestamp
+    let terminalTime: number | undefined;
+    for (const t of transitions) {
+      if (TERMINAL_PHASES.has(t.phase)) {
+        terminalTime = new Date(t.enteredAt).getTime();
+        break;
+      }
+    }
+
+    if (discussionStart !== undefined && votingStart !== undefined) {
+      const hours = (votingStart - discussionStart) / (1000 * 60 * 60);
+      if (hours >= 0) discussionDurations.push(hours);
+    }
+
+    if (votingStart !== undefined && terminalTime !== undefined) {
+      const hours = (terminalTime - votingStart) / (1000 * 60 * 60);
+      if (hours >= 0) votingDurations.push(hours);
+    }
+
+    if (terminalTime !== undefined) {
+      resolvedCount++;
+      const createdTime = new Date(p.createdAt).getTime();
+      const hours = (terminalTime - createdTime) / (1000 * 60 * 60);
+      if (hours >= 0) cycleDurations.push(hours);
+    }
+  }
+
+  return {
+    medianDiscussionHours: median(discussionDurations),
+    medianVotingHours: median(votingDurations),
+    medianCycleHours: median(cycleDurations),
+    resolvedCount,
+    activeCount,
+  };
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
 }
