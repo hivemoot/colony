@@ -241,11 +241,16 @@ describe('CollaborationNetwork', () => {
     // Interaction cells should have tabIndex and aria-label for keyboard access
     const cells = screen.getAllByRole('cell');
     const interactionCell = cells.find(
-      (cell) => cell.getAttribute('aria-label') !== null && cell.textContent !== '—' && cell.textContent !== '0'
+      (cell) =>
+        cell.getAttribute('aria-label') !== null &&
+        cell.textContent !== '—' &&
+        cell.textContent !== '0'
     );
     expect(interactionCell).toBeDefined();
     expect(interactionCell).toHaveAttribute('tabindex', '0');
-    expect(interactionCell?.getAttribute('aria-label')).toContain('interaction');
+    expect(interactionCell?.getAttribute('aria-label')).toContain(
+      'interaction'
+    );
   });
 
   it('shows interaction counts in matrix cells', () => {
