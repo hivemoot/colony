@@ -397,8 +397,10 @@ async function fetchProposals(
   repo: string,
   rawIssues: GitHubIssue[]
 ): Promise<Proposal[]> {
-  const proposalIssues = rawIssues.filter((i) =>
-    i.labels.some((l) => l.name.startsWith('phase:'))
+  const proposalIssues = rawIssues.filter(
+    (i) =>
+      i.labels.some((l) => l.name.startsWith('phase:')) ||
+      i.labels.some((l) => l.name === 'inconclusive')
   );
 
   const proposals: Proposal[] = [];
@@ -412,8 +414,13 @@ async function fetchProposals(
   ] as const;
 
   for (const i of proposalIssues) {
+    // Check for phase: prefixed label first, then standalone inconclusive label
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
-    const phaseName = phaseLabel?.replace('phase:', '');
+    const phaseName =
+      phaseLabel?.replace('phase:', '') ??
+      (i.labels.some((l) => l.name === 'inconclusive')
+        ? 'inconclusive'
+        : undefined);
 
     if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
       continue;
