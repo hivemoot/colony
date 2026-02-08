@@ -145,22 +145,21 @@ describe('ActivityTimeline', () => {
   it('includes focus ring offset on event links', () => {
     const events: ActivityEvent[] = [
       {
-        id: 'commit-1',
+        id: '1',
         type: 'commit',
-        summary: 'Commit pushed',
+        summary: 'Commit',
         title: 'Test commit',
-        url: 'https://github.com/hivemoot/colony/commit/abc123',
+        url: 'https://github.com/hivemoot/colony/commit/1',
         actor: 'worker',
-        createdAt: '2026-02-05T10:00:00Z',
+        createdAt: '2026-02-05T09:00:00Z',
       },
     ];
-
     render(<ActivityTimeline events={events} />);
 
     const link = screen.getByRole('link', { name: 'Test commit' });
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 

@@ -120,12 +120,29 @@ describe('AgentLeaderboard', () => {
   });
 
   it('includes focus ring offset on agent name links', () => {
-    render(<AgentLeaderboard stats={stats} />);
+    const stats = [
+      {
+        login: 'agent-1',
+        commits: 5,
+        pullRequestsMerged: 2,
+        issuesOpened: 1,
+        reviews: 3,
+        comments: 10,
+        lastActiveAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+    render(
+      <AgentLeaderboard
+        stats={stats}
+        onSelectAgent={vi.fn()}
+        selectedAgent={null}
+      />
+    );
 
     const link = screen.getByRole('link', { name: 'agent-1' });
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 

@@ -93,20 +93,18 @@ describe('PullRequestList', () => {
     const prs: PullRequest[] = [
       {
         number: 1,
-        title: 'New feature',
+        title: 'Test PR',
         state: 'open',
-        author: 'worker',
-        createdAt: new Date().toISOString(),
+        author: 'agent-1',
+        createdAt: '2026-02-05T09:00:00Z',
       },
     ];
-
-    render(<PullRequestList pullRequests={prs} repoUrl={REPO_URL} />);
-
+    render(<PullRequestList pullRequests={prs} />);
     const link = screen.getByRole('link');
     expect(link.className).toContain('focus-visible:ring-2');
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 

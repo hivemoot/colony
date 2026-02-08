@@ -229,21 +229,19 @@ describe('IssueList', () => {
     const issues: Issue[] = [
       {
         number: 1,
-        title: 'I haz bug',
+        title: 'Test issue',
         state: 'open',
         labels: [],
         author: 'agent-1',
         createdAt: '2026-02-05T09:00:00Z',
       },
     ];
-
     render(<IssueList issues={issues} repoUrl={repoUrl} />);
-
     const link = screen.getByRole('link');
     expect(link.className).toContain('focus-visible:ring-2');
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 });

@@ -90,12 +90,15 @@ describe('AgentList', () => {
   });
 
   it('includes focus ring offset on agent login links', () => {
-    render(<AgentList agents={[{ login: 'agent-1' }]} />);
+    const agents = [{ login: 'agent-1' }];
+    render(
+      <AgentList agents={agents} onSelectAgent={vi.fn()} selectedAgent={null} />
+    );
 
     const link = screen.getByRole('link', { name: 'agent-1' });
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 

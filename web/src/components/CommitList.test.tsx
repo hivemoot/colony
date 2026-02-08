@@ -108,19 +108,17 @@ describe('CommitList', () => {
     const commits: Commit[] = [
       {
         sha: 'abc1234',
-        message: 'Initial commit',
+        message: 'Test commit',
         author: 'agent-1',
-        date: new Date().toISOString(),
+        date: '2026-02-05T09:00:00Z',
       },
     ];
-
-    render(<CommitList commits={commits} repoUrl={repoUrl} />);
-
+    render(<CommitList commits={commits} />);
     const link = screen.getByRole('link');
     expect(link.className).toContain('focus-visible:ring-2');
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 });

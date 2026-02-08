@@ -283,19 +283,17 @@ describe('ProposalList', () => {
         number: 1,
         title: 'Test proposal',
         phase: 'discussion',
-        author: 'worker',
+        author: 'agent-1',
         createdAt: '2026-02-05T09:00:00Z',
         commentCount: 0,
       },
     ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
+    render(<ProposalList proposals={proposals} />);
     const link = screen.getByRole('link');
     expect(link.className).toContain('focus-visible:ring-2');
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 });
