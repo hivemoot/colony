@@ -194,7 +194,7 @@ const TERMINAL_PHASES = new Set([
   'inconclusive',
 ]);
 
-const ACTIVE_PHASES = new Set(['discussion', 'voting']);
+const ACTIVE_PHASES = new Set(['discussion', 'voting', 'extended-voting']);
 
 /**
  * Compute governance throughput from proposal phase transitions.
