@@ -100,3 +100,7 @@ governance:
         minApprovals: 2
     mergeReady: # Two bees must approve before the honey ships 🍯
       minApprovals: 2
+
+standup:
+  enabled: true
+  category: "Colony Reports"
