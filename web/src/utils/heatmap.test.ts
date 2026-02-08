@@ -174,7 +174,27 @@ describe('computeActivityHeatmap', () => {
       issues: 1,
       prs: 1,
       comments: 1,
+      proposals: 0,
     });
+  });
+
+  it('counts proposals in the correct day', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Add feature',
+          phase: 'discussion',
+          author: 'builder',
+          createdAt: '2026-02-06T10:00:00Z',
+          commentCount: 3,
+        },
+      ],
+    });
+    const result = computeActivityHeatmap(data, 7, now);
+    const feb6 = result.find((d) => d.date === '2026-02-06');
+    expect(feb6?.count).toBe(1);
+    expect(feb6?.breakdown.proposals).toBe(1);
   });
 
   it('ignores events outside the window', () => {
@@ -203,6 +223,7 @@ describe('computeActivityHeatmap', () => {
         issues: 0,
         prs: 0,
         comments: 0,
+        proposals: 0,
       });
     });
   });

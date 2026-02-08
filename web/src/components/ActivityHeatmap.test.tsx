@@ -58,10 +58,10 @@ describe('ActivityHeatmap', () => {
     expect(screen.getByText(/2 active days/i)).toBeInTheDocument();
   });
 
-  it('renders heatmap with accessible role', () => {
+  it('renders heatmap with accessible grid role', () => {
     render(<ActivityHeatmap data={makeData()} selectedAgent={null} />);
 
-    const heatmap = screen.getByRole('img');
+    const heatmap = screen.getByRole('grid');
     expect(heatmap).toHaveAttribute(
       'aria-label',
       expect.stringContaining('Activity heatmap')
@@ -114,7 +114,7 @@ describe('ActivityHeatmap', () => {
     render(<ActivityHeatmap data={data} selectedAgent="builder" />);
 
     expect(
-      screen.getByText(/1 contributions in the last 14 days/i)
+      screen.getByText(/1 contribution in the last 14 days/i)
     ).toBeInTheDocument();
   });
 
