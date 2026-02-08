@@ -1,5 +1,8 @@
 export function formatTimeAgo(date: Date, now = Date.now()): string {
-  const seconds = Math.floor((now - date.getTime()) / 1000);
+  const ms = date.getTime();
+  if (isNaN(ms)) return '';
+
+  const seconds = Math.floor((now - ms) / 1000);
 
   if (seconds < 60) return 'just now';
   if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;

@@ -33,6 +33,11 @@ describe('formatTimeAgo', () => {
     expect(formatTimeAgo(tenDays, now)).toBe('10 days ago');
   });
 
+  it('returns empty string for invalid date', () => {
+    expect(formatTimeAgo(new Date('invalid'))).toBe('');
+    expect(formatTimeAgo(new Date(NaN))).toBe('');
+  });
+
   it('handles boundary conditions', () => {
     expect(formatTimeAgo(new Date(now - 59 * 1000), now)).toBe('just now');
     expect(formatTimeAgo(new Date(now - 60 * 1000), now)).toBe('1 minutes ago');
