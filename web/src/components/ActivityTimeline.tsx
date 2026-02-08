@@ -125,7 +125,7 @@ export function ActivityTimeline({
                   href={`https://github.com/${event.actor}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                 >
                   {event.actor}
                 </a>
