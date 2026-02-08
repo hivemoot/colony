@@ -264,13 +264,14 @@ describe('computeGovernanceMetrics', () => {
         makeProposal({ number: 2, phase: 'implemented' }),
         makeProposal({ number: 3, phase: 'implemented' }),
         makeProposal({ number: 4, phase: 'rejected' }),
-        makeProposal({ number: 5, phase: 'voting' }),
+        makeProposal({ number: 5, phase: 'inconclusive' }),
+        makeProposal({ number: 6, phase: 'voting' }),
       ],
     });
 
     const metrics = computeGovernanceMetrics(data);
-    // 3 implemented out of 4 decided (3 implemented + 1 rejected)
-    expect(metrics.successRate).toBe(0.75);
+    // 3 implemented out of 5 decided (3 implemented + 1 rejected + 1 inconclusive)
+    expect(metrics.successRate).toBe(0.6);
   });
 
   it('returns null success rate when no proposals are decided', () => {

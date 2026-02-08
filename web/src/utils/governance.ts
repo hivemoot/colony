@@ -44,7 +44,8 @@ export function computeGovernanceMetrics(
   const agentRoles = computeAgentRoles(data.agentStats, proposals);
   const topProposers = computeTopProposers(proposals);
 
-  const decided = pipeline.implemented + pipeline.rejected;
+  const decided =
+    pipeline.implemented + pipeline.rejected + pipeline.inconclusive;
   const successRate = decided > 0 ? pipeline.implemented / decided : null;
 
   const totalComments = proposals.reduce((sum, p) => sum + p.commentCount, 0);

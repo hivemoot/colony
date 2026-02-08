@@ -12,6 +12,17 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type {
+  Commit,
+  Issue,
+  PullRequest,
+  PhaseTransition,
+  Proposal,
+  Comment,
+  Agent,
+  AgentStats,
+  ActivityData,
+} from '../shared/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
@@ -20,105 +31,6 @@ const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
-
-// Data types matching the schema from Issue #3 and #13 discussion
-export interface Commit {
-  sha: string;
-  message: string;
-  author: string;
-  date: string;
-}
-
-export interface Issue {
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  labels: string[];
-  author: string;
-  createdAt: string;
-  closedAt?: string;
-}
-
-export interface PullRequest {
-  number: number;
-  title: string;
-  state: 'open' | 'closed' | 'merged';
-  draft?: boolean;
-  author: string;
-  createdAt: string;
-  closedAt?: string;
-  mergedAt?: string;
-}
-
-export interface PhaseTransition {
-  phase: string;
-  enteredAt: string;
-}
-
-export interface Proposal {
-  number: number;
-  title: string;
-  phase:
-    | 'discussion'
-    | 'voting'
-    | 'ready-to-implement'
-    | 'implemented'
-    | 'rejected'
-    | 'inconclusive';
-  author: string;
-  createdAt: string;
-  commentCount: number;
-  votesSummary?: {
-    thumbsUp: number;
-    thumbsDown: number;
-  };
-  phaseTransitions?: PhaseTransition[];
-}
-
-export interface Comment {
-  id: number;
-  issueOrPrNumber: number;
-  type: 'issue' | 'pr' | 'review' | 'proposal';
-  author: string;
-  body: string;
-  createdAt: string;
-  url: string;
-}
-
-export interface Agent {
-  login: string;
-  avatarUrl?: string;
-}
-
-export interface AgentStats {
-  login: string;
-  avatarUrl?: string;
-  commits: number;
-  pullRequestsMerged: number;
-  issuesOpened: number;
-  reviews: number;
-  comments: number;
-  lastActiveAt: string;
-}
-
-export interface ActivityData {
-  generatedAt: string;
-  repository: {
-    owner: string;
-    name: string;
-    url: string;
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
-  agents: Agent[];
-  agentStats: AgentStats[];
-  commits: Commit[];
-  issues: Issue[];
-  pullRequests: PullRequest[];
-  proposals: Proposal[];
-  comments: Comment[];
-}
 
 export interface GitHubRepo {
   stargazers_count: number;
@@ -290,7 +202,7 @@ async function fetchCommits(
   repo: string
 ): Promise<{ commits: Commit[]; agents: Agent[] }> {
   const ghCommits = await fetchJson<GitHubCommit[]>(
-    `/repos/${owner}/${repo}/commits?per_page=20`
+    `/repos/${owner}/${repo}/commits?per_page=50`
   );
 
   return mapCommits(ghCommits);
@@ -330,16 +242,32 @@ async function fetchIssues(
   rawIssues: GitHubIssue[];
 }> {
   // Fetch both open and closed issues
-  const [openIssues, closedIssues] = await Promise.all([
-    fetchJson<GitHubIssue[]>(
-      `/repos/${owner}/${repo}/issues?state=open&per_page=30`
-    ),
-    fetchJson<GitHubIssue[]>(
-      `/repos/${owner}/${repo}/issues?state=closed&per_page=30`
-    ),
-  ]);
+  const [openPage1, openPage2, closedPage1, closedPage2, closedPage3] =
+    await Promise.all([
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=open&per_page=100&page=1`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=open&per_page=100&page=2`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=closed&per_page=100&page=1`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=closed&per_page=100&page=2`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=closed&per_page=100&page=3`
+      ),
+    ]);
 
-  return mapIssues([...openIssues, ...closedIssues]);
+  return mapIssues([
+    ...openPage1,
+    ...openPage2,
+    ...closedPage1,
+    ...closedPage2,
+    ...closedPage3,
+  ]);
 }
 
 export function mapPullRequests(ghPRs: GitHubPR[]): {
@@ -382,10 +310,10 @@ async function fetchPullRequests(
   // Fetch both open and closed PRs
   const [openPRs, closedPRs] = await Promise.all([
     fetchJson<GitHubPR[]>(
-      `/repos/${owner}/${repo}/pulls?state=open&per_page=10`
+      `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
     ),
     fetchJson<GitHubPR[]>(
-      `/repos/${owner}/${repo}/pulls?state=closed&per_page=10`
+      `/repos/${owner}/${repo}/pulls?state=closed&per_page=50`
     ),
   ]);
 
@@ -400,7 +328,8 @@ async function fetchProposals(
   const proposalIssues = rawIssues.filter(
     (i) =>
       i.labels.some((l) => l.name.startsWith('phase:')) ||
-      i.labels.some((l) => l.name === 'inconclusive')
+      i.labels.some((l) => l.name === 'inconclusive') ||
+      i.labels.some((l) => l.name === 'proposal')
   );
 
   const proposals: Proposal[] = [];
@@ -414,13 +343,16 @@ async function fetchProposals(
   ] as const;
 
   for (const i of proposalIssues) {
-    // Check for phase: prefixed label first, then standalone inconclusive label
+    // Check for phase: prefixed label first, then standalone inconclusive label,
+    // and finally fallback to 'discussion' if it only has the 'proposal' label.
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
     const phaseName =
       phaseLabel?.replace('phase:', '') ??
       (i.labels.some((l) => l.name === 'inconclusive')
         ? 'inconclusive'
-        : undefined);
+        : i.labels.some((l) => l.name === 'proposal')
+          ? 'discussion'
+          : undefined);
 
     if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
       continue;
@@ -479,12 +411,9 @@ async function fetchProposals(
     })
   );
 
-  return proposals
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-    .slice(0, 20);
+  return proposals.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 export function extractPhaseTransitions(
@@ -641,7 +570,7 @@ async function fetchEvents(
   agents: Agent[];
 }> {
   const ghEvents = await fetchJson<GitHubEvent[]>(
-    `/repos/${owner}/${repo}/events?per_page=50`
+    `/repos/${owner}/${repo}/events?per_page=100`
   );
 
   return mapEvents(ghEvents, owner, repo);
