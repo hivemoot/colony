@@ -244,6 +244,21 @@ describe('App', () => {
     });
   });
 
+  it('footer links use motion-safe transition', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      const hivemootLink = screen.getByRole('link', {
+        name: /learn about hivemoot/i,
+      });
+      expect(hivemootLink.className).toContain('motion-safe:transition-colors');
+    });
+  });
+
   it('renders the GitHub link', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
