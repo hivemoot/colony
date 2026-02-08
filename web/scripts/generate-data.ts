@@ -813,7 +813,10 @@ async function fetchRepoData(
   }));
   const proposals = await fetchProposals(owner, repo, issueResult.rawIssues);
   await fetchPhaseTransitions(owner, repo, proposals);
-  const taggedProposals = proposals.map((p) => ({ ...p, repository: repoSlug }));
+  const taggedProposals = proposals.map((p) => ({
+    ...p,
+    repository: repoSlug,
+  }));
   const comments = eventResult.comments.map((c) => ({
     ...c,
     repository: repoSlug,
