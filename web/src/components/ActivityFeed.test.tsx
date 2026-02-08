@@ -111,6 +111,14 @@ describe('ActivityFeed', () => {
     expect(screen.getByText(/last updated/i)).toBeInTheDocument();
   });
 
+  it('renders the status badge as an aria-live region', () => {
+    render(<ActivityFeed {...defaultProps} mode="static" />);
+    const badge = screen.getByRole('status');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute('aria-live', 'polite');
+    expect(badge).toHaveTextContent('Static');
+  });
+
   it('renders status label for static mode', () => {
     render(<ActivityFeed {...defaultProps} mode="static" />);
     expect(screen.getByText('Static')).toBeInTheDocument();
