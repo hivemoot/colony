@@ -362,7 +362,7 @@ describe('ActivityFeed', () => {
       },
     ];
 
-    it('shows filter indicator when an agent is selected', () => {
+    it('shows agent profile panel when an agent is selected', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -372,11 +372,13 @@ describe('ActivityFeed', () => {
         />
       );
 
-      expect(screen.getByText(/filtered by:/i)).toBeInTheDocument();
-      expect(screen.getByText('Clear filter')).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: 'worker profile' })
+      ).toBeInTheDocument();
+      expect(screen.getByText('Back to Dashboard')).toBeInTheDocument();
     });
 
-    it('does not show filter indicator when no agent is selected', () => {
+    it('does not show agent profile panel when no agent is selected', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -386,10 +388,10 @@ describe('ActivityFeed', () => {
         />
       );
 
-      expect(screen.queryByText('Clear filter')).not.toBeInTheDocument();
+      expect(screen.queryByText('Back to Dashboard')).not.toBeInTheDocument();
     });
 
-    it('renders Clear filter as type="button" to prevent accidental form submission', () => {
+    it('renders Back to Dashboard as type="button"', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -399,11 +401,11 @@ describe('ActivityFeed', () => {
         />
       );
 
-      const clearButton = screen.getByText('Clear filter');
-      expect(clearButton).toHaveAttribute('type', 'button');
+      const backButton = screen.getByText('Back to Dashboard');
+      expect(backButton.closest('button')).toHaveAttribute('type', 'button');
     });
 
-    it('includes focus ring offset on Clear filter button', () => {
+    it('includes focus ring offset on Back to Dashboard button', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -413,14 +415,16 @@ describe('ActivityFeed', () => {
         />
       );
 
-      const clearButton = screen.getByText('Clear filter');
-      expect(clearButton.className).toContain('focus-visible:ring-offset-1');
-      expect(clearButton.className).toContain(
+      const backButton = screen
+        .getByText('Back to Dashboard')
+        .closest('button') as HTMLElement;
+      expect(backButton.className).toContain('focus-visible:ring-offset-1');
+      expect(backButton.className).toContain(
         'dark:focus-visible:ring-offset-neutral-800'
       );
     });
 
-    it('calls onSelectAgent(null) when Clear filter is clicked', () => {
+    it('calls onSelectAgent(null) when Back to Dashboard is clicked', () => {
       const onSelectAgent = vi.fn();
       render(
         <ActivityFeed
@@ -432,11 +436,11 @@ describe('ActivityFeed', () => {
         />
       );
 
-      fireEvent.click(screen.getByText('Clear filter'));
+      fireEvent.click(screen.getByText('Back to Dashboard'));
       expect(onSelectAgent).toHaveBeenCalledWith(null);
     });
 
-    it('shows filtered counts in section headings when agent is selected', () => {
+    it('hides dashboard sections when agent profile is shown', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -446,12 +450,13 @@ describe('ActivityFeed', () => {
         />
       );
 
-      // worker has 1 of 2 commits
-      expect(screen.getByText('(1 of 2)')).toBeInTheDocument();
-      // Multiple sections show (0 of 1) when worker owns none
-      // (issues: scout owns it, discussion: scout owns the comment)
-      const zeroOfOnes = screen.getAllByText('(0 of 1)');
-      expect(zeroOfOnes.length).toBeGreaterThanOrEqual(1);
+      // Dashboard grid sections should be hidden when profile is shown
+      expect(
+        screen.queryByRole('heading', { name: /recent commits/i })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: /governance status/i })
+      ).not.toBeInTheDocument();
     });
 
     it('shows total counts without filter text when no agent is selected', () => {
@@ -482,7 +487,7 @@ describe('ActivityFeed', () => {
       expect(ones.length).toBe(5);
     });
 
-    it('displays "X of Y" counts when agent filter is active', () => {
+    it('shows agent profile panel instead of filtered counts when agent is selected', () => {
       const dataWithMixedAuthors: ActivityData = {
         ...mockData,
         commits: [
@@ -515,8 +520,12 @@ describe('ActivityFeed', () => {
         />
       );
 
-      // worker has 1 of 3 commits
-      expect(screen.getByText('(1 of 3)')).toBeInTheDocument();
+      // Profile panel replaces the dashboard grid sections
+      expect(
+        screen.getByRole('region', { name: 'worker profile' })
+      ).toBeInTheDocument();
+      // The filtered counts are no longer shown since dashboard is replaced
+      expect(screen.queryByText('(1 of 3)')).not.toBeInTheDocument();
     });
   });
 });
