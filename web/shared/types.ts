@@ -3,6 +3,8 @@ export interface Commit {
   message: string;
   author: string;
   date: string;
+  /** "owner/name" identifier for multi-repo support */
+  repo?: string;
 }
 
 export interface Issue {
@@ -13,6 +15,8 @@ export interface Issue {
   author: string;
   createdAt: string;
   closedAt?: string | null;
+  /** "owner/name" identifier for multi-repo support */
+  repo?: string;
 }
 
 export interface PullRequest {
@@ -24,6 +28,8 @@ export interface PullRequest {
   createdAt: string;
   closedAt?: string | null;
   mergedAt?: string | null;
+  /** "owner/name" identifier for multi-repo support */
+  repo?: string;
 }
 
 export interface PhaseTransition {
@@ -50,6 +56,8 @@ export interface Proposal {
     thumbsDown: number;
   };
   phaseTransitions?: PhaseTransition[];
+  /** "owner/name" identifier for multi-repo support */
+  repo?: string;
 }
 
 export interface Comment {
@@ -60,6 +68,8 @@ export interface Comment {
   body: string;
   createdAt: string;
   url: string;
+  /** "owner/name" identifier for multi-repo support */
+  repo?: string;
 }
 
 export interface Agent {
@@ -84,13 +94,18 @@ export interface RepositoryConfig {
   url: string;
 }
 
+export type RepositoryInfo = RepositoryConfig & {
+  stars: number;
+  forks: number;
+  openIssues: number;
+};
+
 export interface ActivityData {
   generatedAt: string;
-  repository: RepositoryConfig & {
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
+  /** Primary repository — kept for backward compatibility */
+  repository: RepositoryInfo;
+  /** All tracked repositories (includes primary) */
+  repositories?: RepositoryInfo[];
   agents: Agent[];
   agentStats: AgentStats[];
   commits: Commit[];
