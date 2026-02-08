@@ -862,6 +862,10 @@ async function generateActivityData(): Promise<ActivityData> {
     repos.map((r) => fetchRepoData(r.owner, r.repo))
   );
 
+  // Merge and cap entity arrays to keep activity.json payload bounded.
+  // Limits are per-aggregate (not per-repo) so the most recent activity
+  // across all repos wins. Adjust these if new repos are added and the
+  // dashboard feels sparse.
   const commits = results
     .flatMap((r) => r.commits)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -886,7 +890,7 @@ async function generateActivityData(): Promise<ActivityData> {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-    .slice(0, 15);
+    .slice(0, 20);
   const comments = results.flatMap((r) => r.comments);
 
   const allAgents = results.flatMap((r) => r.agents);

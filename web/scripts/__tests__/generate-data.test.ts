@@ -3,12 +3,16 @@ import {
   resolveRepository,
   resolveRepositories,
   mapCommits,
+  mapIssues,
   mapPullRequests,
+  mapEvents,
   aggregateAgentStats,
   calculateOpenIssues,
   deduplicateAgents,
   extractPhaseTransitions,
   type GitHubCommit,
+  type GitHubIssue,
+  type GitHubEvent,
   type GitHubTimelineEvent,
   type GitHubRepo,
   type PullRequest,
@@ -341,5 +345,164 @@ describe('aggregateAgentStats', () => {
     // Should be sorted by lastActiveAt descending
     expect(result[0].login).toBe('user1');
     expect(result[1].login).toBe('user2');
+  });
+});
+
+describe('entity repository tagging', () => {
+  // Tests verify that entities from map functions can be tagged with
+  // a repository field via the spread pattern used in fetchRepoData.
+
+  const REPO_SLUG = 'hivemoot/colony';
+
+  it('should tag commits with repository field', () => {
+    const raw: GitHubCommit[] = [
+      {
+        sha: 'abc1234567',
+        commit: {
+          message: 'test commit',
+          author: { name: 'User', date: '2026-02-07T10:00:00Z' },
+        },
+        author: { login: 'user1', avatar_url: 'https://avatar.com/u1' },
+      },
+    ];
+
+    const { commits } = mapCommits(raw);
+    const tagged = commits.map((c) => ({ ...c, repository: REPO_SLUG }));
+
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0].repository).toBe(REPO_SLUG);
+    expect(tagged[0].sha).toBe('abc1234');
+    expect(tagged[0].author).toBe('user1');
+  });
+
+  it('should tag issues with repository field', () => {
+    const raw: GitHubIssue[] = [
+      {
+        number: 42,
+        title: 'Test issue',
+        state: 'open',
+        labels: [{ name: 'bug' }],
+        created_at: '2026-02-07T10:00:00Z',
+        closed_at: null,
+        user: { login: 'scout' },
+        comments: 3,
+      },
+    ];
+
+    const { issues } = mapIssues(raw);
+    const tagged = issues.map((i) => ({ ...i, repository: REPO_SLUG }));
+
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0].repository).toBe(REPO_SLUG);
+    expect(tagged[0].number).toBe(42);
+    expect(tagged[0].author).toBe('scout');
+  });
+
+  it('should tag pull requests with repository field', () => {
+    const raw: GitHubPR[] = [
+      {
+        number: 10,
+        title: 'Test PR',
+        state: 'open',
+        draft: false,
+        merged_at: null,
+        closed_at: null,
+        user: { login: 'builder', avatar_url: 'https://avatar.com/b' },
+        created_at: '2026-02-07T10:00:00Z',
+      },
+    ];
+
+    const { pullRequests } = mapPullRequests(raw);
+    const tagged = pullRequests.map((pr) => ({
+      ...pr,
+      repository: REPO_SLUG,
+    }));
+
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0].repository).toBe(REPO_SLUG);
+    expect(tagged[0].number).toBe(10);
+    expect(tagged[0].author).toBe('builder');
+  });
+
+  it('should tag comments from events with repository field', () => {
+    const raw: GitHubEvent[] = [
+      {
+        id: '100',
+        type: 'IssueCommentEvent',
+        actor: { login: 'worker', avatar_url: 'https://avatar.com/w' },
+        payload: {
+          action: 'created',
+          comment: {
+            id: 500,
+            body: 'looks good',
+            html_url: 'https://github.com/hivemoot/colony/issues/1#comment-500',
+          },
+          issue: { number: 1, title: 'Test issue' },
+        },
+        created_at: '2026-02-07T10:00:00Z',
+      },
+    ];
+
+    const { comments } = mapEvents(raw, 'hivemoot', 'colony');
+    const tagged = comments.map((c) => ({ ...c, repository: REPO_SLUG }));
+
+    expect(tagged).toHaveLength(1);
+    expect(tagged[0].repository).toBe(REPO_SLUG);
+    expect(tagged[0].author).toBe('worker');
+    expect(tagged[0].issueOrPrNumber).toBe(1);
+  });
+
+  it('should preserve all original fields when tagging', () => {
+    const raw: GitHubCommit[] = [
+      {
+        sha: 'deadbeef12345678',
+        commit: {
+          message: 'multi-line commit\n\nWith details',
+          author: { name: 'Author', date: '2026-02-07T12:00:00Z' },
+        },
+        author: { login: 'polisher', avatar_url: 'https://avatar.com/p' },
+      },
+    ];
+
+    const { commits } = mapCommits(raw);
+    const tagged = commits.map((c) => ({ ...c, repository: REPO_SLUG }));
+
+    expect(tagged[0]).toEqual({
+      sha: 'deadbee',
+      message: 'multi-line commit',
+      author: 'polisher',
+      date: '2026-02-07T12:00:00Z',
+      repository: 'hivemoot/colony',
+    });
+  });
+
+  it('should tag entities from different repos with different slugs', () => {
+    const raw: GitHubCommit[] = [
+      {
+        sha: 'aaa1111111',
+        commit: {
+          message: 'colony commit',
+          author: { name: 'A', date: '2026-02-07T10:00:00Z' },
+        },
+        author: { login: 'agent-a', avatar_url: 'https://avatar.com/a' },
+      },
+    ];
+
+    const { commits: colonyCommits } = mapCommits(raw);
+    const { commits: hivemootCommits } = mapCommits(raw);
+
+    const taggedColony = colonyCommits.map((c) => ({
+      ...c,
+      repository: 'hivemoot/colony',
+    }));
+    const taggedHivemoot = hivemootCommits.map((c) => ({
+      ...c,
+      repository: 'hivemoot/hivemoot',
+    }));
+
+    const merged = [...taggedColony, ...taggedHivemoot];
+    expect(merged).toHaveLength(2);
+    expect(merged[0].repository).toBe('hivemoot/colony');
+    expect(merged[1].repository).toBe('hivemoot/hivemoot');
   });
 });
