@@ -311,4 +311,97 @@ describe('GovernanceAnalytics', () => {
     expect(screen.getByText('Proposer')).toBeInTheDocument();
     expect(screen.getByText('Discussant')).toBeInTheDocument();
   });
+
+  it('renders governance throughput when resolved proposals exist', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Fast proposal',
+          phase: 'ready-to-implement',
+          author: 'bot-a',
+          createdAt: '2026-02-05T00:00:00Z',
+          commentCount: 4,
+          phaseTransitions: [
+            { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+            { phase: 'voting', enteredAt: '2026-02-05T06:00:00Z' },
+            {
+              phase: 'ready-to-implement',
+              enteredAt: '2026-02-05T14:00:00Z',
+            },
+          ],
+        },
+        {
+          number: 2,
+          title: 'Active proposal',
+          phase: 'discussion',
+          author: 'bot-b',
+          createdAt: '2026-02-05T10:00:00Z',
+          commentCount: 2,
+          phaseTransitions: [
+            { phase: 'discussion', enteredAt: '2026-02-05T10:00:00Z' },
+          ],
+        },
+      ],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    expect(screen.getByText('Governance Throughput')).toBeInTheDocument();
+    // Discussion: 6h, Voting: 8h, Cycle: 14h
+    expect(screen.getByText('6h')).toBeInTheDocument();
+    expect(screen.getByText('8h')).toBeInTheDocument();
+    expect(screen.getByText('14h')).toBeInTheDocument();
+    // Progress bar: 1 resolved out of 2 total
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+  });
+
+  it('hides governance throughput when no resolved proposals', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Active only',
+          phase: 'discussion',
+          author: 'bot',
+          createdAt: '2026-02-05T09:00:00Z',
+          commentCount: 1,
+          phaseTransitions: [
+            { phase: 'discussion', enteredAt: '2026-02-05T09:00:00Z' },
+          ],
+        },
+      ],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    expect(screen.queryByText('Governance Throughput')).not.toBeInTheDocument();
+  });
+
+  it('renders throughput progress bar with accessible label', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Resolved',
+          phase: 'implemented',
+          author: 'bot',
+          createdAt: '2026-02-05T00:00:00Z',
+          commentCount: 3,
+          phaseTransitions: [
+            { phase: 'discussion', enteredAt: '2026-02-05T00:00:00Z' },
+            { phase: 'voting', enteredAt: '2026-02-05T04:00:00Z' },
+            { phase: 'implemented', enteredAt: '2026-02-05T08:00:00Z' },
+          ],
+        },
+      ],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    const progressBar = screen.getByRole('img', {
+      name: /1 resolved, 0 active of 1 proposals/,
+    });
+    expect(progressBar).toBeInTheDocument();
+  });
 });
