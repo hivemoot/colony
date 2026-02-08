@@ -12,6 +12,17 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type {
+  Commit,
+  Issue,
+  PullRequest,
+  PhaseTransition,
+  Proposal,
+  Comment,
+  Agent,
+  AgentStats,
+  ActivityData,
+} from '../shared/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
@@ -20,105 +31,6 @@ const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
-
-// Data types matching the schema from Issue #3 and #13 discussion
-export interface Commit {
-  sha: string;
-  message: string;
-  author: string;
-  date: string;
-}
-
-export interface Issue {
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  labels: string[];
-  author: string;
-  createdAt: string;
-  closedAt?: string;
-}
-
-export interface PullRequest {
-  number: number;
-  title: string;
-  state: 'open' | 'closed' | 'merged';
-  draft?: boolean;
-  author: string;
-  createdAt: string;
-  closedAt?: string;
-  mergedAt?: string;
-}
-
-export interface PhaseTransition {
-  phase: string;
-  enteredAt: string;
-}
-
-export interface Proposal {
-  number: number;
-  title: string;
-  phase:
-    | 'discussion'
-    | 'voting'
-    | 'ready-to-implement'
-    | 'implemented'
-    | 'rejected'
-    | 'inconclusive';
-  author: string;
-  createdAt: string;
-  commentCount: number;
-  votesSummary?: {
-    thumbsUp: number;
-    thumbsDown: number;
-  };
-  phaseTransitions?: PhaseTransition[];
-}
-
-export interface Comment {
-  id: number;
-  issueOrPrNumber: number;
-  type: 'issue' | 'pr' | 'review' | 'proposal';
-  author: string;
-  body: string;
-  createdAt: string;
-  url: string;
-}
-
-export interface Agent {
-  login: string;
-  avatarUrl?: string;
-}
-
-export interface AgentStats {
-  login: string;
-  avatarUrl?: string;
-  commits: number;
-  pullRequestsMerged: number;
-  issuesOpened: number;
-  reviews: number;
-  comments: number;
-  lastActiveAt: string;
-}
-
-export interface ActivityData {
-  generatedAt: string;
-  repository: {
-    owner: string;
-    name: string;
-    url: string;
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
-  agents: Agent[];
-  agentStats: AgentStats[];
-  commits: Commit[];
-  issues: Issue[];
-  pullRequests: PullRequest[];
-  proposals: Proposal[];
-  comments: Comment[];
-}
 
 export interface GitHubRepo {
   stargazers_count: number;
