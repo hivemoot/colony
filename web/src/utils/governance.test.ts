@@ -60,6 +60,7 @@ describe('computePipeline', () => {
     expect(result).toEqual({
       discussion: 0,
       voting: 0,
+      extendedVoting: 0,
       readyToImplement: 0,
       implemented: 0,
       rejected: 0,
@@ -85,12 +86,26 @@ describe('computePipeline', () => {
     expect(result).toEqual({
       discussion: 2,
       voting: 1,
+      extendedVoting: 0,
       readyToImplement: 1,
       implemented: 3,
       rejected: 1,
       inconclusive: 1,
       total: 9,
     });
+  });
+
+  it('counts extended-voting proposals', () => {
+    const proposals = [
+      makeProposal({ number: 1, phase: 'extended-voting' }),
+      makeProposal({ number: 2, phase: 'extended-voting' }),
+      makeProposal({ number: 3, phase: 'voting' }),
+    ];
+
+    const result = computePipeline(proposals);
+    expect(result.extendedVoting).toBe(2);
+    expect(result.voting).toBe(1);
+    expect(result.total).toBe(3);
   });
 
   it('handles all proposals in a single phase', () => {
@@ -299,6 +314,20 @@ describe('computeGovernanceMetrics', () => {
 
     const metrics = computeGovernanceMetrics(data);
     expect(metrics.activeProposals).toBe(3);
+  });
+
+  it('includes extended-voting proposals in active count', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({ number: 1, phase: 'discussion' }),
+        makeProposal({ number: 2, phase: 'extended-voting' }),
+        makeProposal({ number: 3, phase: 'implemented' }),
+      ],
+    });
+
+    const metrics = computeGovernanceMetrics(data);
+    expect(metrics.activeProposals).toBe(2);
+    expect(metrics.pipeline.extendedVoting).toBe(1);
   });
 
   it('computes average comments across all proposals', () => {
