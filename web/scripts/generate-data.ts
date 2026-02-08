@@ -50,6 +50,11 @@ export interface PullRequest {
   mergedAt?: string;
 }
 
+export interface PhaseTransition {
+  phase: string;
+  enteredAt: string;
+}
+
 export interface Proposal {
   number: number;
   title: string;
@@ -58,7 +63,8 @@ export interface Proposal {
     | 'voting'
     | 'ready-to-implement'
     | 'implemented'
-    | 'rejected';
+    | 'rejected'
+    | 'inconclusive';
   author: string;
   createdAt: string;
   commentCount: number;
@@ -66,6 +72,7 @@ export interface Proposal {
     thumbsUp: number;
     thumbsDown: number;
   };
+  phaseTransitions?: PhaseTransition[];
 }
 
 export interface Comment {
@@ -202,6 +209,12 @@ export interface GitHubEvent {
       state?: string;
     };
   };
+  created_at: string;
+}
+
+export interface GitHubTimelineEvent {
+  event: string;
+  label?: { name: string };
   created_at: string;
 }
 
@@ -395,6 +408,7 @@ async function fetchProposals(
     'ready-to-implement',
     'implemented',
     'rejected',
+    'inconclusive',
   ] as const;
 
   for (const i of proposalIssues) {
@@ -416,8 +430,19 @@ async function fetchProposals(
     });
   }
 
-  // Fetch votes in parallel for all voting-phase proposals
-  const votingProposals = proposals.filter((p) => p.phase === 'voting');
+  // Fetch votes for all proposals that have been through a voting round.
+  // The Queen's voting comment persists after phase transitions, so we can
+  // retrieve tallies for proposals that already passed or failed voting.
+  const votablePhases: readonly string[] = [
+    'voting',
+    'ready-to-implement',
+    'implemented',
+    'rejected',
+    'inconclusive',
+  ];
+  const votingProposals = proposals.filter((p) =>
+    votablePhases.includes(p.phase)
+  );
 
   await Promise.all(
     votingProposals.map(async (proposal) => {
@@ -452,7 +477,48 @@ async function fetchProposals(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-    .slice(0, 10);
+    .slice(0, 20);
+}
+
+export function extractPhaseTransitions(
+  timelineEvents: GitHubTimelineEvent[]
+): PhaseTransition[] {
+  return timelineEvents
+    .filter(
+      (event) =>
+        event.event === 'labeled' && event.label?.name?.startsWith('phase:')
+    )
+    .map((event) => ({
+      phase: event.label?.name.replace('phase:', '') ?? '',
+      enteredAt: event.created_at,
+    }))
+    .sort(
+      (a, b) =>
+        new Date(a.enteredAt).getTime() - new Date(b.enteredAt).getTime()
+    );
+}
+
+async function fetchPhaseTransitions(
+  owner: string,
+  repo: string,
+  proposals: Proposal[]
+): Promise<void> {
+  await Promise.all(
+    proposals.map(async (proposal) => {
+      try {
+        const timeline = await fetchJson<GitHubTimelineEvent[]>(
+          `/repos/${owner}/${repo}/issues/${proposal.number}/timeline?per_page=100`
+        );
+
+        const transitions = extractPhaseTransitions(timeline);
+        if (transitions.length > 0) {
+          proposal.phaseTransitions = transitions;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch timeline for #${proposal.number}`, e);
+      }
+    })
+  );
 }
 
 export function mapEvents(
@@ -687,6 +753,7 @@ async function generateActivityData(): Promise<ActivityData> {
   const issues = issueResult.issues;
   const pullRequests = prResult.pullRequests;
   const proposals = await fetchProposals(owner, repo, issueResult.rawIssues);
+  await fetchPhaseTransitions(owner, repo, proposals);
   const comments = eventResult.comments;
 
   const openIssues = calculateOpenIssues(repoMetadata, pullRequests);

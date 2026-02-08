@@ -6,7 +6,9 @@ import {
   aggregateAgentStats,
   calculateOpenIssues,
   deduplicateAgents,
+  extractPhaseTransitions,
   type GitHubCommit,
+  type GitHubTimelineEvent,
   type GitHubRepo,
   type PullRequest,
   type GitHubPR,
@@ -155,6 +157,101 @@ describe('mapPullRequests', () => {
     expect(draftPr?.draft).toBe(true);
     expect(mergedPr?.state).toBe('merged');
     expect(mergedPr?.mergedAt).toBe('2026-02-06T12:00:00Z');
+  });
+});
+
+describe('extractPhaseTransitions', () => {
+  it('should extract phase label events from timeline', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'phase:discussion' },
+        created_at: '2026-02-06T14:00:00Z',
+      },
+      { event: 'commented', created_at: '2026-02-06T14:30:00Z' },
+      {
+        event: 'labeled',
+        label: { name: 'phase:voting' },
+        created_at: '2026-02-06T16:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'bug' },
+        created_at: '2026-02-06T16:30:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'phase:implemented' },
+        created_at: '2026-02-06T18:00:00Z',
+      },
+    ];
+
+    const result = extractPhaseTransitions(timeline);
+
+    expect(result).toEqual([
+      { phase: 'discussion', enteredAt: '2026-02-06T14:00:00Z' },
+      { phase: 'voting', enteredAt: '2026-02-06T16:00:00Z' },
+      { phase: 'implemented', enteredAt: '2026-02-06T18:00:00Z' },
+    ]);
+  });
+
+  it('should return empty array when no phase labels exist', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'bug' },
+        created_at: '2026-02-06T14:00:00Z',
+      },
+      { event: 'commented', created_at: '2026-02-06T15:00:00Z' },
+    ];
+
+    expect(extractPhaseTransitions(timeline)).toEqual([]);
+  });
+
+  it('should sort transitions chronologically', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'phase:implemented' },
+        created_at: '2026-02-06T18:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'phase:discussion' },
+        created_at: '2026-02-06T14:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'phase:voting' },
+        created_at: '2026-02-06T16:00:00Z',
+      },
+    ];
+
+    const result = extractPhaseTransitions(timeline);
+
+    expect(result[0].phase).toBe('discussion');
+    expect(result[1].phase).toBe('voting');
+    expect(result[2].phase).toBe('implemented');
+  });
+
+  it('should handle empty timeline', () => {
+    expect(extractPhaseTransitions([])).toEqual([]);
+  });
+
+  it('should handle events with missing label field', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      { event: 'labeled', created_at: '2026-02-06T14:00:00Z' },
+      {
+        event: 'labeled',
+        label: { name: 'phase:voting' },
+        created_at: '2026-02-06T16:00:00Z',
+      },
+    ];
+
+    const result = extractPhaseTransitions(timeline);
+    expect(result).toEqual([
+      { phase: 'voting', enteredAt: '2026-02-06T16:00:00Z' },
+    ]);
   });
 });
 

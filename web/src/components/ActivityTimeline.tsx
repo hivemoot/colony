@@ -93,7 +93,7 @@ export function ActivityTimeline({
                   {event.summary}
                 </span>
                 <span
-                  className="text-amber-400 dark:text-amber-500"
+                  className="text-amber-400 dark:text-amber-600"
                   aria-hidden="true"
                 >
                   •
@@ -105,7 +105,7 @@ export function ActivityTimeline({
                   href={event.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 block text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="mt-1 block text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-200 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 >
                   {event.title}
                 </a>
