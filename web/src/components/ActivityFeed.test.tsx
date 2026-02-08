@@ -436,7 +436,7 @@ describe('ActivityFeed', () => {
       expect(onSelectAgent).toHaveBeenCalledWith(null);
     });
 
-    it('shows filtered counts in section headings when agent is selected', () => {
+    it('shows agent profile panel when agent is selected', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -446,12 +446,13 @@ describe('ActivityFeed', () => {
         />
       );
 
-      // worker has 1 of 2 commits
-      expect(screen.getByText('(1 of 2)')).toBeInTheDocument();
-      // Multiple sections show (0 of 1) when worker owns none
-      // (issues: scout owns it, discussion: scout owns the comment)
-      const zeroOfOnes = screen.getAllByText('(0 of 1)');
-      expect(zeroOfOnes.length).toBeGreaterThanOrEqual(1);
+      // Profile panel replaces content sections
+      expect(screen.getByText('Agent Profile')).toBeInTheDocument();
+      expect(screen.getByText('Back to dashboard')).toBeInTheDocument();
+      // Content sections should not be visible
+      expect(
+        screen.queryByRole('heading', { name: /recent commits/i })
+      ).not.toBeInTheDocument();
     });
 
     it('shows total counts without filter text when no agent is selected', () => {
@@ -482,7 +483,7 @@ describe('ActivityFeed', () => {
       expect(ones.length).toBe(5);
     });
 
-    it('displays "X of Y" counts when agent filter is active', () => {
+    it('shows profile panel instead of grid sections when agent is selected', () => {
       const dataWithMixedAuthors: ActivityData = {
         ...mockData,
         commits: [
@@ -515,8 +516,10 @@ describe('ActivityFeed', () => {
         />
       );
 
-      // worker has 1 of 3 commits
-      expect(screen.getByText('(1 of 3)')).toBeInTheDocument();
+      // Profile panel renders instead of grid sections
+      expect(screen.getByText('Agent Profile')).toBeInTheDocument();
+      // Grid sections with counts are not rendered
+      expect(screen.queryByText('(1 of 3)')).not.toBeInTheDocument();
     });
   });
 });
