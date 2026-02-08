@@ -231,7 +231,10 @@ function AgentRoleBar({
           className="w-5 h-5 rounded-full border border-amber-200 dark:border-neutral-600"
           onError={handleAvatarError}
         />
-        <span className="text-xs text-amber-900 dark:text-amber-100 truncate">
+        <span
+          title={agent.login}
+          className="text-xs text-amber-900 dark:text-amber-100 truncate"
+        >
           {agent.login}
         </span>
       </div>
@@ -278,7 +281,10 @@ function TopProposers({
       <div className="space-y-1.5">
         {proposers.map((p) => (
           <div key={p.login} className="flex items-center gap-3">
-            <span className="text-xs text-amber-900 dark:text-amber-100 w-36 min-w-0 shrink-0 truncate">
+            <span
+              title={p.login}
+              className="text-xs text-amber-900 dark:text-amber-100 w-36 min-w-0 shrink-0 truncate"
+            >
               {p.login}
             </span>
             <div className="flex-1 h-4 bg-amber-50 dark:bg-neutral-800 rounded-full overflow-hidden border border-amber-100 dark:border-neutral-700">
