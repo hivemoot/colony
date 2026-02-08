@@ -108,28 +108,28 @@ describe('activity utils', () => {
       const openIssue = events.find((e) => e.id === 'issue-1-open');
       expect(openIssue).toMatchObject({
         type: 'issue',
-        summary: 'Issue opened',
+        summary: 'Issue Opened',
         createdAt: '2026-02-05T09:00:00Z',
       });
 
       const closedIssue = events.find((e) => e.id === 'issue-2-closed');
       expect(closedIssue).toMatchObject({
         type: 'issue',
-        summary: 'Issue closed',
+        summary: 'Issue Closed',
         createdAt: '2026-02-05T11:00:00Z', // uses closedAt
       });
 
       const openPR = events.find((e) => e.id === 'pr-3-open');
       expect(openPR).toMatchObject({
         type: 'pull_request',
-        summary: 'PR opened',
+        summary: 'PR Opened',
         createdAt: '2026-02-05T07:00:00Z',
       });
 
       const mergedPR = events.find((e) => e.id === 'pr-4-merged');
       expect(mergedPR).toMatchObject({
         type: 'merge',
-        summary: 'PR merged',
+        summary: 'PR Merged',
         createdAt: '2026-02-05T12:00:00Z', // uses mergedAt
       });
 
@@ -194,7 +194,7 @@ describe('activity utils', () => {
       const dates = events.map((e) => new Date(e.createdAt).getTime());
       const sortedDates = [...dates].sort((a, b) => b - a);
       expect(dates).toEqual(sortedDates);
-      expect(events[0].summary).toBe('PR merged'); // 12:00:00
+      expect(events[0].summary).toBe('PR Merged'); // 12:00:00
     });
 
     it('respects maxEvents limit', () => {
@@ -382,7 +382,7 @@ describe('activity utils', () => {
       const events = buildLiveEvents(raw, fallbackUrl);
       expect(events[0]).toMatchObject({
         type: 'merge',
-        summary: 'PR merged',
+        summary: 'PR Merged',
       });
     });
 
