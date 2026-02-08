@@ -200,7 +200,7 @@ describe('CollaborationNetwork', () => {
     expect(dashes).toHaveLength(2);
   });
 
-  it('renders legend with interaction types', () => {
+  it('renders legend with intensity scale', () => {
     const data = makeData({
       agentStats: [
         makeAgentStats({ login: 'alice' }),
@@ -214,9 +214,38 @@ describe('CollaborationNetwork', () => {
 
     render(<CollaborationNetwork data={data} />);
 
-    expect(screen.getByText('Reviews')).toBeInTheDocument();
-    expect(screen.getByText('Co-discussions')).toBeInTheDocument();
-    expect(screen.getByText('Implementations')).toBeInTheDocument();
+    expect(screen.getByText('Low activity')).toBeInTheDocument();
+    expect(screen.getByText('Medium activity')).toBeInTheDocument();
+    expect(screen.getByText('High activity')).toBeInTheDocument();
+  });
+
+  it('makes interaction cells keyboard-accessible with aria-label', () => {
+    const data = makeData({
+      agentStats: [
+        makeAgentStats({ login: 'alice' }),
+        makeAgentStats({ login: 'bob' }),
+      ],
+      pullRequests: [makePR({ number: 10, author: 'bob' })],
+      comments: [
+        makeComment({
+          id: 1,
+          issueOrPrNumber: 10,
+          type: 'review',
+          author: 'alice',
+        }),
+      ],
+    });
+
+    render(<CollaborationNetwork data={data} />);
+
+    // Interaction cells should have tabIndex and aria-label for keyboard access
+    const cells = screen.getAllByRole('cell');
+    const interactionCell = cells.find(
+      (cell) => cell.getAttribute('aria-label') !== null && cell.textContent !== '—' && cell.textContent !== '0'
+    );
+    expect(interactionCell).toBeDefined();
+    expect(interactionCell).toHaveAttribute('tabindex', '0');
+    expect(interactionCell?.getAttribute('aria-label')).toContain('interaction');
   });
 
   it('shows interaction counts in matrix cells', () => {

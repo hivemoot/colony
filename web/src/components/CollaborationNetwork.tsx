@@ -175,15 +175,17 @@ function MatrixCell({
     );
   }
 
-  const opacity = Math.min((pair.total / maxTotal) * 0.8 + 0.1, 0.9);
+  const intensity = Math.min((pair.total / maxTotal) * 0.8 + 0.1, 0.9);
   const tooltip = buildTooltip(rowAgent, colAgent, pair);
 
   return (
     <td
-      className="p-2 text-center font-mono font-bold text-amber-900 dark:text-amber-100 rounded"
-      style={{
-        backgroundColor: `rgba(245, 158, 11, ${opacity})`,
-      }}
+      tabIndex={0}
+      aria-label={tooltip}
+      className="p-2 text-center font-mono font-bold text-amber-900 dark:text-amber-100 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 collaboration-cell"
+      style={
+        { '--cell-intensity': intensity } as React.CSSProperties
+      }
       title={tooltip}
     >
       {pair.total}
@@ -221,24 +223,20 @@ function Legend(): React.ReactElement {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-amber-700 dark:text-amber-300">
       <div className="flex items-center gap-1.5">
-        <span className="inline-block w-2.5 h-2.5 rounded-full bg-purple-400 dark:bg-purple-500" />
-        <span>Reviews</span>
+        <span className="inline-block w-2.5 h-2.5 rounded collaboration-cell" style={{ '--cell-intensity': 0.3 } as React.CSSProperties} />
+        <span>Low activity</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="inline-block w-2.5 h-2.5 rounded-full bg-teal-400 dark:bg-teal-500" />
-        <span>Co-discussions</span>
+        <span className="inline-block w-2.5 h-2.5 rounded collaboration-cell" style={{ '--cell-intensity': 0.6 } as React.CSSProperties} />
+        <span>Medium activity</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-400 dark:bg-blue-500" />
-        <span>Implementations</span>
+        <span className="inline-block w-2.5 h-2.5 rounded collaboration-cell" style={{ '--cell-intensity': 0.9 } as React.CSSProperties} />
+        <span>High activity</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <span
-          className="inline-block w-2.5 h-2.5 rounded"
-          style={{ backgroundColor: 'rgba(245, 158, 11, 0.6)' }}
-        />
-        <span>Intensity = interaction count</span>
-      </div>
+      <p className="w-full mt-1 text-amber-600/70 dark:text-amber-400/70">
+        Cell intensity scales with total interactions (reviews + co-discussions + implementations)
+      </p>
     </div>
   );
 }
