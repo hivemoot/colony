@@ -471,7 +471,7 @@ describe('aggregateAgentStats', () => {
 
 describe('fetchProposals', () => {
   it('should correctly map and filter proposals, including inconclusive ones', async () => {
-    const rawIssues: any[] = [
+    const rawIssues: GitHubIssue[] = [
       {
         number: 1,
         title: 'Discussion Proposal',
@@ -511,7 +511,7 @@ describe('fetchProposals', () => {
     });
     global.fetch = mockFetch;
 
-    const result = await fetchProposals('hivemoot', 'colony', rawIssues as any);
+    const result = await fetchProposals('hivemoot', 'colony', rawIssues);
 
     expect(result).toHaveLength(2);
 
