@@ -76,10 +76,7 @@ describe('AgentList', () => {
       'aria-label',
       'Clear filter for agent-1'
     );
-    expect(selectedButton).toHaveAttribute(
-      'title',
-      'Clear filter for agent-1'
-    );
+    expect(selectedButton).toHaveAttribute('title', 'Clear filter for agent-1');
 
     const otherButton = screen.getByRole('button', { name: /agent-2/i });
     expect(otherButton).toHaveAttribute('aria-pressed', 'false');
