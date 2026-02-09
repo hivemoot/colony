@@ -82,11 +82,11 @@ export function ActivityHeatmap({
       </div>
 
       <div className="flex items-center justify-between mt-2">
-        <span className="text-[10px] text-amber-500 dark:text-amber-400">
+        <span className="text-xs text-amber-500 dark:text-amber-400">
           {formatDateLabel(heatmap[0]?.date)}
         </span>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-amber-500 dark:text-amber-400 mr-1">
+          <span className="text-xs text-amber-500 dark:text-amber-400 mr-1">
             Less
           </span>
           {[0, 1, 2, 3, 4].map((level) => (
@@ -95,11 +95,11 @@ export function ActivityHeatmap({
               className={`w-3 h-3 rounded-sm ${INTENSITY_STYLES[level]}`}
             />
           ))}
-          <span className="text-[10px] text-amber-500 dark:text-amber-400 ml-1">
+          <span className="text-xs text-amber-500 dark:text-amber-400 ml-1">
             More
           </span>
         </div>
-        <span className="text-[10px] text-amber-500 dark:text-amber-400">
+        <span className="text-xs text-amber-500 dark:text-amber-400">
           {formatDateLabel(heatmap[heatmap.length - 1]?.date)}
         </span>
       </div>
@@ -133,10 +133,10 @@ function HeatmapCell({
       role="gridcell"
       tabIndex={0}
       aria-label={tooltip}
-      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-sm flex items-center justify-center text-[10px] font-medium
-        motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900
+      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-sm flex items-center justify-center text-xs font-medium
         ${INTENSITY_STYLES[level]}
         ${level >= 3 ? 'text-amber-950 dark:text-neutral-900' : 'text-amber-700 dark:text-amber-300'}
+        motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900
       `}
     >
       {day.count > 0 ? day.count : ''}

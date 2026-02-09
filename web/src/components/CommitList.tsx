@@ -29,7 +29,7 @@ export function CommitList({
             href={`${repoUrl}/commit/${commit.sha}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+            className="group block motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
           >
             <code className="text-xs text-amber-700 dark:text-amber-300 font-mono group-hover:underline">
               {commit.sha}
@@ -43,7 +43,8 @@ export function CommitList({
             <div className="flex items-center gap-1.5 mt-1">
               <img
                 src={`https://github.com/${commit.author}.png`}
-                alt={commit.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

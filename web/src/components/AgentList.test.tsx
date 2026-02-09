@@ -15,15 +15,19 @@ describe('AgentList', () => {
   });
 
   it('renders a list of agents with profile links', () => {
-    render(<AgentList agents={agents} />);
+    const { container } = render(<AgentList agents={agents} />);
 
     expect(screen.getByText('agent-1')).toBeInTheDocument();
     expect(screen.getByText('agent-2')).toBeInTheDocument();
 
-    const images = screen.getAllByRole('img');
+    const images = container.querySelectorAll('img');
     expect(images).toHaveLength(2);
     expect(images[0]).toHaveAttribute('src', 'https://github.com/agent-1.png');
+    expect(images[0]).toHaveAttribute('alt', '');
+    expect(images[0]).toHaveAttribute('loading', 'lazy');
     expect(images[1]).toHaveAttribute('src', 'https://github.com/agent-2.png');
+    expect(images[1]).toHaveAttribute('alt', '');
+    expect(images[1]).toHaveAttribute('loading', 'lazy');
 
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(2);
@@ -87,6 +91,16 @@ describe('AgentList', () => {
       .closest('div');
     expect(selectedWrapper).not.toBeNull();
     expect(selectedWrapper?.className).not.toContain('opacity-40');
+  });
+
+  it('includes focus ring offset on agent login links', () => {
+    render(<AgentList agents={[{ login: 'agent-1' }]} />);
+
+    const link = screen.getByRole('link', { name: 'agent-1' });
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
   });
 
   it('marks the bee badge as decorative with aria-hidden', () => {

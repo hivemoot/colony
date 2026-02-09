@@ -52,11 +52,12 @@ export function AgentList({
                   src={
                     agent.avatarUrl || `https://github.com/${agent.login}.png`
                   }
-                  alt={agent.login}
+                  alt=""
+                  loading="lazy"
                   className={`w-12 h-12 rounded-full border-2 motion-safe:transition-colors ${
                     isSelected
-                      ? 'border-amber-500 dark:border-amber-400 ring-2 ring-amber-300 dark:ring-amber-600'
-                      : 'border-amber-200 dark:border-neutral-600 group-hover:border-amber-400 dark:group-hover:border-amber-500'
+                      ? 'border-amber-500 dark:border-amber-400'
+                      : 'border-amber-200 dark:border-neutral-600'
                   }`}
                   onError={handleAvatarError}
                 />
@@ -72,7 +73,7 @@ export function AgentList({
               href={`https://github.com/${agent.login}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs mt-1 text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+              className="text-xs mt-1 text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
             >
               {agent.login}
             </a>

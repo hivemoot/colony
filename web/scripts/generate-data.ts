@@ -4,6 +4,10 @@
  * Fetches GitHub activity data (commits, issues, PRs) and writes it to
  * public/data/activity.json for the frontend to consume at runtime.
  *
+ * Supports multiple repositories via COLONY_REPOSITORIES env var
+ * (comma-separated "owner/repo" values). Falls back to a single repo
+ * via COLONY_REPOSITORY or the default hivemoot/colony.
+ *
  * Uses the GitHub REST API. When running in CI or locally, uses
  * GITHUB_TOKEN/GH_TOKEN for authentication; otherwise falls back to
  * unauthenticated requests.
@@ -12,6 +16,18 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type {
+  Commit,
+  Issue,
+  PullRequest,
+  PhaseTransition,
+  Proposal,
+  Comment,
+  Agent,
+  AgentStats,
+  ActivityData,
+  RepositoryInfo,
+} from '../shared/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
@@ -20,98 +36,6 @@ const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
-
-// Data types matching the schema from Issue #3 and #13 discussion
-export interface Commit {
-  sha: string;
-  message: string;
-  author: string;
-  date: string;
-}
-
-export interface Issue {
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  labels: string[];
-  author: string;
-  createdAt: string;
-  closedAt?: string;
-}
-
-export interface PullRequest {
-  number: number;
-  title: string;
-  state: 'open' | 'closed' | 'merged';
-  draft?: boolean;
-  author: string;
-  createdAt: string;
-  closedAt?: string;
-  mergedAt?: string;
-}
-
-export interface Proposal {
-  number: number;
-  title: string;
-  phase:
-    | 'discussion'
-    | 'voting'
-    | 'ready-to-implement'
-    | 'implemented'
-    | 'rejected';
-  author: string;
-  createdAt: string;
-  commentCount: number;
-  votesSummary?: {
-    thumbsUp: number;
-    thumbsDown: number;
-  };
-}
-
-export interface Comment {
-  id: number;
-  issueOrPrNumber: number;
-  type: 'issue' | 'pr' | 'review' | 'proposal';
-  author: string;
-  body: string;
-  createdAt: string;
-  url: string;
-}
-
-export interface Agent {
-  login: string;
-  avatarUrl?: string;
-}
-
-export interface AgentStats {
-  login: string;
-  avatarUrl?: string;
-  commits: number;
-  pullRequestsMerged: number;
-  issuesOpened: number;
-  reviews: number;
-  comments: number;
-  lastActiveAt: string;
-}
-
-export interface ActivityData {
-  generatedAt: string;
-  repository: {
-    owner: string;
-    name: string;
-    url: string;
-    stars: number;
-    forks: number;
-    openIssues: number;
-  };
-  agents: Agent[];
-  agentStats: AgentStats[];
-  commits: Commit[];
-  issues: Issue[];
-  pullRequests: PullRequest[];
-  proposals: Proposal[];
-  comments: Comment[];
-}
 
 export interface GitHubRepo {
   stargazers_count: number;
@@ -205,6 +129,12 @@ export interface GitHubEvent {
   created_at: string;
 }
 
+export interface GitHubTimelineEvent {
+  event: string;
+  label?: { name: string };
+  created_at: string;
+}
+
 export async function fetchJson<T>(endpoint: string): Promise<T> {
   const url = `${GITHUB_API}${endpoint}`;
   const headers: Record<string, string> = {
@@ -250,7 +180,53 @@ export function resolveRepository(env = process.env): {
   return { owner, repo };
 }
 
-export function mapCommits(ghCommits: GitHubCommit[]): {
+/**
+ * Resolve the list of repositories to track.
+ * Reads COLONY_REPOSITORIES (comma-separated "owner/repo" values) first,
+ * then falls back to resolveRepository() for single-repo mode.
+ */
+export function resolveRepositories(
+  env = process.env
+): Array<{ owner: string; repo: string }> {
+  const multiRepo = env.COLONY_REPOSITORIES;
+
+  if (!multiRepo) {
+    return [resolveRepository(env)];
+  }
+
+  const repos = multiRepo
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+
+  if (repos.length === 0) {
+    return [resolveRepository(env)];
+  }
+
+  const seen = new Set<string>();
+  const result: Array<{ owner: string; repo: string }> = [];
+
+  for (const r of repos) {
+    const [owner, repo] = r.split('/');
+    if (!owner || !repo) {
+      throw new Error(
+        `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
+      );
+    }
+    const key = `${owner}/${repo}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push({ owner, repo });
+    }
+  }
+
+  return result;
+}
+
+export function mapCommits(
+  ghCommits: GitHubCommit[],
+  repoTag?: string
+): {
   commits: Commit[];
   agents: Agent[];
 } {
@@ -259,6 +235,7 @@ export function mapCommits(ghCommits: GitHubCommit[]): {
     message: c.commit.message.split('\n')[0],
     author: c.author?.login ?? c.commit.author.name,
     date: c.commit.author.date,
+    ...(repoTag ? { repo: repoTag } : {}),
   }));
 
   const agents: Agent[] = ghCommits
@@ -274,16 +251,20 @@ export function mapCommits(ghCommits: GitHubCommit[]): {
 
 async function fetchCommits(
   owner: string,
-  repo: string
+  repo: string,
+  repoTag?: string
 ): Promise<{ commits: Commit[]; agents: Agent[] }> {
   const ghCommits = await fetchJson<GitHubCommit[]>(
-    `/repos/${owner}/${repo}/commits?per_page=20`
+    `/repos/${owner}/${repo}/commits?per_page=50`
   );
 
-  return mapCommits(ghCommits);
+  return mapCommits(ghCommits, repoTag);
 }
 
-export function mapIssues(ghIssues: GitHubIssue[]): {
+export function mapIssues(
+  ghIssues: GitHubIssue[],
+  repoTag?: string
+): {
   issues: Issue[];
   rawIssues: GitHubIssue[];
 } {
@@ -304,6 +285,7 @@ export function mapIssues(ghIssues: GitHubIssue[]): {
     author: i.user.login,
     createdAt: i.created_at,
     ...(i.closed_at ? { closedAt: i.closed_at } : {}),
+    ...(repoTag ? { repo: repoTag } : {}),
   }));
 
   return { issues, rawIssues: allIssues };
@@ -311,25 +293,48 @@ export function mapIssues(ghIssues: GitHubIssue[]): {
 
 async function fetchIssues(
   owner: string,
-  repo: string
+  repo: string,
+  repoTag?: string
 ): Promise<{
   issues: Issue[];
   rawIssues: GitHubIssue[];
 }> {
   // Fetch both open and closed issues
-  const [openIssues, closedIssues] = await Promise.all([
-    fetchJson<GitHubIssue[]>(
-      `/repos/${owner}/${repo}/issues?state=open&per_page=30`
-    ),
-    fetchJson<GitHubIssue[]>(
-      `/repos/${owner}/${repo}/issues?state=closed&per_page=30`
-    ),
-  ]);
+  const [openPage1, openPage2, closedPage1, closedPage2, closedPage3] =
+    await Promise.all([
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=open&per_page=100&page=1`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=open&per_page=100&page=2`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=closed&per_page=100&page=1`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=closed&per_page=100&page=2`
+      ),
+      fetchJson<GitHubIssue[]>(
+        `/repos/${owner}/${repo}/issues?state=closed&per_page=100&page=3`
+      ),
+    ]);
 
-  return mapIssues([...openIssues, ...closedIssues]);
+  return mapIssues(
+    [
+      ...openPage1,
+      ...openPage2,
+      ...closedPage1,
+      ...closedPage2,
+      ...closedPage3,
+    ],
+    repoTag
+  );
 }
 
-export function mapPullRequests(ghPRs: GitHubPR[]): {
+export function mapPullRequests(
+  ghPRs: GitHubPR[],
+  repoTag?: string
+): {
   pullRequests: PullRequest[];
   agents: Agent[];
 } {
@@ -349,6 +354,7 @@ export function mapPullRequests(ghPRs: GitHubPR[]): {
     createdAt: pr.created_at,
     ...(pr.merged_at ? { mergedAt: pr.merged_at } : {}),
     ...(pr.closed_at ? { closedAt: pr.closed_at } : {}),
+    ...(repoTag ? { repo: repoTag } : {}),
   }));
 
   const agents: Agent[] = allPRs.map((pr) => ({
@@ -361,7 +367,8 @@ export function mapPullRequests(ghPRs: GitHubPR[]): {
 
 async function fetchPullRequests(
   owner: string,
-  repo: string
+  repo: string,
+  repoTag?: string
 ): Promise<{
   pullRequests: PullRequest[];
   agents: Agent[];
@@ -369,37 +376,51 @@ async function fetchPullRequests(
   // Fetch both open and closed PRs
   const [openPRs, closedPRs] = await Promise.all([
     fetchJson<GitHubPR[]>(
-      `/repos/${owner}/${repo}/pulls?state=open&per_page=10`
+      `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
     ),
     fetchJson<GitHubPR[]>(
-      `/repos/${owner}/${repo}/pulls?state=closed&per_page=10`
+      `/repos/${owner}/${repo}/pulls?state=closed&per_page=50`
     ),
   ]);
 
-  return mapPullRequests([...openPRs, ...closedPRs]);
+  return mapPullRequests([...openPRs, ...closedPRs], repoTag);
 }
 
 async function fetchProposals(
   owner: string,
   repo: string,
-  rawIssues: GitHubIssue[]
+  rawIssues: GitHubIssue[],
+  repoTag?: string
 ): Promise<Proposal[]> {
-  const proposalIssues = rawIssues.filter((i) =>
-    i.labels.some((l) => l.name.startsWith('phase:'))
+  const proposalIssues = rawIssues.filter(
+    (i) =>
+      i.labels.some((l) => l.name.startsWith('phase:')) ||
+      i.labels.some((l) => l.name === 'inconclusive') ||
+      i.labels.some((l) => l.name === 'proposal')
   );
 
   const proposals: Proposal[] = [];
   const validPhases = [
     'discussion',
     'voting',
+    'extended-voting',
     'ready-to-implement',
     'implemented',
     'rejected',
+    'inconclusive',
   ] as const;
 
   for (const i of proposalIssues) {
+    // Check for phase: prefixed label first, then standalone inconclusive label,
+    // and finally fallback to 'discussion' if it only has the 'proposal' label.
     const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
-    const phaseName = phaseLabel?.replace('phase:', '');
+    const phaseName =
+      phaseLabel?.replace('phase:', '') ??
+      (i.labels.some((l) => l.name === 'inconclusive')
+        ? 'inconclusive'
+        : i.labels.some((l) => l.name === 'proposal')
+          ? 'discussion'
+          : undefined);
 
     if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
       continue;
@@ -413,6 +434,7 @@ async function fetchProposals(
       author: i.user.login,
       createdAt: i.created_at,
       commentCount: i.comments,
+      ...(repoTag ? { repo: repoTag } : {}),
     });
   }
 
@@ -421,6 +443,7 @@ async function fetchProposals(
   // retrieve tallies for proposals that already passed or failed voting.
   const votablePhases: readonly string[] = [
     'voting',
+    'extended-voting',
     'ready-to-implement',
     'implemented',
     'rejected',
@@ -458,18 +481,57 @@ async function fetchProposals(
     })
   );
 
-  return proposals
+  return proposals.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export function extractPhaseTransitions(
+  timelineEvents: GitHubTimelineEvent[]
+): PhaseTransition[] {
+  return timelineEvents
+    .filter(
+      (event) =>
+        event.event === 'labeled' && event.label?.name?.startsWith('phase:')
+    )
+    .map((event) => ({
+      phase: event.label?.name.replace('phase:', '') ?? '',
+      enteredAt: event.created_at,
+    }))
     .sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-    .slice(0, 10);
+        new Date(a.enteredAt).getTime() - new Date(b.enteredAt).getTime()
+    );
+}
+
+async function fetchPhaseTransitions(
+  owner: string,
+  repo: string,
+  proposals: Proposal[]
+): Promise<void> {
+  await Promise.all(
+    proposals.map(async (proposal) => {
+      try {
+        const timeline = await fetchJson<GitHubTimelineEvent[]>(
+          `/repos/${owner}/${repo}/issues/${proposal.number}/timeline?per_page=100`
+        );
+
+        const transitions = extractPhaseTransitions(timeline);
+        if (transitions.length > 0) {
+          proposal.phaseTransitions = transitions;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch timeline for #${proposal.number}`, e);
+      }
+    })
+  );
 }
 
 export function mapEvents(
   ghEvents: GitHubEvent[],
   owner: string,
-  repo: string
+  repo: string,
+  repoTag?: string
 ): {
   comments: Comment[];
   agents: Agent[];
@@ -492,6 +554,7 @@ export function mapEvents(
         body: comment.body.slice(0, 200),
         createdAt: event.created_at,
         url: comment.html_url,
+        ...(repoTag ? { repo: repoTag } : {}),
       });
       agents.push({
         login: event.actor.login,
@@ -518,6 +581,7 @@ export function mapEvents(
         body,
         createdAt: event.created_at,
         url: review.html_url,
+        ...(repoTag ? { repo: repoTag } : {}),
       });
       agents.push({
         login: event.actor.login,
@@ -537,6 +601,7 @@ export function mapEvents(
         body: comment.body.slice(0, 200),
         createdAt: event.created_at,
         url: comment.html_url,
+        ...(repoTag ? { repo: repoTag } : {}),
       });
       agents.push({
         login: event.actor.login,
@@ -560,6 +625,7 @@ export function mapEvents(
         url:
           issue.html_url ||
           `https://github.com/${owner}/${repo}/issues/${issue.number}`,
+        ...(repoTag ? { repo: repoTag } : {}),
       });
       agents.push({
         login: event.actor.login,
@@ -573,16 +639,17 @@ export function mapEvents(
 
 async function fetchEvents(
   owner: string,
-  repo: string
+  repo: string,
+  repoTag?: string
 ): Promise<{
   comments: Comment[];
   agents: Agent[];
 }> {
   const ghEvents = await fetchJson<GitHubEvent[]>(
-    `/repos/${owner}/${repo}/events?per_page=50`
+    `/repos/${owner}/${repo}/events?per_page=100`
   );
 
-  return mapEvents(ghEvents, owner, repo);
+  return mapEvents(ghEvents, owner, repo, repoTag);
 }
 
 async function fetchRepoMetadata(
@@ -681,66 +748,147 @@ export function aggregateAgentStats(
   });
 }
 
-async function generateActivityData(): Promise<ActivityData> {
-  const { owner, repo } = resolveRepository();
-  console.log(`Fetching activity for ${owner}/${repo}...`);
-
+/** Fetch all activity data for a single repository. */
+async function fetchRepoActivity(
+  owner: string,
+  repo: string,
+  repoTag?: string
+): Promise<{
+  repoInfo: RepositoryInfo;
+  commits: Commit[];
+  issues: Issue[];
+  pullRequests: PullRequest[];
+  proposals: Proposal[];
+  comments: Comment[];
+  agents: Agent[];
+}> {
   const [repoMetadata, commitResult, issueResult, prResult, eventResult] =
     await Promise.all([
       fetchRepoMetadata(owner, repo),
-      fetchCommits(owner, repo),
-      fetchIssues(owner, repo),
-      fetchPullRequests(owner, repo),
-      fetchEvents(owner, repo),
+      fetchCommits(owner, repo, repoTag),
+      fetchIssues(owner, repo, repoTag),
+      fetchPullRequests(owner, repo, repoTag),
+      fetchEvents(owner, repo, repoTag),
     ]);
 
-  const commits = commitResult.commits;
-  const issues = issueResult.issues;
-  const pullRequests = prResult.pullRequests;
-  const proposals = await fetchProposals(owner, repo, issueResult.rawIssues);
-  const comments = eventResult.comments;
+  const proposals = await fetchProposals(
+    owner,
+    repo,
+    issueResult.rawIssues,
+    repoTag
+  );
+  await fetchPhaseTransitions(owner, repo, proposals);
 
-  const openIssues = calculateOpenIssues(repoMetadata, pullRequests);
+  const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
 
-  const allAgents = [
+  const repoInfo: RepositoryInfo = {
+    owner,
+    name: repo,
+    url: `https://github.com/${owner}/${repo}`,
+    stars: repoMetadata.stargazers_count,
+    forks: repoMetadata.forks_count,
+    openIssues,
+  };
+
+  const agents = [
     ...commitResult.agents,
     ...prResult.agents,
     ...eventResult.agents,
   ];
-  const agents = deduplicateAgents(allAgents);
+
+  console.log(
+    `  ${owner}/${repo}: ${commitResult.commits.length} commits, ${issueResult.issues.length} issues, ${prResult.pullRequests.length} PRs, ${proposals.length} proposals, ${eventResult.comments.length} comments`
+  );
+
+  return {
+    repoInfo,
+    commits: commitResult.commits,
+    issues: issueResult.issues,
+    pullRequests: prResult.pullRequests,
+    proposals,
+    comments: eventResult.comments,
+    agents,
+  };
+}
+
+async function generateActivityData(): Promise<ActivityData> {
+  const repos = resolveRepositories();
+  const isMultiRepo = repos.length > 1;
+
+  console.log(
+    `Fetching activity for ${repos.map((r) => `${r.owner}/${r.repo}`).join(', ')}...`
+  );
+
+  // Fetch all repos in parallel with graceful degradation
+  const settled = await Promise.allSettled(
+    repos.map((r) =>
+      fetchRepoActivity(
+        r.owner,
+        r.repo,
+        isMultiRepo ? `${r.owner}/${r.repo}` : undefined
+      )
+    )
+  );
+
+  const repoResults = settled
+    .map((result, i) => {
+      if (result.status === 'fulfilled') return result.value;
+      console.warn(
+        `Failed to fetch ${repos[i].owner}/${repos[i].repo}: ${result.reason}`
+      );
+      return null;
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  if (repoResults.length === 0) {
+    throw new Error('All repository fetches failed');
+  }
+
+  // Merge results across all repos
+  const allCommits = repoResults.flatMap((r) => r.commits);
+  const allIssues = repoResults.flatMap((r) => r.issues);
+  const allPullRequests = repoResults.flatMap((r) => r.pullRequests);
+  const allProposals = repoResults.flatMap((r) => r.proposals);
+  const allComments = repoResults.flatMap((r) => r.comments);
+  const allRawAgents = repoResults.flatMap((r) => r.agents);
+  const allRepoInfos = repoResults.map((r) => r.repoInfo);
+
+  const agents = deduplicateAgents(allRawAgents);
 
   const agentMap = new Map<string, Agent>();
   agents.forEach((a) => agentMap.set(a.login, a));
 
   const agentStats = aggregateAgentStats(
-    commits,
-    issues,
-    pullRequests,
-    comments,
+    allCommits,
+    allIssues,
+    allPullRequests,
+    allComments,
     agentMap
   );
 
+  const totalCommits = allCommits.length;
+  const totalIssues = allIssues.length;
+  const totalPRs = allPullRequests.length;
+  const totalProposals = allProposals.length;
+  const totalComments = allComments.length;
+
   console.log(
-    `Fetched: ${commits.length} commits, ${issues.length} issues, ${pullRequests.length} PRs, ${proposals.length} proposals, ${comments.length} comments, ${agents.length} agents`
+    `Total: ${totalCommits} commits, ${totalIssues} issues, ${totalPRs} PRs, ${totalProposals} proposals, ${totalComments} comments, ${agents.length} agents across ${repos.length} repo(s)`
   );
 
   return {
     generatedAt: new Date().toISOString(),
-    repository: {
-      owner: owner,
-      name: repo,
-      url: `https://github.com/${owner}/${repo}`,
-      stars: repoMetadata.stargazers_count,
-      forks: repoMetadata.forks_count,
-      openIssues,
-    },
+    // Primary repo for backward compatibility
+    repository: allRepoInfos[0],
+    // All repos for multi-repo aware consumers
+    repositories: allRepoInfos,
     agents,
     agentStats,
-    commits,
-    issues,
-    pullRequests,
-    comments,
-    proposals,
+    commits: allCommits,
+    issues: allIssues,
+    pullRequests: allPullRequests,
+    comments: allComments,
+    proposals: allProposals,
   };
 }
 

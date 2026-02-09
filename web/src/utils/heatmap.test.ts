@@ -130,25 +130,6 @@ describe('computeActivityHeatmap', () => {
     expect(feb4?.breakdown.comments).toBe(2);
   });
 
-  it('counts proposals in the correct day', () => {
-    const data = makeData({
-      proposals: [
-        {
-          number: 100,
-          title: 'new idea',
-          phase: 'discussion',
-          author: 'builder',
-          createdAt: '2026-02-02T15:00:00Z',
-          commentCount: 0,
-        },
-      ],
-    });
-    const result = computeActivityHeatmap(data, 7, now);
-    const feb2 = result.find((d) => d.date === '2026-02-02');
-    expect(feb2?.count).toBe(1);
-    expect(feb2?.breakdown.proposals).toBe(1);
-  });
-
   it('aggregates mixed activity types in a single day', () => {
     const data = makeData({
       commits: [
@@ -205,6 +186,25 @@ describe('computeActivityHeatmap', () => {
       comments: 1,
       proposals: 1,
     });
+  });
+
+  it('counts proposals in the correct day', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Add feature',
+          phase: 'discussion',
+          author: 'builder',
+          createdAt: '2026-02-06T10:00:00Z',
+          commentCount: 3,
+        },
+      ],
+    });
+    const result = computeActivityHeatmap(data, 7, now);
+    const feb6 = result.find((d) => d.date === '2026-02-06');
+    expect(feb6?.count).toBe(1);
+    expect(feb6?.breakdown.proposals).toBe(1);
   });
 
   it('ignores events outside the window', () => {

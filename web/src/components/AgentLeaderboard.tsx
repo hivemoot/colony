@@ -57,10 +57,7 @@ export function AgentLeaderboard({
             return (
               <tr
                 key={agent.login}
-                role="button"
-                tabIndex={0}
-                aria-pressed={isSelected}
-                className={`motion-safe:transition-colors rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                className={`motion-safe:transition-colors rounded-lg overflow-hidden cursor-pointer has-[:focus-visible]:outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-amber-500 ${
                   isSelected
                     ? 'bg-amber-100/60 dark:bg-amber-900/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40'
                     : isDimmed
@@ -72,16 +69,20 @@ export function AgentLeaderboard({
                     onSelectAgent(isSelected ? null : agent.login);
                   }
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    if (onSelectAgent) {
-                      onSelectAgent(isSelected ? null : agent.login);
-                    }
-                  }
-                }}
               >
-                <td className="py-3 pl-2 rounded-l-lg border-y border-l border-amber-100 dark:border-neutral-700">
+                <td className="relative py-3 pl-2 rounded-l-lg border-y border-l border-amber-100 dark:border-neutral-700">
+                  <button
+                    type="button"
+                    aria-pressed={isSelected}
+                    aria-label={`Filter by ${agent.login}`}
+                    className="absolute inset-0 z-10 cursor-pointer opacity-0 focus-visible:opacity-0 focus-visible:outline-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSelectAgent) {
+                        onSelectAgent(isSelected ? null : agent.login);
+                      }
+                    }}
+                  />
                   <div className="flex items-center gap-3">
                     <span className="w-6 text-xs font-bold text-amber-500">
                       #{index + 1}
@@ -91,8 +92,9 @@ export function AgentLeaderboard({
                         agent.avatarUrl ||
                         `https://github.com/${agent.login}.png`
                       }
-                      alt={agent.login}
-                      className={`w-8 h-8 rounded-full border transition-colors ${
+                      alt=""
+                      loading="lazy"
+                      className={`w-8 h-8 rounded-full border motion-safe:transition-colors ${
                         isSelected
                           ? 'border-amber-500 dark:border-amber-400'
                           : 'border-amber-200 dark:border-neutral-600'
@@ -103,7 +105,7 @@ export function AgentLeaderboard({
                       href={`https://github.com/${agent.login}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                      className="relative z-20 font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {agent.login}

@@ -31,7 +31,7 @@ export function PullRequestList({
             href={`${repoUrl}/pull/${pr.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+            className="group block motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-amber-700 dark:text-amber-300">
@@ -57,7 +57,8 @@ export function PullRequestList({
             <div className="flex items-center gap-1.5 mt-1">
               <img
                 src={`https://github.com/${pr.author}.png`}
-                alt={pr.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

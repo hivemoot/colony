@@ -112,6 +112,17 @@ describe('App', () => {
     });
   });
 
+  it('loading state has role="status" and aria-live for screen readers', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+
+    render(<App />);
+    await waitFor(() => {
+      const loadingRegion = screen.getByRole('status');
+      expect(loadingRegion).toBeInTheDocument();
+      expect(loadingRegion).toHaveAttribute('aria-live', 'polite');
+    });
+  });
+
   it('loading spinner respects reduced motion preference', async () => {
     vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
 
@@ -230,7 +241,7 @@ describe('App', () => {
     });
   });
 
-  it('shows error state on fetch failure', async () => {
+  it('shows error state on fetch failure with alert role', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -241,6 +252,38 @@ describe('App', () => {
       expect(
         screen.getByText(/failed to load activity data/i)
       ).toBeInTheDocument();
+    });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/failed to load activity data/i);
+  });
+
+  it('renders skip-to-content link targeting main', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+
+    render(<App />);
+    await waitFor(() => {
+      const skipLink = screen.getByText(/skip to content/i);
+      expect(skipLink).toBeInTheDocument();
+      expect(skipLink).toHaveAttribute('href', '#main-content');
+    });
+
+    expect(document.getElementById('main-content')).not.toBeNull();
+    expect(document.getElementById('main-content')?.tagName).toBe('MAIN');
+  });
+
+  it('footer links use motion-safe transition', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      const hivemootLink = screen.getByRole('link', {
+        name: /learn about hivemoot/i,
+      });
+      expect(hivemootLink.className).toContain('motion-safe:transition-colors');
     });
   });
 

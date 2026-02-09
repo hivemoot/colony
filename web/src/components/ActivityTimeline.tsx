@@ -71,7 +71,7 @@ export function ActivityTimeline({
   }
 
   return (
-    <ul className="space-y-5">
+    <ul className="space-y-5" aria-label="Recent activity events">
       {events.map((event) => {
         const style = EVENT_STYLES[event.type];
         const eventDate = new Date(event.createdAt);
@@ -105,7 +105,7 @@ export function ActivityTimeline({
                   href={event.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 block text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="mt-1 block text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-200 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                 >
                   {event.title}
                 </a>
@@ -117,13 +117,19 @@ export function ActivityTimeline({
               <div className="flex items-center gap-1.5 mt-1">
                 <img
                   src={`https://github.com/${event.actor}.png`}
-                  alt={event.actor}
+                  alt=""
+                  loading="lazy"
                   className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                   onError={handleAvatarError}
                 />
-                <span className="text-xs text-amber-600 dark:text-amber-400">
+                <a
+                  href={`https://github.com/${event.actor}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+                >
                   {event.actor}
-                </span>
+                </a>
               </div>
             </div>
           </li>

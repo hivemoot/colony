@@ -5,13 +5,18 @@ import type {
 } from '../types/activity';
 import { ActivityHeatmap } from './ActivityHeatmap';
 import { ActivityTimeline } from './ActivityTimeline';
+import { AgentProfilePanel } from './AgentProfilePanel';
 import { CommitList } from './CommitList';
 import { IssueList } from './IssueList';
 import { PullRequestList } from './PullRequestList';
 import { AgentList } from './AgentList';
 import { AgentLeaderboard } from './AgentLeaderboard';
+import { GovernanceAnalytics } from './GovernanceAnalytics';
+import { GovernanceHealth } from './GovernanceHealth';
+import { CollaborationNetwork } from './CollaborationNetwork';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
+import { ColonyStory } from './ColonyStory';
 import { formatTimeAgo } from '../utils/time';
 
 interface ActivityFeedProps {
@@ -78,7 +83,11 @@ export function ActivityFeed({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className={`text-xs px-2 py-1 rounded-full ${statusStyles}`}>
+            <span
+              role="status"
+              aria-live="polite"
+              className={`text-xs px-2 py-1 rounded-full ${statusStyles}`}
+            >
               {statusLabel}
             </span>
             <label className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-200">
@@ -103,8 +112,9 @@ export function ActivityFeed({
               Filtered by: <strong>{selectedAgent}</strong>
             </span>
             <button
+              type="button"
               onClick={() => onSelectAgent(null)}
-              className="text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded"
+              className="text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
             >
               Clear filter
             </button>
@@ -162,107 +172,180 @@ export function ActivityFeed({
         </section>
       )}
 
-      {data && data.proposals && data.proposals.length > 0 && (
-        <section
-          id="proposals"
-          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
-        >
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
-            <span role="img" aria-label="governance">
-              ⚖️
-            </span>
-            Governance Status
-            <SectionCount
-              filtered={filteredProposals.length}
-              total={data.proposals.length}
-              isFiltered={Boolean(selectedAgent)}
-            />
-          </h2>
-          <ProposalList
-            proposals={filteredProposals}
-            repoUrl={data.repository.url}
-            filteredAgent={selectedAgent}
+      {data && selectedAgent ? (
+        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+          <AgentProfilePanel
+            data={data}
+            events={events}
+            agentLogin={selectedAgent}
+            onClose={() => onSelectAgent(null)}
           />
         </section>
-      )}
-
-      {data && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="commit">
-                📝
-              </span>
-              Recent Commits
-              <SectionCount
-                filtered={filteredCommits.length}
-                total={data.commits.length}
-                isFiltered={Boolean(selectedAgent)}
+      ) : (
+        <>
+          {data && data.proposals && data.proposals.length > 0 && (
+            <section
+              id="proposals"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+                <span role="img" aria-label="governance">
+                  ⚖️
+                </span>
+                Governance Status
+                <SectionCount
+                  filtered={filteredProposals.length}
+                  total={data.proposals.length}
+                  isFiltered={Boolean(selectedAgent)}
+                />
+              </h2>
+              <ProposalList
+                proposals={filteredProposals}
+                repoUrl={data.repository.url}
+                filteredAgent={selectedAgent}
               />
-            </h2>
-            <CommitList
-              commits={filteredCommits.slice(0, 5)}
-              repoUrl={data.repository.url}
-              filteredAgent={selectedAgent}
-            />
-          </section>
+            </section>
+          )}
 
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="issue">
-                🎯
-              </span>
-              Issues
-              <SectionCount
-                filtered={filteredIssues.length}
-                total={data.issues.length}
-                isFiltered={Boolean(selectedAgent)}
-              />
-            </h2>
-            <IssueList
-              issues={filteredIssues.slice(0, 5)}
-              repoUrl={data.repository.url}
-              filteredAgent={selectedAgent}
-            />
-          </section>
+          {data && data.proposals.length > 0 && (
+            <section
+              id="analytics"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+                <span role="img" aria-label="analytics">
+                  📊
+                </span>
+                Governance Analytics
+              </h2>
+              <GovernanceAnalytics data={data} />
+            </section>
+          )}
 
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="pull request">
-                🔀
-              </span>
-              Pull Requests
-              <SectionCount
-                filtered={filteredPRs.length}
-                total={data.pullRequests.length}
-                isFiltered={Boolean(selectedAgent)}
-              />
-            </h2>
-            <PullRequestList
-              pullRequests={filteredPRs.slice(0, 5)}
-              repoUrl={data.repository.url}
-              filteredAgent={selectedAgent}
-            />
-          </section>
+          {data && data.proposals.length > 0 && (
+            <section
+              id="health"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+                <span role="img" aria-label="health">
+                  💚
+                </span>
+                Governance Health
+              </h2>
+              <GovernanceHealth data={data} />
+            </section>
+          )}
 
-          <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
-              <span role="img" aria-label="discussion">
-                💬
-              </span>
-              Discussion
-              <SectionCount
-                filtered={filteredComments.length}
-                total={nonProposalComments.length}
-                isFiltered={Boolean(selectedAgent)}
-              />
-            </h2>
-            <CommentList
-              comments={filteredComments.slice(0, 5)}
-              filteredAgent={selectedAgent}
-            />
-          </section>
-        </div>
+          {data && data.agentStats.length >= 2 && data.comments.length > 0 && (
+            <section
+              id="collaboration"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+                <span role="img" aria-label="collaboration network">
+                  🕸️
+                </span>
+                Collaboration Network
+              </h2>
+              <CollaborationNetwork data={data} />
+            </section>
+          )}
+
+          {data && (
+            <section
+              id="story"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+                <span role="img" aria-label="story">
+                  📖
+                </span>
+                Colony Story
+              </h2>
+              <ColonyStory data={data} />
+            </section>
+          )}
+
+          {data && (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="commit">
+                    📝
+                  </span>
+                  Recent Commits
+                  <SectionCount
+                    filtered={filteredCommits.length}
+                    total={data.commits.length}
+                    isFiltered={Boolean(selectedAgent)}
+                  />
+                </h2>
+                <CommitList
+                  commits={filteredCommits.slice(0, 5)}
+                  repoUrl={data.repository.url}
+                  filteredAgent={selectedAgent}
+                />
+              </section>
+
+              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="issue">
+                    🎯
+                  </span>
+                  Issues
+                  <SectionCount
+                    filtered={filteredIssues.length}
+                    total={data.issues.length}
+                    isFiltered={Boolean(selectedAgent)}
+                  />
+                </h2>
+                <IssueList
+                  issues={filteredIssues.slice(0, 5)}
+                  repoUrl={data.repository.url}
+                  filteredAgent={selectedAgent}
+                />
+              </section>
+
+              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="pull request">
+                    🔀
+                  </span>
+                  Pull Requests
+                  <SectionCount
+                    filtered={filteredPRs.length}
+                    total={data.pullRequests.length}
+                    isFiltered={Boolean(selectedAgent)}
+                  />
+                </h2>
+                <PullRequestList
+                  pullRequests={filteredPRs.slice(0, 5)}
+                  repoUrl={data.repository.url}
+                  filteredAgent={selectedAgent}
+                />
+              </section>
+
+              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="discussion">
+                    💬
+                  </span>
+                  Discussion
+                  <SectionCount
+                    filtered={filteredComments.length}
+                    total={nonProposalComments.length}
+                    isFiltered={Boolean(selectedAgent)}
+                  />
+                </h2>
+                <CommentList
+                  comments={filteredComments.slice(0, 5)}
+                  filteredAgent={selectedAgent}
+                />
+              </section>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

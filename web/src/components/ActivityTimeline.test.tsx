@@ -14,6 +14,24 @@ describe('ActivityTimeline', () => {
     expect(screen.getByText(/no recent activity yet/i)).toBeInTheDocument();
   });
 
+  it('labels the events list for screen readers', () => {
+    const events: ActivityEvent[] = [
+      {
+        id: 'commit-1',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Test',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
+    render(<ActivityTimeline events={events} />);
+
+    const list = screen.getByRole('list');
+    expect(list).toHaveAttribute('aria-label', 'Recent activity events');
+  });
+
   it('renders a list of activity events', () => {
     const events: ActivityEvent[] = [
       {
@@ -28,7 +46,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'issue-2',
         type: 'issue',
-        summary: 'Issue opened',
+        summary: 'Issue Opened',
         title: '#42 Bug report',
         url: 'https://github.com/hivemoot/colony/issues/42',
         actor: 'scout',
@@ -42,7 +60,7 @@ describe('ActivityTimeline', () => {
     expect(screen.getByText('abc123 Add tests')).toBeInTheDocument();
     expect(screen.getByText('worker')).toBeInTheDocument();
 
-    expect(screen.getByText('Issue opened')).toBeInTheDocument();
+    expect(screen.getByText('Issue Opened')).toBeInTheDocument();
     expect(screen.getByText('#42 Bug report')).toBeInTheDocument();
     expect(screen.getByText('scout')).toBeInTheDocument();
   });
@@ -60,7 +78,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'issue-1',
         type: 'issue',
-        summary: 'Issue opened',
+        summary: 'Issue Opened',
         title: 'Test issue',
         actor: 'b',
         createdAt: '2026-02-05T11:00:00Z',
@@ -68,7 +86,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'pr-1',
         type: 'pull_request',
-        summary: 'PR opened',
+        summary: 'PR Opened',
         title: 'Test PR',
         actor: 'c',
         createdAt: '2026-02-05T10:00:00Z',
@@ -76,7 +94,7 @@ describe('ActivityTimeline', () => {
       {
         id: 'merge-1',
         type: 'merge',
-        summary: 'PR merged',
+        summary: 'PR Merged',
         title: 'Test merge',
         actor: 'd',
         createdAt: '2026-02-05T09:00:00Z',
@@ -139,7 +157,29 @@ describe('ActivityTimeline', () => {
       'href',
       'https://github.com/hivemoot/colony/commit/abc123'
     );
-    expect(link.className).toContain('transition-colors');
+    expect(link.className).toContain('motion-safe:transition-colors');
+  });
+
+  it('includes focus ring offset on event links', () => {
+    const events: ActivityEvent[] = [
+      {
+        id: 'commit-1',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Test commit',
+        url: 'https://github.com/hivemoot/colony/commit/abc123',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
+    render(<ActivityTimeline events={events} />);
+
+    const link = screen.getByRole('link', { name: 'Test commit' });
+    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
+    );
   });
 
   it('renders event without link when url is not provided', () => {
@@ -193,9 +233,32 @@ describe('ActivityTimeline', () => {
       },
     ];
 
+    const { container } = render(<ActivityTimeline events={events} />);
+
+    const avatar = container.querySelector('img');
+    expect(avatar).toHaveAttribute('src', 'https://github.com/worker.png');
+    expect(avatar).toHaveAttribute('alt', '');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('links actor names to GitHub profiles', () => {
+    const events: ActivityEvent[] = [
+      {
+        id: 'commit-1',
+        type: 'commit',
+        summary: 'Commit pushed',
+        title: 'Test commit',
+        url: 'https://github.com/hivemoot/colony/commit/abc123',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
     render(<ActivityTimeline events={events} />);
 
-    const avatar = screen.getByAltText('worker');
-    expect(avatar).toHaveAttribute('src', 'https://github.com/worker.png');
+    const actorLink = screen.getByRole('link', { name: 'worker' });
+    expect(actorLink).toHaveAttribute('href', 'https://github.com/worker');
+    expect(actorLink).toHaveAttribute('target', '_blank');
+    expect(actorLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

@@ -111,6 +111,14 @@ describe('ActivityFeed', () => {
     expect(screen.getByText(/last updated/i)).toBeInTheDocument();
   });
 
+  it('renders the status badge as an aria-live region', () => {
+    render(<ActivityFeed {...defaultProps} mode="static" />);
+    const badge = screen.getByRole('status');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute('aria-live', 'polite');
+    expect(badge).toHaveTextContent('Static');
+  });
+
   it('renders status label for static mode', () => {
     render(<ActivityFeed {...defaultProps} mode="static" />);
     expect(screen.getByText('Static')).toBeInTheDocument();
@@ -381,6 +389,37 @@ describe('ActivityFeed', () => {
       expect(screen.queryByText('Clear filter')).not.toBeInTheDocument();
     });
 
+    it('renders Clear filter as type="button" to prevent accidental form submission', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+        />
+      );
+
+      const clearButton = screen.getByText('Clear filter');
+      expect(clearButton).toHaveAttribute('type', 'button');
+    });
+
+    it('includes focus ring offset on Clear filter button', () => {
+      render(
+        <ActivityFeed
+          {...defaultProps}
+          data={multiAgentData}
+          events={multiAgentEvents}
+          selectedAgent="worker"
+        />
+      );
+
+      const clearButton = screen.getByText('Clear filter');
+      expect(clearButton.className).toContain('focus-visible:ring-offset-1');
+      expect(clearButton.className).toContain(
+        'dark:focus-visible:ring-offset-neutral-800'
+      );
+    });
+
     it('calls onSelectAgent(null) when Clear filter is clicked', () => {
       const onSelectAgent = vi.fn();
       render(
@@ -397,7 +436,7 @@ describe('ActivityFeed', () => {
       expect(onSelectAgent).toHaveBeenCalledWith(null);
     });
 
-    it('shows filtered counts in section headings when agent is selected', () => {
+    it('shows agent profile panel when agent is selected', () => {
       render(
         <ActivityFeed
           {...defaultProps}
@@ -407,12 +446,13 @@ describe('ActivityFeed', () => {
         />
       );
 
-      // worker has 1 of 2 commits
-      expect(screen.getByText('(1 of 2)')).toBeInTheDocument();
-      // Multiple sections show (0 of 1) when worker owns none
-      // (issues: scout owns it, discussion: scout owns the comment)
-      const zeroOfOnes = screen.getAllByText('(0 of 1)');
-      expect(zeroOfOnes.length).toBeGreaterThanOrEqual(1);
+      // Profile panel replaces content sections
+      expect(screen.getByText('Agent Profile')).toBeInTheDocument();
+      expect(screen.getByText('Back to dashboard')).toBeInTheDocument();
+      // Content sections should not be visible
+      expect(
+        screen.queryByRole('heading', { name: /recent commits/i })
+      ).not.toBeInTheDocument();
     });
 
     it('shows total counts without filter text when no agent is selected', () => {
@@ -443,7 +483,7 @@ describe('ActivityFeed', () => {
       expect(ones.length).toBe(5);
     });
 
-    it('displays "X of Y" counts when agent filter is active', () => {
+    it('shows profile panel instead of grid sections when agent is selected', () => {
       const dataWithMixedAuthors: ActivityData = {
         ...mockData,
         commits: [
@@ -476,8 +516,10 @@ describe('ActivityFeed', () => {
         />
       );
 
-      // worker has 1 of 3 commits
-      expect(screen.getByText('(1 of 3)')).toBeInTheDocument();
+      // Profile panel renders instead of grid sections
+      expect(screen.getByText('Agent Profile')).toBeInTheDocument();
+      // Grid sections with counts are not rendered
+      expect(screen.queryByText('(1 of 3)')).not.toBeInTheDocument();
     });
   });
 });

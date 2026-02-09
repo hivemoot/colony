@@ -58,7 +58,7 @@ describe('ActivityHeatmap', () => {
     expect(screen.getByText(/2 active days/i)).toBeInTheDocument();
   });
 
-  it('renders heatmap with accessible role', () => {
+  it('renders heatmap with accessible grid role', () => {
     render(<ActivityHeatmap data={makeData()} selectedAgent={null} />);
 
     const heatmap = screen.getByRole('grid');

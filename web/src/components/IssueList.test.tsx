@@ -106,7 +106,67 @@ describe('IssueList', () => {
     expect(screen.queryByText('help wanted')).not.toBeInTheDocument();
   });
 
-  it('applies transition-colors to list item links', () => {
+  it('shows overflow indicator when issue has more than 2 labels', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Multi-label issue',
+        state: 'open',
+        labels: [
+          'enhancement',
+          'documentation',
+          'help wanted',
+          'good first issue',
+        ],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('+2 more')).toBeInTheDocument();
+    expect(
+      screen.getByTitle('help wanted, good first issue')
+    ).toBeInTheDocument();
+  });
+
+  it('does not show overflow indicator when issue has 2 or fewer labels', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Two-label issue',
+        state: 'open',
+        labels: ['bug', 'enhancement'],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.queryByText(/more/)).not.toBeInTheDocument();
+  });
+
+  it('shows correct overflow count for exactly 3 labels', () => {
+    const issues: Issue[] = [
+      {
+        number: 1,
+        title: 'Three-label issue',
+        state: 'open',
+        labels: ['bug', 'enhancement', 'documentation'],
+        author: 'scout',
+        createdAt: '2026-02-05T09:00:00Z',
+      },
+    ];
+
+    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+
+    expect(screen.getByText('+1 more')).toBeInTheDocument();
+    expect(screen.getByTitle('documentation')).toBeInTheDocument();
+  });
+
+  it('applies motion-safe:transition-colors to list item links', () => {
     const issues: Issue[] = [
       {
         number: 1,
@@ -121,7 +181,7 @@ describe('IssueList', () => {
     render(<IssueList issues={issues} repoUrl={repoUrl} />);
 
     const link = screen.getByRole('link');
-    expect(link.className).toContain('transition-colors');
+    expect(link.className).toContain('motion-safe:transition-colors');
   });
 
   it('renders a relative timestamp using closedAt if available', () => {
@@ -157,12 +217,16 @@ describe('IssueList', () => {
       },
     ];
 
-    render(<IssueList issues={issues} repoUrl={repoUrl} />);
+    const { container } = render(
+      <IssueList issues={issues} repoUrl={repoUrl} />
+    );
 
     expect(screen.getByText('scout')).toBeInTheDocument();
-    const avatar = screen.getByAltText('scout');
+    const avatar = container.querySelector('img');
     expect(avatar).toBeInTheDocument();
     expect(avatar).toHaveAttribute('src', 'https://github.com/scout.png');
+    expect(avatar).toHaveAttribute('alt', '');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
   });
 
   it('includes focus indicators on link elements', () => {

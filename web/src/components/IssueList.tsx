@@ -29,7 +29,7 @@ export function IssueList({
             href={`${repoUrl}/issues/${issue.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+            className="group block motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-amber-700 dark:text-amber-300">
@@ -61,12 +61,21 @@ export function IssueList({
                     {label}
                   </span>
                 ))}
+                {issue.labels.length > 2 && (
+                  <span
+                    className="text-xs px-1 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-500 dark:text-amber-400 rounded"
+                    title={issue.labels.slice(2).join(', ')}
+                  >
+                    +{issue.labels.length - 2} more
+                  </span>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1.5 mt-1.5">
               <img
                 src={`https://github.com/${issue.author}.png`}
-                alt={issue.author}
+                alt=""
+                loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
                 onError={handleAvatarError}
               />

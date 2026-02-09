@@ -58,13 +58,17 @@ describe('PullRequestList', () => {
   });
 
   it('renders author avatar images', () => {
-    render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
+    const { container } = render(
+      <PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />
+    );
 
-    const avatar = screen.getByAltText('hivemoot-builder');
+    const avatar = container.querySelector('img');
     expect(avatar).toHaveAttribute(
       'src',
       'https://github.com/hivemoot-builder.png'
     );
+    expect(avatar).toHaveAttribute('alt', '');
+    expect(avatar).toHaveAttribute('loading', 'lazy');
   });
 
   it('renders draft badge when PR is a draft', () => {
@@ -83,10 +87,10 @@ describe('PullRequestList', () => {
     expect(badge.className).not.toContain('bg-gray-');
   });
 
-  it('applies transition-colors to list item links', () => {
+  it('applies motion-safe:transition-colors to list item links', () => {
     render(<PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />);
     const link = screen.getByRole('link');
-    expect(link.className).toContain('transition-colors');
+    expect(link.className).toContain('motion-safe:transition-colors');
   });
 
   it('includes focus indicators on link elements', () => {
