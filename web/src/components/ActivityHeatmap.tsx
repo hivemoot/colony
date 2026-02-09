@@ -136,7 +136,7 @@ function HeatmapCell({
       className={`w-8 h-8 sm:w-9 sm:h-9 rounded-sm flex items-center justify-center text-xs font-medium
         ${INTENSITY_STYLES[level]}
         ${level >= 3 ? 'text-amber-950 dark:text-neutral-900' : 'text-amber-700 dark:text-amber-300'}
-        motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1
+        motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900
       `}
     >
       {day.count > 0 ? day.count : ''}
