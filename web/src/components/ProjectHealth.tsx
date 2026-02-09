@@ -1,4 +1,4 @@
-import type { RepositoryInfo } from '../shared/types';
+import type { RepositoryInfo } from '../../shared/types';
 
 interface ProjectHealthProps {
   /** All tracked repositories (includes primary) */

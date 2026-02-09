@@ -16,7 +16,10 @@ export function AgentSpecialization({
   // East: Reviewer (REVIEW)
   // South: Proposer (ORG)
   // West: Discussant (DISCUSS)
-  const getPoint = (score: number, angleDeg: number) => {
+  const getPoint = (
+    score: number,
+    angleDeg: number
+  ): { x: number; y: number } => {
     const angleRad = (angleDeg - 90) * (Math.PI / 180);
     const r = score * radius;
     return {
