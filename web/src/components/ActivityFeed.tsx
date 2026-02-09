@@ -67,10 +67,16 @@ export function ActivityFeed({
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
-      <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+      <section
+        aria-labelledby="section-live-feed"
+        className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100">
+            <h2
+              id="section-live-feed"
+              className="text-xl font-bold text-amber-900 dark:text-amber-100"
+            >
               Live Activity Feed
             </h2>
             <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -126,8 +132,14 @@ export function ActivityFeed({
       </section>
 
       {data && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+        <section
+          aria-labelledby="section-heatmap"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        >
+          <h2
+            id="section-heatmap"
+            className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+          >
             <span role="img" aria-label="calendar">
               📅
             </span>
@@ -140,9 +152,13 @@ export function ActivityFeed({
       {data && (
         <section
           id="agents"
+          aria-labelledby="section-agents"
           className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
         >
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+          <h2
+            id="section-agents"
+            className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+          >
             <span role="img" aria-label="bees">
               🐝
             </span>
@@ -157,8 +173,14 @@ export function ActivityFeed({
       )}
 
       {data && data.agentStats.length > 0 && (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-          <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+        <section
+          aria-labelledby="section-leaderboard"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        >
+          <h2
+            id="section-leaderboard"
+            className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+          >
             <span role="img" aria-label="leaderboard">
               🏆
             </span>
@@ -173,7 +195,10 @@ export function ActivityFeed({
       )}
 
       {data && selectedAgent ? (
-        <section className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+        <section
+          aria-labelledby="section-agent-profile"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        >
           <AgentProfilePanel
             data={data}
             events={events}
@@ -186,9 +211,13 @@ export function ActivityFeed({
           {data && data.proposals && data.proposals.length > 0 && (
             <section
               id="proposals"
+              aria-labelledby="section-proposals"
               className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
-              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+              <h2
+                id="section-proposals"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
                 <span role="img" aria-label="governance">
                   ⚖️
                 </span>
@@ -210,9 +239,13 @@ export function ActivityFeed({
           {data && data.proposals.length > 0 && (
             <section
               id="analytics"
+              aria-labelledby="section-analytics"
               className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
-              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+              <h2
+                id="section-analytics"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
                 <span role="img" aria-label="analytics">
                   📊
                 </span>
@@ -225,9 +258,13 @@ export function ActivityFeed({
           {data && data.proposals.length > 0 && (
             <section
               id="health"
+              aria-labelledby="section-health"
               className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
-              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+              <h2
+                id="section-health"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
                 <span role="img" aria-label="health">
                   💚
                 </span>
@@ -240,9 +277,13 @@ export function ActivityFeed({
           {data && data.agentStats.length >= 2 && data.comments.length > 0 && (
             <section
               id="collaboration"
+              aria-labelledby="section-collaboration"
               className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
-              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+              <h2
+                id="section-collaboration"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
                 <span role="img" aria-label="collaboration network">
                   🕸️
                 </span>
@@ -255,9 +296,13 @@ export function ActivityFeed({
           {data && (
             <section
               id="story"
+              aria-labelledby="section-story"
               className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
-              <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
+              <h2
+                id="section-story"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
                 <span role="img" aria-label="story">
                   📖
                 </span>
@@ -269,8 +314,14 @@ export function ActivityFeed({
 
           {data && (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+              <section
+                aria-labelledby="section-commits"
+                className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              >
+                <h2
+                  id="section-commits"
+                  className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2"
+                >
                   <span role="img" aria-label="commit">
                     📝
                   </span>
@@ -288,8 +339,14 @@ export function ActivityFeed({
                 />
               </section>
 
-              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+              <section
+                aria-labelledby="section-issues"
+                className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              >
+                <h2
+                  id="section-issues"
+                  className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2"
+                >
                   <span role="img" aria-label="issue">
                     🎯
                   </span>
@@ -307,8 +364,14 @@ export function ActivityFeed({
                 />
               </section>
 
-              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+              <section
+                aria-labelledby="section-pull-requests"
+                className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              >
+                <h2
+                  id="section-pull-requests"
+                  className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2"
+                >
                   <span role="img" aria-label="pull request">
                     🔀
                   </span>
@@ -326,8 +389,14 @@ export function ActivityFeed({
                 />
               </section>
 
-              <section className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+              <section
+                aria-labelledby="section-discussion"
+                className="bg-white/50 dark:bg-neutral-700/50 rounded-lg p-4 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              >
+                <h2
+                  id="section-discussion"
+                  className="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2"
+                >
                   <span role="img" aria-label="discussion">
                     💬
                   </span>
