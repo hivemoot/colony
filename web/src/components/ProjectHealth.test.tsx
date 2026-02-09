@@ -3,17 +3,21 @@ import { describe, it, expect } from 'vitest';
 import { ProjectHealth } from './ProjectHealth';
 
 describe('ProjectHealth', () => {
-  const mockRepo = {
-    stars: 42,
-    forks: 8,
-    openIssues: 5,
-    url: 'https://github.com/hivemoot/colony',
-  };
+  const mockRepos = [
+    {
+      owner: 'hivemoot',
+      name: 'colony',
+      stars: 42,
+      forks: 8,
+      openIssues: 5,
+      url: 'https://github.com/hivemoot/colony',
+    },
+  ];
 
   it('renders all metrics with correct values', () => {
     render(
       <ProjectHealth
-        repository={mockRepo}
+        repositories={mockRepos}
         activeAgentsCount={3}
         activeProposalsCount={2}
       />
@@ -26,10 +30,10 @@ describe('ProjectHealth', () => {
     expect(screen.getByText('2 active proposals')).toBeInTheDocument();
   });
 
-  it('renders correct links', () => {
+  it('renders correct links for single repo', () => {
     render(
       <ProjectHealth
-        repository={mockRepo}
+        repositories={mockRepos}
         activeAgentsCount={3}
         activeProposalsCount={2}
       />
@@ -47,20 +51,72 @@ describe('ProjectHealth', () => {
       'href',
       'https://github.com/hivemoot/colony/issues'
     );
-    expect(screen.getByTitle('Active Agents')).toHaveAttribute(
-      'href',
-      '#agents'
+  });
+
+  it('aggregates metrics for multiple repos', () => {
+    const multiRepos = [
+      ...mockRepos,
+      {
+        owner: 'hivemoot',
+        name: 'hivemoot',
+        stars: 10,
+        forks: 2,
+        openIssues: 3,
+        url: 'https://github.com/hivemoot/hivemoot',
+      },
+    ];
+
+    render(
+      <ProjectHealth
+        repositories={multiRepos}
+        activeAgentsCount={5}
+        activeProposalsCount={4}
+      />
     );
-    expect(screen.getByTitle('Active Proposals')).toHaveAttribute(
+
+    // 42 + 10 = 52
+    expect(screen.getByText('52')).toBeInTheDocument();
+    // 8 + 2 = 10
+    expect(screen.getByText('10')).toBeInTheDocument();
+    // 5 + 3 = 8
+    expect(screen.getByText(/8 open issues/i)).toBeInTheDocument();
+    expect(screen.getByText('2 repos')).toBeInTheDocument();
+  });
+
+  it('links to organization for multiple repos', () => {
+    const multiRepos = [
+      ...mockRepos,
+      {
+        owner: 'hivemoot',
+        name: 'hivemoot',
+        stars: 10,
+        forks: 2,
+        openIssues: 3,
+        url: 'https://github.com/hivemoot/hivemoot',
+      },
+    ];
+
+    render(
+      <ProjectHealth
+        repositories={multiRepos}
+        activeAgentsCount={5}
+        activeProposalsCount={4}
+      />
+    );
+
+    const orgUrl = 'https://github.com/hivemoot';
+    expect(screen.getByTitle('Total Stars')).toHaveAttribute('href', orgUrl);
+    expect(screen.getByTitle('Total Forks')).toHaveAttribute('href', orgUrl);
+    expect(screen.getByTitle('Total Open Issues')).toHaveAttribute(
       'href',
-      '#proposals'
+      orgUrl
     );
   });
 
   it('includes focus ring offset on all links', () => {
     render(
       <ProjectHealth
-        repository={mockRepo}
+        repositories={mockRepos}
         activeAgentsCount={3}
         activeProposalsCount={2}
       />
@@ -78,7 +134,7 @@ describe('ProjectHealth', () => {
   it('renders singular labels when count is 1', () => {
     render(
       <ProjectHealth
-        repository={{ ...mockRepo, openIssues: 1 }}
+        repositories={[{ ...mockRepos[0], openIssues: 1 }]}
         activeAgentsCount={1}
         activeProposalsCount={1}
       />
