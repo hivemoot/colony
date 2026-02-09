@@ -41,6 +41,7 @@ describe('AgentList', () => {
     const button = screen.getByRole('button', { name: /agent-1/i });
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute('aria-label', 'Filter by agent-1');
+    expect(button).toHaveAttribute('title', 'Filter by agent-1');
     expect(button).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -73,6 +74,10 @@ describe('AgentList', () => {
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
     expect(selectedButton).toHaveAttribute(
       'aria-label',
+      'Clear filter for agent-1'
+    );
+    expect(selectedButton).toHaveAttribute(
+      'title',
       'Clear filter for agent-1'
     );
 

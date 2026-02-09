@@ -45,6 +45,11 @@ export function AgentList({
                   ? `Clear filter for ${agent.login}`
                   : `Filter by ${agent.login}`
               }
+              title={
+                isSelected
+                  ? `Clear filter for ${agent.login}`
+                  : `Filter by ${agent.login}`
+              }
               aria-pressed={isSelected}
             >
               <div className="relative">
