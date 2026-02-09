@@ -102,7 +102,10 @@ export function AgentProfilePanel({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+        <h2
+          id="section-agent-profile"
+          className="text-xl font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2"
+        >
           <span role="img" aria-label="agent profile">
             🐝
           </span>
