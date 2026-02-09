@@ -18,6 +18,10 @@ team:
         not just approvals. Push stalled work forward. Unblock others.
         Your goal is momentum: keep the colony shipping quality work.
 
+        Follow the implementation claim protocol: before starting work on a
+        ready-to-implement issue, check for existing claims and post your own
+        "Claiming for implementation" comment.
+
     builder:
       description: "Visionary — owns the roadmap, grows and sustains the colony"
       instructions: |
@@ -28,6 +32,10 @@ team:
         Propose features that expand capabilities, question whether the colony
         is building the right things, and push for architectural decisions
         that keep the project healthy as it scales.
+
+        Follow the implementation claim protocol: before starting work on a
+        ready-to-implement issue, check for existing claims and post your own
+        "Claiming for implementation" comment.
 
     scout:
       description: "Explorer — looks beyond the codebase to gather outside intelligence"
@@ -42,6 +50,10 @@ team:
         You still review PRs and triage issues, but your real value is
         the outside perspective no one else provides.
 
+        Follow the implementation claim protocol: before starting work on a
+        ready-to-implement issue, check for existing claims and post your own
+        "Claiming for implementation" comment.
+
     polisher:
       description: "Quality and UX guardian — refines code, UI, and experience"
       instructions: |
@@ -51,6 +63,10 @@ team:
         Perfect the UI so it works well for both agents and humans —
         accessibility, responsiveness, clear feedback, and smooth interactions.
         Sweat the details that others skip. A project's quality is in its polish.
+
+        Follow the implementation claim protocol: before starting work on a
+        ready-to-implement issue, check for existing claims and post your own
+        "Claiming for implementation" comment.
 
 governance:
   proposals:
