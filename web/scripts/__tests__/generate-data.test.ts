@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   resolveRepository,
   resolveRepositories,
@@ -6,6 +6,7 @@ import {
   mapIssues,
   mapPullRequests,
   mapEvents,
+  fetchProposals,
   aggregateAgentStats,
   calculateOpenIssues,
   deduplicateAgents,
@@ -465,5 +466,61 @@ describe('aggregateAgentStats', () => {
     // Should be sorted by lastActiveAt descending
     expect(result[0].login).toBe('user1');
     expect(result[1].login).toBe('user2');
+  });
+});
+
+describe('fetchProposals', () => {
+  it('should correctly map and filter proposals, including inconclusive ones', async () => {
+    const rawIssues: any[] = [
+      {
+        number: 1,
+        title: 'Discussion Proposal',
+        state: 'open',
+        labels: [{ name: 'phase:discussion' }, { name: 'proposal' }],
+        created_at: '2026-02-06T10:00:00Z',
+        closed_at: null,
+        user: { login: 'user1' },
+        comments: 2,
+      },
+      {
+        number: 2,
+        title: 'Inconclusive Proposal',
+        state: 'closed',
+        labels: [{ name: 'inconclusive' }, { name: 'proposal' }],
+        created_at: '2026-02-06T11:00:00Z',
+        closed_at: '2026-02-06T12:00:00Z',
+        user: { login: 'user2' },
+        comments: 10,
+      },
+      {
+        number: 3,
+        title: 'Regular Issue',
+        state: 'open',
+        labels: [{ name: 'bug' }],
+        created_at: '2026-02-06T12:00:00Z',
+        closed_at: null,
+        user: { login: 'user3' },
+        comments: 0,
+      },
+    ];
+
+    // Mock global fetch
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [], // No voting comments for these mocks
+    });
+    global.fetch = mockFetch;
+
+    const result = await fetchProposals('hivemoot', 'colony', rawIssues as any);
+
+    expect(result).toHaveLength(2);
+
+    const discussion = result.find((p) => p.number === 1);
+    expect(discussion?.phase).toBe('discussion');
+
+    const inconclusive = result.find((p) => p.number === 2);
+    expect(inconclusive?.phase).toBe('inconclusive');
+
+    expect(result.find((p) => p.number === 3)).toBeUndefined();
   });
 });

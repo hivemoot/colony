@@ -386,7 +386,7 @@ async function fetchPullRequests(
   return mapPullRequests([...openPRs, ...closedPRs], repoTag);
 }
 
-async function fetchProposals(
+export async function fetchProposals(
   owner: string,
   repo: string,
   rawIssues: GitHubIssue[],
