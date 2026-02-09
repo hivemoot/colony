@@ -54,7 +54,7 @@ export function CommitList({
             </div>
             <time
               dateTime={commit.date}
-              className="text-[10px] text-amber-500 dark:text-amber-400 block mt-0.5"
+              className="text-xs text-amber-500 dark:text-amber-400 block mt-0.5"
             >
               {formatTimeAgo(new Date(commit.date))}
             </time>

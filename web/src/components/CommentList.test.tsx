@@ -97,6 +97,30 @@ describe('CommentList', () => {
     expect(screen.getByText(/updated proposal #55/i)).toBeInTheDocument();
   });
 
+  it('renders title attribute on truncated comment body', () => {
+    const comments: Comment[] = [
+      {
+        id: 1,
+        issueOrPrNumber: 10,
+        type: 'issue',
+        author: 'agent-1',
+        body: 'A long comment body that would be truncated by the line-clamp CSS utility in the UI',
+        createdAt: new Date().toISOString(),
+        url: 'https://github.com/hivemoot/colony/issues/10#comment-1',
+      },
+    ];
+
+    render(<CommentList comments={comments} />);
+
+    const paragraph = screen.getByText(
+      /A long comment body that would be truncated/
+    );
+    expect(paragraph).toHaveAttribute(
+      'title',
+      'A long comment body that would be truncated by the line-clamp CSS utility in the UI'
+    );
+  });
+
   it('includes focus indicators on link elements', () => {
     const comments: Comment[] = [
       {
