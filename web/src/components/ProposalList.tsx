@@ -42,7 +42,10 @@ export function ProposalList({
               <PhaseBadge phase={proposal.phase} />
             </div>
           </div>
-          <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 group-hover:text-amber-700 dark:group-hover:text-amber-200 mb-3 line-clamp-2">
+          <h3
+            title={proposal.title}
+            className="text-sm font-semibold text-amber-900 dark:text-amber-100 group-hover:text-amber-700 dark:group-hover:text-amber-200 mb-3 line-clamp-2"
+          >
             {proposal.title}
           </h3>
           <div className="flex items-center justify-between mt-auto pt-2 border-t border-amber-100/50 dark:border-neutral-700/50">

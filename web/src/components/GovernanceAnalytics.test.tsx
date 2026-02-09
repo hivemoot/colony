@@ -315,6 +315,49 @@ describe('GovernanceAnalytics', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders title attribute on truncated agent names', () => {
+    const data = makeData({
+      agentStats: [
+        {
+          login: 'hivemoot-builder-with-very-long-name',
+          commits: 10,
+          pullRequestsMerged: 2,
+          issuesOpened: 1,
+          reviews: 0,
+          comments: 5,
+          lastActiveAt: '2026-02-05T09:00:00Z',
+        },
+      ],
+      proposals: [
+        {
+          number: 1,
+          title: 'A',
+          phase: 'discussion',
+          author: 'hivemoot-builder-with-very-long-name',
+          createdAt: '2026-02-05T09:00:00Z',
+          commentCount: 1,
+        },
+      ],
+    });
+
+    render(<GovernanceAnalytics data={data} />);
+
+    const agentNameElements = screen.getAllByText(
+      'hivemoot-builder-with-very-long-name'
+    );
+    for (const el of agentNameElements) {
+      if (
+        el.tagName.toLowerCase() === 'span' &&
+        el.classList.contains('truncate')
+      ) {
+        expect(el).toHaveAttribute(
+          'title',
+          'hivemoot-builder-with-very-long-name'
+        );
+      }
+    }
+  });
+
   it('renders role legend with all four roles', () => {
     const data = makeData({
       agentStats: [

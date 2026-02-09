@@ -286,6 +286,30 @@ describe('ProposalList', () => {
     expect(timeEl).toHaveAttribute('datetime', createdAt);
   });
 
+  it('renders title attribute on truncated proposal titles', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title:
+          'A very long proposal title that would be truncated by the line-clamp CSS utility',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    const heading = screen.getByText(
+      'A very long proposal title that would be truncated by the line-clamp CSS utility'
+    );
+    expect(heading).toHaveAttribute(
+      'title',
+      'A very long proposal title that would be truncated by the line-clamp CSS utility'
+    );
+  });
+
   it('includes focus indicators on link elements', () => {
     const proposals: Proposal[] = [
       {

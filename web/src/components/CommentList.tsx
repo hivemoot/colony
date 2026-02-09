@@ -59,7 +59,10 @@ export function CommentList({
                 {formatCommentAction(comment.type)} #{comment.issueOrPrNumber}
               </span>
             </div>
-            <p className="text-amber-800 dark:text-neutral-300 text-xs italic leading-relaxed line-clamp-3">
+            <p
+              title={comment.body}
+              className="text-amber-800 dark:text-neutral-300 text-xs italic leading-relaxed line-clamp-3"
+            >
               "{comment.body}"
             </p>
             <time
