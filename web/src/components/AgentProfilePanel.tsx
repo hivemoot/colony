@@ -31,6 +31,8 @@ const PHASE_BADGE: Record<string, string> = {
   discussion:
     'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200',
   voting: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+  'extended-voting':
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200',
   'ready-to-implement':
     'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
   implemented:

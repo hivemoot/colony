@@ -243,6 +243,32 @@ describe('AgentProfilePanel', () => {
     expect(screen.getByText('voting')).toBeInTheDocument();
   });
 
+  it('renders extended-voting phase badge with indigo styling', () => {
+    render(
+      <AgentProfilePanel
+        data={makeData({
+          proposals: [
+            {
+              number: 102,
+              title: 'Extended voting proposal',
+              phase: 'extended-voting',
+              author: 'builder',
+              createdAt: '2026-02-04T10:00:00Z',
+              commentCount: 7,
+            },
+          ],
+        })}
+        events={makeEvents()}
+        agentLogin="builder"
+        onClose={vi.fn()}
+      />
+    );
+
+    const badge = screen.getByText('extended-voting');
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toContain('bg-indigo-100');
+  });
+
   it('renders recent activity filtered to the agent', () => {
     render(
       <AgentProfilePanel
