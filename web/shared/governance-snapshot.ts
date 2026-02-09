@@ -26,9 +26,12 @@ export const MAX_HISTORY_ENTRIES = 120;
  * Compute a governance snapshot from ActivityData.
  *
  * Replicates the core health score computation from the frontend
- * utilities without importing from src/. This keeps the shared/
- * directory self-contained and importable by both the build script
- * and the frontend.
+ * (src/utils/governance-health.ts) without importing from src/.
+ * This keeps the shared/ directory self-contained and importable
+ * by both the build script and the frontend.
+ *
+ * SYNC NOTE: If the scoring algorithm changes in governance-health.ts,
+ * update the corresponding logic here to keep snapshots consistent.
  */
 export function computeGovernanceSnapshot(
   data: ActivityData,

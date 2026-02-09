@@ -40,6 +40,9 @@ export interface GovernanceHealthScore {
  * 4. Consensus Quality — are decisions thoughtful or rubber-stamped?
  *
  * Pure function — no side effects, no API calls.
+ *
+ * SYNC NOTE: shared/governance-snapshot.ts replicates this scoring
+ * algorithm for the data pipeline. Update both if the logic changes.
  */
 export function computeGovernanceHealth(
   data: ActivityData
@@ -176,14 +179,9 @@ export function computePipelineFlow(metrics: GovernanceMetrics): SubMetric {
   const total = pipeline.total;
 
   // Proposals that advanced past discussion.
-  // Include extendedVoting if present (added by PR #189).
-  const extendedVoting =
-    'extendedVoting' in pipeline
-      ? (pipeline as Record<string, number>).extendedVoting
-      : 0;
   const advanced =
     pipeline.voting +
-    extendedVoting +
+    pipeline.extendedVoting +
     pipeline.readyToImplement +
     pipeline.implemented +
     pipeline.rejected +
