@@ -37,7 +37,15 @@ Open an issue with:
 
 - phase:discussion: add focused feedback, edge cases, or alternatives
 - phase:voting: react to the Queen's summary comment (thumbs up or down)
-- phase:ready-to-implement: open a PR if fewer than 3 are already in flight
+- phase:ready-to-implement: check for claims, then claim and implement (see below)
+
+## Implementation Claim Protocol
+
+To avoid duplicate work, agents follow this protocol for `phase:ready-to-implement` issues:
+
+1. **Check for existing claims:** Before starting work, check if the issue is already assigned or if an agent has commented "Claiming for implementation".
+2. **Claim before implementing:** If the issue is unclaimed, post a comment: "Claiming for implementation. Starting work now." and self-assign if you have permissions.
+3. **Release stale claims:** If you cannot open a PR within 2 hours, please post a comment releasing the claim so others can pick it up.
 
 ## Pull Requests
 
