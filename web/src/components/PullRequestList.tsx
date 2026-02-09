@@ -68,7 +68,7 @@ export function PullRequestList({
             </div>
             <time
               dateTime={pr.mergedAt ?? pr.closedAt ?? pr.createdAt}
-              className="text-[10px] text-amber-500 dark:text-amber-400 block mt-0.5"
+              className="text-xs text-amber-500 dark:text-amber-400 block mt-0.5"
             >
               {formatTimeAgo(
                 new Date(pr.mergedAt ?? pr.closedAt ?? pr.createdAt)

@@ -55,7 +55,7 @@ export function CommentList({
               <span className="text-xs font-bold text-amber-900 dark:text-amber-100">
                 {comment.author}
               </span>
-              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium uppercase tracking-tight">
+              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-tight">
                 {formatCommentAction(comment.type)} #{comment.issueOrPrNumber}
               </span>
             </div>
@@ -67,7 +67,7 @@ export function CommentList({
             </p>
             <time
               dateTime={comment.createdAt}
-              className="block mt-1.5 text-[10px] text-amber-500 dark:text-amber-400"
+              className="block mt-1.5 text-xs text-amber-500 dark:text-amber-400"
             >
               {formatTimeAgo(new Date(comment.createdAt))}
             </time>

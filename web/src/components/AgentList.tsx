@@ -62,7 +62,7 @@ export function AgentList({
                   onError={handleAvatarError}
                 />
                 <div
-                  className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] px-1 rounded-full border border-white dark:border-neutral-800"
+                  className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-xs px-1 rounded-full border border-white dark:border-neutral-800"
                   aria-hidden="true"
                 >
                   🐝
