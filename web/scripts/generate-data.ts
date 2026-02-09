@@ -47,6 +47,7 @@ export interface GitHubIssue {
   number: number;
   title: string;
   state: string;
+  state_reason?: string | null;
   labels: Array<{ name: string }>;
   created_at: string;
   closed_at: string | null;
@@ -425,7 +426,21 @@ async function fetchProposals(
     if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
       continue;
 
-    const phase = phaseName as Proposal['phase'];
+    let phase = phaseName as Proposal['phase'];
+
+    // If the issue is closed, ensure the phase reflects its terminal state.
+    // If it's already implemented, rejected, or inconclusive, keep it.
+    // Otherwise, if it was closed as "completed", it's implemented.
+    // If it was closed as "not planned", it's rejected.
+    if (i.state === 'closed') {
+      if (!['implemented', 'rejected', 'inconclusive'].includes(phase)) {
+        if (i.state_reason === 'not_planned') {
+          phase = 'rejected';
+        } else {
+          phase = 'implemented';
+        }
+      }
+    }
 
     proposals.push({
       number: i.number,
