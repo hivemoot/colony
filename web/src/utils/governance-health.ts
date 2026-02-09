@@ -175,15 +175,10 @@ export function computePipelineFlow(metrics: GovernanceMetrics): SubMetric {
   const { pipeline } = metrics;
   const total = pipeline.total;
 
-  // Proposals that advanced past discussion.
-  // Include extendedVoting if present (added by PR #189).
-  const extendedVoting =
-    'extendedVoting' in pipeline
-      ? (pipeline as Record<string, number>).extendedVoting
-      : 0;
+  // Proposals that advanced past discussion
   const advanced =
     pipeline.voting +
-    extendedVoting +
+    pipeline.extendedVoting +
     pipeline.readyToImplement +
     pipeline.implemented +
     pipeline.rejected +
