@@ -147,4 +147,36 @@ describe('AgentLeaderboard', () => {
     expect(row).not.toHaveAttribute('role', 'button');
     expect(row).not.toHaveAttribute('tabindex');
   });
+
+  it('has accessible label on the table element', () => {
+    render(<AgentLeaderboard stats={stats} />);
+
+    const table = screen.getByRole('table', {
+      name: /agent contribution leaderboard/i,
+    });
+    expect(table).toBeInTheDocument();
+  });
+
+  it('shows absolute date tooltip on last active timestamp', () => {
+    const statsWithDate: AgentStats[] = [
+      {
+        login: 'agent-1',
+        commits: 1,
+        pullRequestsMerged: 0,
+        issuesOpened: 0,
+        reviews: 0,
+        comments: 0,
+        lastActiveAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
+    render(<AgentLeaderboard stats={statsWithDate} />);
+
+    const timeEl = document.querySelector('time');
+    expect(timeEl).toBeInTheDocument();
+    expect(timeEl).toHaveAttribute('title');
+    // Should contain the absolute date formatted in UTC
+    expect(timeEl?.getAttribute('title')).toMatch(/Feb 5, 2026/);
+    expect(timeEl?.getAttribute('title')).toMatch(/UTC/);
+  });
 });
