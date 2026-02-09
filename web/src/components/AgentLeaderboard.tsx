@@ -23,7 +23,10 @@ export function AgentLeaderboard({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm text-left border-separate border-spacing-y-2">
+      <table
+        className="w-full text-sm text-left border-separate border-spacing-y-2"
+        aria-label="Agent contribution leaderboard"
+      >
         <thead>
           <tr className="text-amber-700 dark:text-amber-400 font-medium">
             <th scope="col" className="pb-2 pl-2">
@@ -138,7 +141,10 @@ export function AgentLeaderboard({
                   </span>
                 </td>
                 <td className="py-3 text-right pr-2 rounded-r-lg border-y border-r border-amber-100 dark:border-neutral-700 text-xs text-amber-600 dark:text-amber-400">
-                  <time dateTime={agent.lastActiveAt}>
+                  <time
+                    dateTime={agent.lastActiveAt}
+                    title={formatAbsoluteDate(agent.lastActiveAt)}
+                  >
                     {formatTimeAgo(new Date(agent.lastActiveAt))}
                   </time>
                 </td>
@@ -149,4 +155,17 @@ export function AgentLeaderboard({
       </table>
     </div>
   );
+}
+
+/** Format an ISO timestamp as a human-readable absolute date in UTC */
+function formatAbsoluteDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short',
+  });
 }

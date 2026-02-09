@@ -58,9 +58,10 @@ export function ColonyStory({ data }: ColonyStoryProps): React.ReactElement {
 }
 
 function formatMilestoneDate(iso: string): string {
-  const date = new Date(iso + 'T00:00:00');
+  const date = new Date(iso + 'T00:00:00Z');
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }

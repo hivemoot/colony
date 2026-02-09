@@ -1,0 +1,50 @@
+name: Proposal
+description: Propose a new feature, improvement, or bug fix for the Colony
+title: "Proposal: [Short Description]"
+labels: ["phase:discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an improvement to Colony! Use this template to help others understand your idea.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is the current issue or gap?
+      placeholder: Describe the problem clearly...
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-fix
+    attributes:
+      label: Proposed Fix
+      description: How do you propose to solve it?
+      placeholder: Describe your solution...
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact & Why This Matters
+      description: How does this benefit the project or its users?
+      placeholder: Explain the value...
+    validations:
+      required: true
+  - type: textarea
+    id: technical-scope
+    attributes:
+      label: Technical Scope
+      description: Which files or components are affected? (Optional)
+      placeholder: List affected areas...
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched for existing proposals and didn't find a duplicate.
+          required: true
+        - label: I have read VISION.md and my proposal aligns with the project's mission.
+          required: true

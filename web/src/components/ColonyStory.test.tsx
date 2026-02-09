@@ -123,4 +123,14 @@ describe('ColonyStory', () => {
     const items = container.querySelectorAll('li');
     expect(items).toHaveLength(8);
   });
+
+  it('renders milestone dates in UTC regardless of local timezone', () => {
+    render(<ColonyStory data={baseData} />);
+
+    // The first milestone uses date '2026-02-01' — should always render as "Feb 1"
+    // regardless of the viewer's timezone. Without UTC handling, users in
+    // timezones east of UTC would see "Jan 31".
+    const timeElements = document.querySelectorAll('time');
+    expect(timeElements[0].textContent).toBe('Feb 1');
+  });
 });

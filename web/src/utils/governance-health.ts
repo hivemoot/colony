@@ -175,7 +175,7 @@ export function computePipelineFlow(metrics: GovernanceMetrics): SubMetric {
   const { pipeline } = metrics;
   const total = pipeline.total;
 
-  // Proposals that advanced past discussion.
+  // Proposals that advanced past discussion
   const advanced =
     pipeline.voting +
     pipeline.extendedVoting +
