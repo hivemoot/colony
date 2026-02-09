@@ -13,7 +13,7 @@
  * unauthenticated requests.
  */
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
@@ -29,9 +29,16 @@ import type {
   RepositoryInfo,
 } from '../shared/types';
 
+import {
+  computeGovernanceSnapshot,
+  appendSnapshot,
+  type GovernanceSnapshot,
+} from '../shared/governance-snapshot.ts';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
+const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
 
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
@@ -892,6 +899,23 @@ async function generateActivityData(): Promise<ActivityData> {
   };
 }
 
+/**
+ * Load existing governance history from disk, or return empty array
+ * if the file doesn't exist yet.
+ */
+function loadHistory(): GovernanceSnapshot[] {
+  if (!existsSync(HISTORY_FILE)) return [];
+  try {
+    const raw = readFileSync(HISTORY_FILE, 'utf-8');
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as GovernanceSnapshot[];
+  } catch {
+    console.warn('Could not parse governance history, starting fresh');
+    return [];
+  }
+}
+
 async function main(): Promise<void> {
   try {
     const data = await generateActivityData();
@@ -899,9 +923,18 @@ async function main(): Promise<void> {
     // Ensure output directory exists
     mkdirSync(OUTPUT_DIR, { recursive: true });
 
-    // Write data file
+    // Write activity data
     writeFileSync(OUTPUT_FILE, JSON.stringify(data, null, 2));
     console.log(`Activity data written to ${OUTPUT_FILE}`);
+
+    // Compute and append governance snapshot for historical tracking
+    const snapshot = computeGovernanceSnapshot(data, data.generatedAt);
+    const history = loadHistory();
+    const updated = appendSnapshot(history, snapshot);
+    writeFileSync(HISTORY_FILE, JSON.stringify(updated, null, 2));
+    console.log(
+      `Governance snapshot appended (${updated.length} entries, score: ${snapshot.healthScore})`
+    );
   } catch (error) {
     console.error('Failed to generate activity data:', error);
     process.exit(1);
