@@ -6,8 +6,10 @@ import {
   type AgentRoleProfile,
   type GovernanceMetrics,
   type ProposalPipelineCounts,
+  type ThroughputMetrics,
 } from '../utils/governance';
 import { handleAvatarError } from '../utils/avatar';
+import { formatHours } from '../utils/time';
 
 interface GovernanceAnalyticsProps {
   data: ActivityData;
@@ -22,6 +24,9 @@ export function GovernanceAnalytics({
     <div className="space-y-6">
       <SummaryCards metrics={metrics} />
       <ProposalPipeline pipeline={metrics.pipeline} />
+      {metrics.throughput.resolvedCount > 0 && (
+        <GovernanceThroughput throughput={metrics.throughput} />
+      )}
       {metrics.agentRoles.length > 0 && (
         <AgentRoles roles={metrics.agentRoles} />
       )}
@@ -262,6 +267,93 @@ function AgentRoleBar({
       <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 w-20 text-right shrink-0">
         {roleLabel}
       </span>
+    </div>
+  );
+}
+
+function GovernanceThroughput({
+  throughput,
+}: {
+  throughput: ThroughputMetrics;
+}): React.ReactElement {
+  const total = throughput.resolvedCount + throughput.activeCount;
+  const resolvedPct = total > 0 ? (throughput.resolvedCount / total) * 100 : 0;
+
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+        Governance Throughput
+      </h4>
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="bg-white/30 dark:bg-neutral-800/30 rounded-lg p-3 text-center border border-amber-100 dark:border-neutral-700">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+            Discussion
+          </p>
+          <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+            {throughput.medianDiscussionHours !== null
+              ? formatHours(throughput.medianDiscussionHours)
+              : '—'}
+          </p>
+        </div>
+        <div className="bg-white/30 dark:bg-neutral-800/30 rounded-lg p-3 text-center border border-amber-100 dark:border-neutral-700">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+            Voting
+          </p>
+          <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+            {throughput.medianVotingHours !== null
+              ? formatHours(throughput.medianVotingHours)
+              : '—'}
+          </p>
+        </div>
+        <div className="bg-white/30 dark:bg-neutral-800/30 rounded-lg p-3 text-center border border-amber-100 dark:border-neutral-700">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+            Full Cycle
+          </p>
+          <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+            {throughput.medianCycleHours !== null
+              ? formatHours(throughput.medianCycleHours)
+              : '—'}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-amber-700 dark:text-amber-300 w-16 shrink-0">
+          Progress
+        </span>
+        <div
+          className="flex-1 flex h-4 rounded-full overflow-hidden border border-amber-200 dark:border-neutral-600"
+          role="img"
+          aria-label={`${throughput.resolvedCount} resolved, ${throughput.activeCount} active of ${total} proposals`}
+        >
+          {resolvedPct > 0 && (
+            <div
+              className="bg-green-400 dark:bg-green-500 motion-safe:transition-all"
+              style={{ width: `${resolvedPct}%` }}
+              title={`Resolved: ${throughput.resolvedCount} (${Math.round(resolvedPct)}%)`}
+            />
+          )}
+          {resolvedPct < 100 && (
+            <div
+              className="bg-amber-300 dark:bg-amber-600 motion-safe:transition-all"
+              style={{ width: `${100 - resolvedPct}%` }}
+              title={`Active: ${throughput.activeCount} (${Math.round(100 - resolvedPct)}%)`}
+            />
+          )}
+        </div>
+        <span className="text-xs font-mono text-amber-700 dark:text-amber-300 w-16 text-right shrink-0">
+          {throughput.resolvedCount}/{total}
+        </span>
+      </div>
+      <div className="flex gap-x-4 gap-y-1 mt-2">
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-400 dark:bg-green-500" />
+          <span className="text-amber-700 dark:text-amber-300">Resolved</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-300 dark:bg-amber-600" />
+          <span className="text-amber-700 dark:text-amber-300">Active</span>
+        </div>
+      </div>
     </div>
   );
 }

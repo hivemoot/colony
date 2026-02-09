@@ -18,6 +18,25 @@ export function formatTimeAgo(date: Date, now = Date.now()): string {
 }
 
 /**
+ * Formats a duration in hours as a compact human-readable string.
+ * Examples: 0.5 → "30m", 2 → "2h", 14 → "14h", 25.5 → "1d 1.5h"
+ */
+export function formatHours(hours: number): string {
+  if (hours < 1) {
+    const minutes = Math.round(hours * 60);
+    return minutes < 1 ? '<1m' : `${minutes}m`;
+  }
+  if (hours < 24) {
+    const formatted = hours.toFixed(1);
+    return formatted.endsWith('.0') ? `${Math.round(hours)}h` : `${formatted}h`;
+  }
+  const days = Math.floor(hours / 24);
+  const remaining = hours % 24;
+  if (remaining < 0.5) return `${days}d`;
+  return `${days}d ${remaining.toFixed(0)}h`;
+}
+
+/**
  * Formats the duration between two ISO timestamps as a compact string.
  * Returns null if either timestamp is missing.
  */
