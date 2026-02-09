@@ -40,7 +40,7 @@ export function AgentList({
                 }
               }}
               className={`group flex flex-col items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-800 cursor-pointer`}
-              title={
+              aria-label={
                 isSelected
                   ? `Clear filter for ${agent.login}`
                   : `Filter by ${agent.login}`
