@@ -31,7 +31,7 @@ export function PullRequestList({
             href={`${repoUrl}/pull/${pr.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+            className="group block motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-amber-700 dark:text-amber-300">

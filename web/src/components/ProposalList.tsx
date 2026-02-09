@@ -31,7 +31,7 @@ export function ProposalList({
           href={`${repoUrl}/issues/${proposal.number}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+          className="group block p-4 bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 border border-amber-200 dark:border-neutral-600 rounded-lg motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         >
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-mono text-amber-700 dark:text-amber-400">

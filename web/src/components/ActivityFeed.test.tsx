@@ -414,9 +414,9 @@ describe('ActivityFeed', () => {
       );
 
       const clearButton = screen.getByText('Clear filter');
-      expect(clearButton.className).toContain('focus-visible:ring-offset-1');
+      expect(clearButton.className).toContain('focus-visible:ring-offset-2');
       expect(clearButton.className).toContain(
-        'dark:focus-visible:ring-offset-neutral-800'
+        'dark:focus-visible:ring-offset-neutral-900'
       );
     });
 
