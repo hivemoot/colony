@@ -244,6 +244,24 @@ describe('mapPullRequests', () => {
     expect(result.pullRequests[0].repo).toBe('hivemoot/colony');
     expect(result.pullRequests[1].repo).toBe('hivemoot/colony');
   });
+
+  it('should keep full fetched PR coverage for downstream linking', () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      body: null,
+      state: 'open',
+      draft: false,
+      merged_at: null,
+      closed_at: null,
+      user: { login: `user${i + 1}`, avatar_url: `url${i + 1}` },
+      created_at: `2026-02-06T${String(i).padStart(2, '0')}:00:00Z`,
+    }));
+
+    const result = mapPullRequests(many as unknown as GitHubPR[]);
+
+    expect(result.pullRequests).toHaveLength(20);
+  });
 });
 
 describe('mapEvents', () => {

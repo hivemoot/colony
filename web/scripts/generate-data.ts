@@ -347,12 +347,10 @@ export function mapPullRequests(
   pullRequests: PullRequest[];
   agents: Agent[];
 } {
-  const allPRs = ghPRs
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 15);
+  const allPRs = ghPRs.sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   const pullRequests: PullRequest[] = allPRs.map((pr) => ({
     number: pr.number,
