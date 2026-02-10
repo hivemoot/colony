@@ -8,6 +8,13 @@ vi.mock('../utils/time', () => ({
   formatTimeAgo: (): string => '5 minutes ago',
 }));
 
+vi.mock('../hooks/useGovernanceHistory', () => ({
+  useGovernanceHistory: (): { history: []; loading: false } => ({
+    history: [],
+    loading: false,
+  }),
+}));
+
 const mockData: ActivityData = {
   generatedAt: '2026-02-05T12:00:00Z',
   repository: {
