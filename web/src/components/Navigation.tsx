@@ -4,7 +4,9 @@ interface NavigationProps {
   hasRoadmap?: boolean;
 }
 
-export function Navigation({ hasRoadmap = true }: NavigationProps): React.ReactElement {
+export function Navigation({
+  hasRoadmap = true,
+}: NavigationProps): React.ReactElement {
   return (
     <nav className="sticky top-0 z-50 w-full bg-amber-50/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-amber-200 dark:border-neutral-700 py-2 mb-8">
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
@@ -30,7 +32,13 @@ export function Navigation({ hasRoadmap = true }: NavigationProps): React.ReactE
   );
 }
 
-function NavLink({ href, label }: { href: string; label: string }): React.ReactElement {
+function NavLink({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}): React.ReactElement {
   return (
     <a
       href={href}

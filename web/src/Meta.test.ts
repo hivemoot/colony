@@ -22,11 +22,15 @@ describe('index.html metadata', () => {
   });
 
   it('contains theme-color meta tag', () => {
-    expect(normalizedHtml).toContain('<meta name="theme-color" content="#d97706" />');
+    expect(normalizedHtml).toContain(
+      '<meta name="theme-color" content="#d97706" />'
+    );
   });
 
   it('contains Open Graph meta tags', () => {
-    expect(normalizedHtml).toContain('<meta property="og:type" content="website" />');
+    expect(normalizedHtml).toContain(
+      '<meta property="og:type" content="website" />'
+    );
     expect(normalizedHtml).toContain(
       '<meta property="og:url" content="https://hivemoot.github.io/colony/" />'
     );

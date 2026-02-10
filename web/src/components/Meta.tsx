@@ -18,7 +18,7 @@ export function Meta({ data }: MetaProps): null {
 
     // Update meta tags
     const updateMeta = (selector: string, content: string) => {
-      let el = document.querySelector(selector);
+      const el = document.querySelector(selector);
       if (el) {
         el.setAttribute('content', content);
       }

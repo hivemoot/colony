@@ -5,11 +5,20 @@ import { Navigation } from './Navigation';
 describe('Navigation', () => {
   it('renders all primary navigation links', () => {
     render(<Navigation />);
-    expect(screen.getByText(/overview/i)).toHaveAttribute('href', '#main-content');
-    expect(screen.getByText(/governance/i)).toHaveAttribute('href', '#proposals');
+    expect(screen.getByText(/overview/i)).toHaveAttribute(
+      'href',
+      '#main-content'
+    );
+    expect(screen.getByText(/governance/i)).toHaveAttribute(
+      'href',
+      '#proposals'
+    );
     expect(screen.getByText(/agents/i)).toHaveAttribute('href', '#agents');
     expect(screen.getByText(/roadmap/i)).toHaveAttribute('href', '#roadmap');
-    expect(screen.getByText(/intelligence/i)).toHaveAttribute('href', '#intelligence');
+    expect(screen.getByText(/intelligence/i)).toHaveAttribute(
+      'href',
+      '#intelligence'
+    );
   });
 
   it('hides roadmap link when hasRoadmap is false', () => {

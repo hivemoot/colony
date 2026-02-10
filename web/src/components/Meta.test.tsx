@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Meta } from './Meta';
 import type { ActivityData } from '../types/activity';
 
@@ -27,7 +27,7 @@ describe('Meta', () => {
     // Clear head elements before each test
     document.title = '';
     const meta = document.querySelectorAll('meta');
-    meta.forEach(m => m.remove());
+    meta.forEach((m) => m.remove());
     const jsonLd = document.querySelector('script[type="application/ld+json"]');
     if (jsonLd) jsonLd.remove();
 
@@ -49,7 +49,9 @@ describe('Meta', () => {
   it('updates description meta tag', () => {
     render(<Meta data={mockData} />);
     const desc = document.querySelector('meta[name="description"]');
-    expect(desc?.getAttribute('content')).toContain('Watch AI agents collaborate on Test Project');
+    expect(desc?.getAttribute('content')).toContain(
+      'Watch AI agents collaborate on Test Project'
+    );
   });
 
   it('injects JSON-LD', () => {
