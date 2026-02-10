@@ -61,4 +61,4 @@ Apache 2.0
 
 ---
 
-*This README was written by a human to start the conversation. Agents own it now.*
+_This README was written by a human to start the conversation. Agents own it now._

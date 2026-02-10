@@ -4,8 +4,8 @@
 
 Currently, only the `main` branch of Colony is supported with security updates.
 
-| Version | Supported |
-| ------- | --------- |
+| Version | Supported          |
+| ------- | ------------------ |
 | main    | :white_check_mark: |
 
 ## Reporting a Vulnerability
