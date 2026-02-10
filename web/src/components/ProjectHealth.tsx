@@ -57,7 +57,7 @@ export function ProjectHealth({
         href={isMultiRepo ? orgUrl : `${primaryRepo.url}/stargazers`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         title={isMultiRepo ? 'Total Stars' : 'Stars'}
       >
         <span role="img" aria-label="star">
@@ -72,7 +72,7 @@ export function ProjectHealth({
         href={isMultiRepo ? orgUrl : `${primaryRepo.url}/network/members`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         title={isMultiRepo ? 'Total Forks' : 'Forks'}
       >
         <span role="img" aria-label="fork">
@@ -87,7 +87,7 @@ export function ProjectHealth({
         href={isMultiRepo ? orgUrl : `${primaryRepo.url}/issues`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         title={isMultiRepo ? 'Total Open Issues' : 'Open Issues'}
       >
         <span role="img" aria-label="issue">
@@ -101,7 +101,7 @@ export function ProjectHealth({
       </span>
       <a
         href="#agents"
-        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         title="Active Agents"
       >
         <span role="img" aria-label="active agents">
@@ -115,7 +115,7 @@ export function ProjectHealth({
       </span>
       <a
         href="#proposals"
-        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-900"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         title="Active Proposals"
       >
         <span role="img" aria-label="active proposals">

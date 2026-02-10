@@ -182,7 +182,7 @@ function MatrixCell({
     <td
       tabIndex={0}
       aria-label={tooltip}
-      className="p-2 text-center font-mono font-bold text-amber-900 dark:text-amber-100 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 collaboration-cell"
+      className="p-2 text-center font-mono font-bold text-amber-900 dark:text-amber-100 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 collaboration-cell"
       style={{ '--cell-intensity': intensity } as React.CSSProperties}
       title={tooltip}
     >

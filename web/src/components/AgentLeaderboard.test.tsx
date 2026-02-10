@@ -123,9 +123,9 @@ describe('AgentLeaderboard', () => {
     render(<AgentLeaderboard stats={stats} />);
 
     const link = screen.getByRole('link', { name: 'agent-1' });
-    expect(link.className).toContain('focus-visible:ring-offset-1');
+    expect(link.className).toContain('focus-visible:ring-offset-2');
     expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-800'
+      'dark:focus-visible:ring-offset-neutral-900'
     );
   });
 

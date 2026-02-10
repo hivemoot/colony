@@ -124,7 +124,7 @@ describe('ProjectHealth', () => {
 
     const links = screen.getAllByRole('link');
     for (const link of links) {
-      expect(link.className).toContain('focus-visible:ring-offset-1');
+      expect(link.className).toContain('focus-visible:ring-offset-2');
       expect(link.className).toContain(
         'dark:focus-visible:ring-offset-neutral-900'
       );

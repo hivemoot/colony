@@ -39,7 +39,7 @@ export function AgentList({
                   onSelectAgent(isSelected ? null : agent.login);
                 }
               }}
-              className={`group flex flex-col items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-800 cursor-pointer`}
+              className={`group flex flex-col items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 cursor-pointer`}
               aria-label={
                 isSelected
                   ? `Clear filter for ${agent.login}`
@@ -78,7 +78,7 @@ export function AgentList({
               href={`https://github.com/${agent.login}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs mt-1 text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+              className="text-xs mt-1 text-amber-900 dark:text-amber-100 font-medium hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
             >
               {agent.login}
             </a>
