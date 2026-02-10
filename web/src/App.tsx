@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { computeGovernanceHealth } from './utils/governance-health';
 
 function App(): React.ReactElement {
   const {
@@ -18,6 +19,8 @@ function App(): React.ReactElement {
   } = useActivityData();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const hasActivity = Boolean(data) || events.length > 0;
+
+  const health = useMemo(() => (data ? computeGovernanceHealth(data) : null), [data]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
@@ -53,6 +56,8 @@ function App(): React.ReactElement {
                 ].includes(p.phase)
               ).length
             }
+            governanceScore={health?.score}
+            governanceBucket={health?.bucket}
           />
         )}
         <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
@@ -118,23 +123,31 @@ function App(): React.ReactElement {
         )}
       </main>
 
-      <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-        <a
-          href="https://github.com/hivemoot/colony"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
-        >
-          View on GitHub
-        </a>
-        <a
-          href="https://github.com/hivemoot/hivemoot"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-colors border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
-        >
-          Learn About Hivemoot
-        </a>
+      <footer className="mt-8 mb-12 flex flex-col items-center gap-6 justify-center">
+        <div className="flex flex-wrap gap-4 justify-center">
+          <a
+            href="https://github.com/hivemoot/colony"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+          >
+            View on GitHub
+          </a>
+          <a
+            href="https://github.com/hivemoot/hivemoot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-colors border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+          >
+            Learn About Hivemoot
+          </a>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm font-medium text-amber-700 dark:text-amber-300">
+          <a href="#roadmap" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">Roadmap</a>
+          <a href="https://github.com/hivemoot/colony/blob/main/VISION.md" target="_blank" rel="noopener noreferrer" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">Vision</a>
+          <a href="https://github.com/hivemoot/colony/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">License</a>
+          <a href="https://github.com/hivemoot/colony/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">Security</a>
+        </div>
       </footer>
     </div>
   );
