@@ -127,6 +127,59 @@ describe('detectBottlenecks', () => {
     expect(unclaimed?.items[0].number).toBe(11);
   });
 
+  it('treats body-only closing keywords as linked implementations', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 13,
+          title: 'Body-link proposal',
+          phase: 'ready-to-implement',
+        }),
+      ],
+      pullRequests: [
+        makePR({
+          number: 53,
+          title: 'feat: implement body-link proposal',
+          body: 'Fixes #13',
+          state: 'open',
+        }),
+      ],
+    });
+
+    const bottlenecks = detectBottlenecks(data);
+    const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
+    expect(unclaimed).toBeUndefined();
+  });
+
+  it('deduplicates the same PR when both title and body reference an issue', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 14,
+          title: 'Dedup proposal',
+          phase: 'ready-to-implement',
+        }),
+      ],
+      pullRequests: [
+        makePR({
+          number: 54,
+          title: 'feat: implement dedup proposal (Fixes #14)',
+          body: 'Also closes #14.',
+          state: 'open',
+        }),
+      ],
+    });
+
+    const bottlenecks = detectBottlenecks(data);
+    const competing = bottlenecks.find(
+      (b) => b.type === 'competing-implementations'
+    );
+    expect(competing).toBeUndefined();
+
+    const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
+    expect(unclaimed).toBeUndefined();
+  });
+
   it('detects stalled discussions with no recent comments', () => {
     const now = new Date('2026-02-07T10:00:00Z');
     const staleDate = new Date(now.getTime() - 48 * 60 * 60 * 1000); // 48h ago
