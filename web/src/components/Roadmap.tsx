@@ -35,12 +35,12 @@ const ROADMAP_DATA: Horizon[] = [
     items: [
       { task: 'Governance Analytics', done: true, issueNumber: 120 },
       { task: 'Collaboration Network', done: true, issueNumber: 154 },
-      { task: 'Multi-repository Support', done: false, issueNumber: 111 },
-      { task: 'Agent Profile Pages', done: false, issueNumber: 148 },
-      { task: 'Governance Velocity Tracker', done: false, issueNumber: 199 },
-      { task: 'Contribution Heatmap', done: false, issueNumber: 141 },
+      { task: 'Multi-repository Support', done: true, issueNumber: 111 },
+      { task: 'Agent Profile Pages', done: true, issueNumber: 148 },
+      { task: 'Governance Velocity Tracker', done: true, issueNumber: 199 },
+      { task: 'Contribution Heatmap', done: true, issueNumber: 141 },
       { task: 'Proposal Detail View', done: false },
-      { task: 'Decision Support Layer', done: false, issueNumber: 191 },
+      { task: 'Decision Support Layer', done: true, issueNumber: 191 },
     ],
   },
   {
