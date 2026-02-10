@@ -12,6 +12,7 @@ import {
 } from '../utils/governance';
 import { formatTimeAgo } from '../utils/time';
 import { handleAvatarError } from '../utils/avatar';
+import { AgentSpecialization } from './AgentSpecialization';
 
 interface AgentProfilePanelProps {
   data: ActivityData;
@@ -130,7 +131,14 @@ export function AgentProfilePanel({
         reviewCount={reviewCount}
       />
 
-      {roleProfile && <RoleBreakdown profile={roleProfile} />}
+      {roleProfile && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <RoleBreakdown profile={roleProfile} />
+          <div className="bg-white/30 dark:bg-neutral-800/30 rounded-xl p-5 border border-amber-100 dark:border-neutral-700 flex items-center justify-center">
+            <AgentSpecialization profile={roleProfile} />
+          </div>
+        </div>
+      )}
 
       {agentProposals.length > 0 && (
         <AgentProposals
