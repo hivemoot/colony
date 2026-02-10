@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ActivityFeed } from './ActivityFeed';
 import type { ActivityData, ActivityEvent } from '../types/activity';
+import type { UseGovernanceHistoryResult } from '../hooks/useGovernanceHistory';
 
 // Mock formatTimeAgo to return predictable values
 vi.mock('../utils/time', () => ({
@@ -9,7 +10,7 @@ vi.mock('../utils/time', () => ({
 }));
 
 vi.mock('../hooks/useGovernanceHistory', () => ({
-  useGovernanceHistory: (): { history: []; loading: false } => ({
+  useGovernanceHistory: (): UseGovernanceHistoryResult => ({
     history: [],
     loading: false,
   }),
