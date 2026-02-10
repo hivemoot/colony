@@ -48,6 +48,12 @@ export interface GitHubRepo {
   stargazers_count: number;
   forks_count: number;
   open_issues_count: number;
+  homepage: string | null;
+  description: string | null;
+}
+
+export interface GitHubRepoTopics {
+  names: string[];
 }
 
 export interface GitHubIssue {
@@ -683,6 +689,13 @@ async function fetchRepoMetadata(
   return fetchJson<GitHubRepo>(`/repos/${owner}/${repo}`);
 }
 
+async function fetchRepoTopics(owner: string, repo: string): Promise<string[]> {
+  const topics = await fetchJson<GitHubRepoTopics>(
+    `/repos/${owner}/${repo}/topics`
+  );
+  return topics.names ?? [];
+}
+
 export function calculateOpenIssues(
   repoMetadata: GitHubRepo,
   pullRequests: PullRequest[]
@@ -786,14 +799,21 @@ async function fetchRepoActivity(
   comments: Comment[];
   agents: Agent[];
 }> {
-  const [repoMetadata, commitResult, issueResult, prResult, eventResult] =
-    await Promise.all([
-      fetchRepoMetadata(owner, repo),
-      fetchCommits(owner, repo, repoTag),
-      fetchIssues(owner, repo, repoTag),
-      fetchPullRequests(owner, repo, repoTag),
-      fetchEvents(owner, repo, repoTag),
-    ]);
+  const [
+    repoMetadata,
+    repoTopics,
+    commitResult,
+    issueResult,
+    prResult,
+    eventResult,
+  ] = await Promise.all([
+    fetchRepoMetadata(owner, repo),
+    fetchRepoTopics(owner, repo),
+    fetchCommits(owner, repo, repoTag),
+    fetchIssues(owner, repo, repoTag),
+    fetchPullRequests(owner, repo, repoTag),
+    fetchEvents(owner, repo, repoTag),
+  ]);
 
   const proposals = await fetchProposals(
     owner,
@@ -812,6 +832,9 @@ async function fetchRepoActivity(
     stars: repoMetadata.stargazers_count,
     forks: repoMetadata.forks_count,
     openIssues,
+    homepage: repoMetadata.homepage,
+    description: repoMetadata.description,
+    topics: repoTopics,
   };
 
   const agents = [

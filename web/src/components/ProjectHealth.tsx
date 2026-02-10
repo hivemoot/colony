@@ -25,6 +25,13 @@ export function ProjectHealth({
 
   // Primary repo for links
   const primaryRepo = repositories[0];
+  const reposWithVisibilityRisk = repositories.filter(
+    (repo) => !repo.homepage || !repo.topics || repo.topics.length === 0
+  );
+  const hasVisibilityRisk = reposWithVisibilityRisk.length > 0;
+  const visibilityTitle = hasVisibilityRisk
+    ? `${reposWithVisibilityRisk.length} repos missing homepage or topics`
+    : 'Repository discoverability metadata looks healthy';
 
   // For multi-repo, we might want to link to the organization
   const orgUrl = isMultiRepo
@@ -123,6 +130,25 @@ export function ProjectHealth({
         </span>
         {activeProposalsCount} active{' '}
         {activeProposalsCount === 1 ? 'proposal' : 'proposals'}
+      </a>
+      <span className="text-amber-300 dark:text-neutral-600" aria-hidden="true">
+        |
+      </span>
+      <a
+        href={isMultiRepo ? orgUrl : primaryRepo.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+        title={visibilityTitle}
+      >
+        <span role="img" aria-label="visibility">
+          {hasVisibilityRisk ? '🧭' : '✅'}
+        </span>
+        {hasVisibilityRisk
+          ? `${reposWithVisibilityRisk.length} visibility risk${
+              reposWithVisibilityRisk.length === 1 ? '' : 's'
+            }`
+          : 'visibility healthy'}
       </a>
     </div>
   );

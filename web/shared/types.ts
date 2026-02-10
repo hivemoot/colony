@@ -99,6 +99,9 @@ export type RepositoryInfo = RepositoryConfig & {
   stars: number;
   forks: number;
   openIssues: number;
+  homepage?: string | null;
+  description?: string | null;
+  topics?: string[];
 };
 
 export interface ActivityData {

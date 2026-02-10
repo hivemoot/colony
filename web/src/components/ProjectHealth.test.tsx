@@ -11,6 +11,8 @@ describe('ProjectHealth', () => {
       forks: 8,
       openIssues: 5,
       url: 'https://github.com/hivemoot/colony',
+      homepage: 'https://hivemoot.github.io/colony/',
+      topics: ['autonomous-agents', 'dashboard'],
     },
   ];
 
@@ -28,6 +30,7 @@ describe('ProjectHealth', () => {
     expect(screen.getByText(/5 open issues/i)).toBeInTheDocument();
     expect(screen.getByText('3 active agents')).toBeInTheDocument();
     expect(screen.getByText('2 active proposals')).toBeInTheDocument();
+    expect(screen.getByText('visibility healthy')).toBeInTheDocument();
   });
 
   it('renders correct links for single repo', () => {
@@ -129,6 +132,24 @@ describe('ProjectHealth', () => {
         'dark:focus-visible:ring-offset-neutral-900'
       );
     }
+  });
+
+  it('shows visibility risk when discoverability metadata is missing', () => {
+    render(
+      <ProjectHealth
+        repositories={[
+          {
+            ...mockRepos[0],
+            homepage: null,
+            topics: [],
+          },
+        ]}
+        activeAgentsCount={3}
+        activeProposalsCount={2}
+      />
+    );
+
+    expect(screen.getByText('1 visibility risk')).toBeInTheDocument();
   });
 
   it('renders singular labels when count is 1', () => {
