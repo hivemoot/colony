@@ -215,6 +215,96 @@ describe('ProposalList', () => {
     expect(screen.getByText('inconclusive')).toBeInTheDocument();
   });
 
+  it('renders vote and comment emojis with aria-labels', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Emoji labels',
+        phase: 'voting',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 5,
+        votesSummary: { thumbsUp: 3, thumbsDown: 1 },
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(screen.getByLabelText('votes for')).toBeInTheDocument();
+    expect(screen.getByLabelText('votes against')).toBeInTheDocument();
+    expect(screen.getByLabelText('comments')).toBeInTheDocument();
+  });
+
+  it('renders lifecycle duration when phaseTransitions span multiple phases', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Lifecycle proposal',
+        phase: 'implemented',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 5,
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-05T16:00:00Z' },
+          { phase: 'implemented', enteredAt: '2026-02-05T18:00:00Z' },
+        ],
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(screen.getByLabelText('lifecycle duration')).toBeInTheDocument();
+    expect(screen.getByText('4h')).toBeInTheDocument();
+  });
+
+  it('does not render lifecycle duration with fewer than 2 transitions', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Single phase proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
+        ],
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.queryByLabelText('lifecycle duration')
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders proposal title tooltip and semantic timestamp', () => {
+    const createdAt = '2026-02-05T09:00:00Z';
+    const title =
+      'A very long proposal title that would be truncated by the line-clamp CSS utility';
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title,
+        phase: 'discussion',
+        author: 'worker',
+        createdAt,
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    const heading = screen.getByText(title);
+    expect(heading).toHaveAttribute('title', title);
+
+    const timeEl = screen.getByText(/ago/i);
+    expect(timeEl.tagName.toLowerCase()).toBe('time');
+    expect(timeEl).toHaveAttribute('datetime', createdAt);
+  });
+
   it('includes focus indicators on proposal action buttons', () => {
     const proposals: Proposal[] = [
       {
