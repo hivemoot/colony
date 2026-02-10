@@ -59,6 +59,14 @@ function buildTimeline(proposal: Proposal): DecisionTimelineItem[] {
     normalized.unshift({ phase: 'discussion', enteredAt: proposal.createdAt });
   }
 
+  if (!normalized.some((item) => item.phase === proposal.phase)) {
+    normalized.push({
+      phase: proposal.phase,
+      enteredAt:
+        normalized[normalized.length - 1]?.enteredAt ?? proposal.createdAt,
+    });
+  }
+
   return normalized.map((item, index) => {
     const next = normalized[index + 1];
     return {

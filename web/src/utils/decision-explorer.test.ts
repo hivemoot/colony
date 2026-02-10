@@ -70,6 +70,20 @@ describe('findImplementingPullRequest', () => {
 });
 
 describe('buildDecisionSnapshot', () => {
+  it('includes current proposal phase when transitions are missing', () => {
+    const snapshot = buildDecisionSnapshot(
+      makeProposal({
+        phase: 'ready-to-implement',
+        phaseTransitions: undefined,
+      }),
+      []
+    );
+
+    expect(snapshot.timeline).toHaveLength(2);
+    expect(snapshot.timeline[0].phase).toBe('discussion');
+    expect(snapshot.timeline[1].phase).toBe('ready-to-implement');
+  });
+
   it('builds timeline durations from phase transitions', () => {
     const snapshot = buildDecisionSnapshot(
       makeProposal({
@@ -102,6 +116,26 @@ describe('buildDecisionSnapshot', () => {
 
     expect(snapshot.timeline[0].phase).toBe('discussion');
     expect(snapshot.timeline[0].durationToNext).toBe('2h');
+  });
+
+  it('sorts transitions chronologically before building timeline', () => {
+    const snapshot = buildDecisionSnapshot(
+      makeProposal({
+        phase: 'ready-to-implement',
+        phaseTransitions: [
+          { phase: 'ready-to-implement', enteredAt: '2026-02-09T16:00:00Z' },
+          { phase: 'discussion', enteredAt: '2026-02-09T10:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-09T12:00:00Z' },
+        ],
+      }),
+      []
+    );
+
+    expect(snapshot.timeline.map((item) => item.phase)).toEqual([
+      'discussion',
+      'voting',
+      'ready-to-implement',
+    ]);
   });
 
   it('computes vote totals and support percentage', () => {
