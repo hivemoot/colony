@@ -177,6 +177,41 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders sticky dashboard section navigation with hash links', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockActivityData),
+    } as Response);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /dashboard sections/i })
+      ).toBeInTheDocument();
+    });
+
+    const sectionNav = screen.getByRole('navigation', {
+      name: /dashboard sections/i,
+    });
+
+    expect(
+      sectionNav.querySelector<HTMLAnchorElement>('a[href="#main-content"]')
+    ).toHaveTextContent(/overview/i);
+    expect(
+      sectionNav.querySelector<HTMLAnchorElement>('a[href="#activity"]')
+    ).toHaveTextContent(/activity/i);
+    expect(
+      sectionNav.querySelector<HTMLAnchorElement>('a[href="#intelligence"]')
+    ).toHaveTextContent(/intelligence/i);
+    expect(
+      sectionNav.querySelector<HTMLAnchorElement>('a[href="#proposals"]')
+    ).toHaveTextContent(/governance/i);
+    expect(
+      sectionNav.querySelector<HTMLAnchorElement>('a[href="#agents"]')
+    ).toHaveTextContent(/agents/i);
+  });
+
   it('renders leaderboard with agent stats', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,

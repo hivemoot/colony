@@ -72,8 +72,9 @@ export function ActivityFeed({
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
       <section
+        id="activity"
         aria-labelledby="section-live-feed"
-        className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+        className="scroll-mt-28 bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -157,7 +158,7 @@ export function ActivityFeed({
         <section
           id="agents"
           aria-labelledby="section-agents"
-          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+          className="scroll-mt-28 bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
         >
           <h2
             id="section-agents"
@@ -215,7 +216,7 @@ export function ActivityFeed({
           {data && data.proposals.length > 0 && (
             <section
               id="intelligence"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="scroll-mt-28 bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
               <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
                 <span role="img" aria-label="intelligence">
@@ -231,7 +232,7 @@ export function ActivityFeed({
             <section
               id="proposals"
               aria-labelledby="section-proposals"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="scroll-mt-28 bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
             >
               <h2
                 id="section-proposals"
