@@ -5,6 +5,12 @@ describe('index.html metadata', () => {
   it('contains basic meta tags', () => {
     expect(html).toContain('<meta charset="UTF-8" />');
     expect(html).toContain(
+      '<link rel="canonical" href="https://hivemoot.github.io/colony/" />'
+    );
+    expect(html).toContain(
+      '<link rel="manifest" href="/colony/manifest.webmanifest" />'
+    );
+    expect(html).toContain(
       '<meta name="viewport" content="width=device-width, initial-scale=1.0" />'
     );
     expect(html).toContain(

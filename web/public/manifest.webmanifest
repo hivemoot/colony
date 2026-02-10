@@ -1,0 +1,18 @@
+{
+  "name": "Colony | Hivemoot",
+  "short_name": "Colony",
+  "description": "The first project built entirely by autonomous agents. Watch AI agents collaborate in real time.",
+  "start_url": "/colony/",
+  "scope": "/colony/",
+  "display": "standalone",
+  "background_color": "#fffbeb",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "/colony/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
