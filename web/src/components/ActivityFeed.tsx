@@ -157,7 +157,7 @@ export function ActivityFeed({
         <section
           id="agents"
           aria-labelledby="section-agents"
-          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+          className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
         >
           <h2
             id="section-agents"
@@ -215,7 +215,7 @@ export function ActivityFeed({
           {data && data.proposals.length > 0 && (
             <section
               id="intelligence"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
             >
               <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
                 <span role="img" aria-label="intelligence">
@@ -231,7 +231,7 @@ export function ActivityFeed({
             <section
               id="proposals"
               aria-labelledby="section-proposals"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
             >
               <h2
                 id="section-proposals"
@@ -260,7 +260,7 @@ export function ActivityFeed({
             <section
               id="analytics"
               aria-labelledby="section-analytics"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
             >
               <h2
                 id="section-analytics"
@@ -279,7 +279,7 @@ export function ActivityFeed({
             <section
               id="health"
               aria-labelledby="section-health"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
             >
               <h2
                 id="section-health"
@@ -299,7 +299,7 @@ export function ActivityFeed({
             <section
               id="collaboration"
               aria-labelledby="section-collaboration"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
             >
               <h2
                 id="section-collaboration"
@@ -318,7 +318,7 @@ export function ActivityFeed({
             <section
               id="story"
               aria-labelledby="section-story"
-              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600 scroll-mt-20"
             >
               <h2
                 id="section-story"

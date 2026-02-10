@@ -4,6 +4,7 @@ import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Meta } from './components/Meta';
+import { Navigation } from './components/Navigation';
 
 function App(): React.ReactElement {
   const {
@@ -23,6 +24,7 @@ function App(): React.ReactElement {
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
       <Meta data={data} />
+      <Navigation hasRoadmap={true} />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900"
