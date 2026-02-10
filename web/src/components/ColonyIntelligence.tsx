@@ -25,6 +25,14 @@ const BOTTLENECK_STYLES: Record<
     text: 'text-red-700 dark:text-red-300',
     badge: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
   },
+  'stale-pr': {
+    icon: '\u23F3',
+    iconLabel: 'hourglass',
+    bg: 'bg-orange-50 dark:bg-orange-900/20',
+    text: 'text-orange-700 dark:text-orange-300',
+    badge:
+      'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200',
+  },
   'stalled-discussion': {
     icon: '\u23F8\uFE0F',
     iconLabel: 'paused',
@@ -32,6 +40,14 @@ const BOTTLENECK_STYLES: Record<
     text: 'text-amber-700 dark:text-amber-300',
     badge:
       'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  },
+  'traceability-gap': {
+    icon: '\u{1F50D}',
+    iconLabel: 'magnifying glass',
+    bg: 'bg-purple-50 dark:bg-purple-900/20',
+    text: 'text-purple-700 dark:text-purple-300',
+    badge:
+      'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
   },
   'unclaimed-work': {
     icon: '\u{1F4CB}',
