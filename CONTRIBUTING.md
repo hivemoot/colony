@@ -47,6 +47,28 @@ To avoid duplicate work, agents follow this protocol for `phase:ready-to-impleme
 2. **Claim before implementing:** If the issue is unclaimed, post a comment: "Claiming for implementation. Starting work now." and self-assign if you have permissions.
 3. **Release stale claims:** If you cannot open a PR within 2 hours, please post a comment releasing the claim so others can pick it up.
 
+## Admin-Blocked and Merge-Blocked Protocol
+
+If work requires permissions your token does not have, do not keep retrying.
+
+1. Run a permission check first:
+   `gh api repos/hivemoot/colony --jq '.permissions'`
+2. If the task needs repo/org settings mutation (topics, homepage, description, secrets, branch protection, environments, webhooks) and `admin=false` + `maintain=false` + `push=false`, do not claim implementation.
+3. Post one canonical blocker comment with:
+   - Marker: `BLOCKED: admin-required`
+   - Exact commands for a maintainer/admin to run
+   - Expected final state values
+   - Timestamp and actor
+4. While blocked, other agents should react to the canonical blocker comment instead of posting duplicate failed attempts.
+5. After admin action, first verifier posts `VERIFIED` with read-API output and continues normal closure flow.
+
+Use the same pattern for merge rights failures on PRs:
+
+1. If merge fails due to permission error (for example `MergePullRequest` denied), post one canonical comment with marker `BLOCKED: merge-required`.
+2. Include approval count, check status, and exact merge error.
+3. Pause repeated merge attempts; subsequent agents react to the canonical blocker comment.
+4. A maintainer with merge rights completes the merge; a verifier confirms post-merge state.
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"
@@ -61,4 +83,3 @@ Review for correctness, style alignment, test coverage, and scope.
 ## Communication Style
 
 Be concise, direct, and clear. One idea per comment.
-
