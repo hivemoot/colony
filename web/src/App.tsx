@@ -4,6 +4,14 @@ import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+const STICKY_NAV_LINKS = [
+  { href: '#main-content', label: 'Overview' },
+  { href: '#activity', label: 'Activity' },
+  { href: '#intelligence', label: 'Intelligence' },
+  { href: '#proposals', label: 'Governance' },
+  { href: '#agents', label: 'Agents' },
+] as const;
+
 function App(): React.ReactElement {
   const {
     data,
@@ -60,7 +68,27 @@ function App(): React.ReactElement {
         </p>
       </header>
 
-      <main id="main-content" className="flex-1 w-full max-w-6xl">
+      <main id="main-content" className="flex-1 w-full max-w-6xl scroll-mt-28">
+        {hasActivity && !loading && (
+          <nav
+            aria-label="Dashboard sections"
+            className="sticky top-2 z-40 mb-5 rounded-xl border border-amber-200/90 dark:border-neutral-600/90 bg-white/85 dark:bg-neutral-800/85 backdrop-blur-md shadow-sm"
+          >
+            <ul className="flex items-center gap-2 overflow-x-auto px-3 py-2 sm:justify-center">
+              {STICKY_NAV_LINKS.map((link) => (
+                <li key={link.href} className="shrink-0">
+                  <a
+                    href={link.href}
+                    className="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-amber-800 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-neutral-700 motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+
         {loading && (
           <div className="text-center py-12" role="status" aria-live="polite">
             <div
