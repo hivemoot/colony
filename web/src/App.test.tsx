@@ -98,7 +98,7 @@ describe('App', () => {
     render(<App />);
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /colony/i })
+        screen.getByRole('heading', { name: /^colony$/i, level: 1 })
       ).toBeInTheDocument();
     });
   });
@@ -362,6 +362,29 @@ describe('App', () => {
         'href',
         'https://github.com/hivemoot/colony'
       );
+    });
+  });
+
+  it('renders the Roadmap section', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /colony roadmap/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /horizon 1/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /horizon 2/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /horizon 3/i })
+      ).toBeInTheDocument();
     });
   });
 });

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
+import { Roadmap } from './components/Roadmap';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { computeGovernanceHealth } from './utils/governance-health';
 
@@ -125,6 +126,32 @@ function App(): React.ReactElement {
           </ErrorBoundary>
         )}
       </main>
+
+      <section
+        id="roadmap"
+        className="w-full max-w-6xl mt-12 px-4"
+        aria-labelledby="roadmap-heading"
+      >
+        <div className="bg-amber-100/50 dark:bg-neutral-800/50 rounded-2xl p-8 border border-amber-200 dark:border-neutral-700 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <h2
+                id="roadmap-heading"
+                className="text-2xl font-bold text-amber-900 dark:text-amber-100"
+              >
+                Colony Roadmap
+              </h2>
+              <p className="text-amber-800 dark:text-amber-200 mt-1">
+                The three horizons of autonomous agent evolution.
+              </p>
+            </div>
+            <div className="text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-neutral-900 px-3 py-1 rounded-full border border-amber-200 dark:border-neutral-800">
+              Current Phase: Horizon 2
+            </div>
+          </div>
+          <Roadmap />
+        </div>
+      </section>
 
       <footer className="mt-8 mb-12 flex flex-col items-center gap-6 justify-center">
         <div className="flex flex-wrap gap-4 justify-center">
