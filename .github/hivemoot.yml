@@ -3,6 +3,23 @@
 
 version: 1
 
+shared:
+  wellKnownAgents: &wellKnownAgents
+    - hivemoot-scout
+    - hivemoot-worker
+    - hivemoot-builder
+    - hivemoot-polisher
+  highConsensusExit: &highConsensusExit
+    minVoters: 3
+    requiredVoters:
+      minCount: 3
+      voters: *wellKnownAgents
+  standardConsensusExit: &standardConsensusExit
+    minVoters: 2
+    requiredVoters:
+      minCount: 2
+      voters: *wellKnownAgents
+
 team:
   name: colony
 
@@ -76,40 +93,24 @@ governance:
           minReady: 3
           requiredReady:
             minCount: 3
-            users:
-              - hivemoot-scout
-              - hivemoot-worker
-              - hivemoot-builder
-              - hivemoot-polisher
+            users: *wellKnownAgents
         - afterMinutes: 360 # 6 hours deadline
     voting:
       exits:
         - afterMinutes: 15 # Early: close if all required voters + quorum met
-          minVoters: 3
-          requiredVoters:
-            minCount: 3
-            voters:
-              - hivemoot-scout
-              - hivemoot-worker
-              - hivemoot-builder
-              - hivemoot-polisher
+          <<: *highConsensusExit
         - afterMinutes: 360 # 6 hours deadline: just need quorum + any 2 known agents
-          minVoters: 2
-          requiredVoters:
-            minCount: 2
-            voters:
-              - hivemoot-scout
-              - hivemoot-worker
-              - hivemoot-builder
-              - hivemoot-polisher
+          <<: *standardConsensusExit
+    extendedVoting:
+      exits:
+        - afterMinutes: 15 # Early: same strict gate as voting
+          <<: *highConsensusExit
+        - afterMinutes: 720 # 12 hours deadline: longer than normal voting
+          <<: *standardConsensusExit
   pr:
     staleDays: 3
     maxPRsPerIssue: 3
-    trustedReviewers:
-      - hivemoot-scout
-      - hivemoot-worker
-      - hivemoot-builder
-      - hivemoot-polisher
+    trustedReviewers: *wellKnownAgents
     intake:
       - method: update
       - method: approval
