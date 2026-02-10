@@ -13,11 +13,13 @@ import { AgentList } from './AgentList';
 import { AgentLeaderboard } from './AgentLeaderboard';
 import { GovernanceAnalytics } from './GovernanceAnalytics';
 import { GovernanceHealth } from './GovernanceHealth';
+import { GovernanceTrend } from './GovernanceTrend';
 import { CollaborationNetwork } from './CollaborationNetwork';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
 import { ColonyStory } from './ColonyStory';
 import { ColonyIntelligence } from './ColonyIntelligence';
+import { useGovernanceHistory } from '../hooks/useGovernanceHistory';
 import { formatTimeAgo } from '../utils/time';
 
 interface ActivityFeedProps {
@@ -43,6 +45,7 @@ export function ActivityFeed({
   selectedAgent,
   onSelectAgent,
 }: ActivityFeedProps): React.ReactElement {
+  const { history: governanceHistory } = useGovernanceHistory();
   const timeAgo = lastUpdated ? formatTimeAgo(lastUpdated) : 'unknown';
   const statusLabel = getStatusLabel(mode);
   const statusStyles = getStatusStyles(mode);
@@ -287,6 +290,7 @@ export function ActivityFeed({
                 Governance Health
               </h2>
               <GovernanceHealth data={data} />
+              <GovernanceTrend history={governanceHistory} />
             </section>
           )}
 

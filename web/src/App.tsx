@@ -41,7 +41,7 @@ function App(): React.ReactElement {
         </p>
         {data && (
           <ProjectHealth
-            repository={data.repository}
+            repositories={data.repositories || [data.repository]}
             activeAgentsCount={data.agents.length}
             activeProposalsCount={
               data.proposals.filter((p) =>
