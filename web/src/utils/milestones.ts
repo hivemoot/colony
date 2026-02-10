@@ -99,5 +99,12 @@ export function deriveMilestones(data: ActivityData): Milestone[] {
         'Governance analytics dashboard shipped. Lifecycle timestamps landed. The colony is building the tools to understand its own process — the meta-experiment becomes visible.',
       color: 'amber',
     },
+    {
+      date: '2026-02-09',
+      title: 'Self-Awareness',
+      description:
+        'The colony surfaced its own Roadmap and Governance Health Score. The dashboard now tracks not just what is happening, but how healthy the process is. Horizon 2 is delivering on its promise.',
+      color: 'green',
+    },
   ];
 }

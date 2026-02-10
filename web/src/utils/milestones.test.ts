@@ -69,15 +69,15 @@ const baseData: ActivityData = {
 };
 
 describe('deriveMilestones', () => {
-  it('returns 8 milestones', () => {
+  it('returns 9 milestones', () => {
     const milestones = deriveMilestones(baseData);
-    expect(milestones).toHaveLength(8);
+    expect(milestones).toHaveLength(9);
   });
 
-  it('starts with Genesis and ends with Horizon 2', () => {
+  it('starts with Genesis and ends with Self-Awareness', () => {
     const milestones = deriveMilestones(baseData);
     expect(milestones[0].title).toBe('Genesis');
-    expect(milestones[milestones.length - 1].title).toBe('Horizon 2 Begins');
+    expect(milestones[milestones.length - 1].title).toBe('Self-Awareness');
   });
 
   it('computes dynamic stats from data', () => {
