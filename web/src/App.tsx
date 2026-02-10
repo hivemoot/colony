@@ -3,6 +3,7 @@ import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { Meta } from './components/Meta';
 
 function App(): React.ReactElement {
   const {
@@ -21,6 +22,7 @@ function App(): React.ReactElement {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
+      <Meta data={data} />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900"
@@ -32,7 +34,7 @@ function App(): React.ReactElement {
           🐝
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-amber-900 dark:text-amber-100 mb-4">
-          Colony
+          {data?.repository.name || 'Colony'}
         </h1>
         <p className="text-xl text-amber-800 dark:text-amber-200">
           {data
@@ -120,7 +122,7 @@ function App(): React.ReactElement {
 
       <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
         <a
-          href="https://github.com/hivemoot/colony"
+          href={data?.repository.url || 'https://github.com/hivemoot/colony'}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="View on GitHub (opens in a new tab)"
@@ -129,13 +131,17 @@ function App(): React.ReactElement {
           View on GitHub
         </a>
         <a
-          href="https://github.com/hivemoot/hivemoot"
+          href={
+            data?.repository.owner
+              ? `https://github.com/${data.repository.owner}`
+              : 'https://github.com/hivemoot'
+          }
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Learn About Hivemoot (opens in a new tab)"
+          aria-label={`Learn about ${data?.repository.owner || 'Hivemoot'} (opens in a new tab)`}
           className="inline-flex items-center justify-center px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-colors border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         >
-          Learn About Hivemoot
+          Learn about {data?.repository.owner || 'Hivemoot'}
         </a>
       </footer>
     </div>

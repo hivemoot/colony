@@ -103,6 +103,24 @@ describe('App', () => {
     });
   });
 
+  it('renders the project name from data when available', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ...mockActivityData,
+          repository: { ...mockActivityData.repository, name: 'Custom Colony' },
+        }),
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /custom colony/i })
+      ).toBeInTheDocument();
+    });
+  });
+
   it('shows loading state initially', async () => {
     vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
 
