@@ -261,6 +261,8 @@ describe('mapPullRequests', () => {
     const result = mapPullRequests(many as unknown as GitHubPR[]);
 
     expect(result.pullRequests).toHaveLength(20);
+    expect(result.pullRequests[0].number).toBe(20);
+    expect(result.pullRequests[19].number).toBe(1);
   });
 });
 

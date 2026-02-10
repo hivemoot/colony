@@ -347,6 +347,8 @@ export function mapPullRequests(
   pullRequests: PullRequest[];
   agents: Agent[];
 } {
+  // Keep the full fetched PR set so proposal-to-PR linkage remains reliable
+  // for historical decisions in the Decision Explorer.
   const allPRs = ghPRs.sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
