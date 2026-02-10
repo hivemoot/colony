@@ -19,7 +19,6 @@ import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
 import { ColonyStory } from './ColonyStory';
 import { ColonyIntelligence } from './ColonyIntelligence';
-import { Roadmap } from './Roadmap';
 import { useGovernanceHistory } from '../hooks/useGovernanceHistory';
 import { formatTimeAgo } from '../utils/time';
 
@@ -227,19 +226,6 @@ export function ActivityFeed({
               <ColonyIntelligence data={data} repoUrl={data.repository.url} />
             </section>
           )}
-
-          <section
-            id="roadmap"
-            className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
-          >
-            <h2 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2">
-              <span role="img" aria-label="roadmap">
-                🗺️
-              </span>
-              Colony Roadmap
-            </h2>
-            <Roadmap />
-          </section>
 
           {data && data.proposals && data.proposals.length > 0 && (
             <section

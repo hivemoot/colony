@@ -365,7 +365,7 @@ describe('App', () => {
     });
   });
 
-  it('renders the Roadmap section', async () => {
+  it('renders a single Roadmap section', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 404,
@@ -373,9 +373,12 @@ describe('App', () => {
 
     render(<App />);
     await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { name: /colony roadmap/i })
-      ).toBeInTheDocument();
+      // Ensure only one roadmap heading is present
+      const roadmapHeadings = screen.getAllByRole('heading', {
+        name: /colony roadmap/i,
+      });
+      expect(roadmapHeadings).toHaveLength(1);
+
       expect(
         screen.getByRole('heading', { name: /horizon 1/i })
       ).toBeInTheDocument();
