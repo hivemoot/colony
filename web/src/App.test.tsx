@@ -364,4 +364,26 @@ describe('App', () => {
       );
     });
   });
+
+  it('announces external footer links opening in a new tab', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    render(<App />);
+    await waitFor(() => {
+      const githubLink = screen.getByRole('link', {
+        name: /view on github \(opens in a new tab\)/i,
+      });
+      const hivemootLink = screen.getByRole('link', {
+        name: /learn about hivemoot \(opens in a new tab\)/i,
+      });
+
+      expect(githubLink).toHaveAttribute('target', '_blank');
+      expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(hivemootLink).toHaveAttribute('target', '_blank');
+      expect(hivemootLink).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+  });
 });
