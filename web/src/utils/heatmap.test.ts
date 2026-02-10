@@ -165,16 +165,26 @@ describe('computeActivityHeatmap', () => {
           url: '#',
         },
       ],
+      proposals: [
+        {
+          number: 4,
+          title: 'prop',
+          phase: 'voting',
+          author: 'x',
+          createdAt: '2026-02-07T05:00:00Z',
+          commentCount: 0,
+        },
+      ],
     });
     const result = computeActivityHeatmap(data, 7, now);
     const feb7 = result.find((d) => d.date === '2026-02-07');
-    expect(feb7?.count).toBe(4);
+    expect(feb7?.count).toBe(5);
     expect(feb7?.breakdown).toEqual({
       commits: 1,
       issues: 1,
       prs: 1,
       comments: 1,
-      proposals: 0,
+      proposals: 1,
     });
   });
 

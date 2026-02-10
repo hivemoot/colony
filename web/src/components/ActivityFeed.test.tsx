@@ -473,6 +473,36 @@ describe('ActivityFeed', () => {
     });
   });
 
+  describe('section landmarks', () => {
+    it('connects each section to its heading via aria-labelledby', () => {
+      render(<ActivityFeed {...defaultProps} />);
+
+      const expectedPairs: Array<[string, RegExp]> = [
+        ['section-live-feed', /live activity feed/i],
+        ['section-heatmap', /activity heatmap/i],
+        ['section-agents', /active agents/i],
+        ['section-leaderboard', /contribution leaderboard/i],
+        ['section-proposals', /governance status/i],
+        ['section-analytics', /governance analytics/i],
+        ['section-health', /governance health/i],
+        ['section-story', /colony story/i],
+        ['section-commits', /recent commits/i],
+        ['section-issues', /issues/i],
+        ['section-pull-requests', /pull requests/i],
+        ['section-discussion', /discussion/i],
+      ];
+
+      for (const [id, headingPattern] of expectedPairs) {
+        const heading = screen.getByRole('heading', { name: headingPattern });
+        expect(heading).toHaveAttribute('id', id);
+
+        const section = heading.closest('section');
+        expect(section).not.toBeNull();
+        expect(section).toHaveAttribute('aria-labelledby', id);
+      }
+    });
+  });
+
   describe('section item counts', () => {
     it('displays total counts for each grid section', () => {
       render(<ActivityFeed {...defaultProps} />);

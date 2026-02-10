@@ -143,6 +143,39 @@ describe('ActivityHeatmap', () => {
     expect(cells[0].getAttribute('title')).toContain('1 issue');
   });
 
+  it('shows proposals in tooltip breakdown', () => {
+    const data = makeData({
+      proposals: [
+        {
+          number: 1,
+          title: 'p',
+          phase: 'discussion',
+          author: 'x',
+          createdAt: '2026-02-05T10:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+
+    render(<ActivityHeatmap data={data} selectedAgent={null} />);
+
+    const cell = document.querySelector('[title*="Feb 5"]');
+    expect(cell?.getAttribute('title')).toContain('1 proposal');
+  });
+
+  it('provides keyboard accessibility for cells', () => {
+    const data = makeData({
+      commits: [
+        { sha: 'a', message: 'm', author: 'x', date: '2026-02-07T10:00:00Z' },
+      ],
+    });
+
+    render(<ActivityHeatmap data={data} selectedAgent={null} />);
+
+    const cell = screen.getByRole('gridcell', { name: /Feb 7: 1/i });
+    expect(cell).toHaveAttribute('tabIndex', '0');
+  });
+
   it('renders date labels at start and end', () => {
     render(<ActivityHeatmap data={makeData()} selectedAgent={null} />);
 

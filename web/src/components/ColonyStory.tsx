@@ -34,7 +34,7 @@ export function ColonyStory({ data }: ColonyStoryProps): React.ReactElement {
             <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 mb-1">
               <time
                 dateTime={milestone.date}
-                className="text-xs font-mono text-amber-500 dark:text-amber-500 shrink-0"
+                className="text-xs font-mono text-amber-500 dark:text-amber-400 shrink-0"
               >
                 {formatMilestoneDate(milestone.date)}
               </time>
@@ -46,7 +46,7 @@ export function ColonyStory({ data }: ColonyStoryProps): React.ReactElement {
               {milestone.description}
             </p>
             {milestone.stats && (
-              <p className="text-xs text-amber-500 dark:text-amber-500 mt-1 font-mono">
+              <p className="text-xs text-amber-500 dark:text-amber-400 mt-1 font-mono">
                 {milestone.stats}
               </p>
             )}
