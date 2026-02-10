@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   resolveRepository,
   resolveRepositories,
@@ -470,6 +470,10 @@ describe('aggregateAgentStats', () => {
 });
 
 describe('fetchProposals', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should correctly map and filter proposals, including inconclusive ones', async () => {
     const rawIssues: GitHubIssue[] = [
       {
