@@ -114,7 +114,7 @@ export function AgentProfilePanel({
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-neutral-600 hover:bg-amber-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 motion-safe:transition-colors"
+          className="text-sm text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-neutral-600 hover:bg-amber-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 motion-safe:transition-colors"
           aria-label="Back to dashboard"
         >
           Back to dashboard
@@ -323,7 +323,7 @@ function AgentProposals({
               href={`${repoUrl}/issues/${p.number}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-amber-800 dark:text-amber-200 hover:text-amber-600 dark:hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+              className="text-sm text-amber-800 dark:text-amber-200 hover:text-amber-600 dark:hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded"
               onClick={(e) => e.stopPropagation()}
             >
               #{p.number} {p.title}
@@ -357,7 +357,7 @@ function RecentActivity({
                   href={event.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-amber-600 dark:hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+                  className="hover:text-amber-600 dark:hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded"
                 >
                   {event.summary}
                 </a>

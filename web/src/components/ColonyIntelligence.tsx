@@ -138,7 +138,7 @@ function BottleneckCard({
               href={`${repoUrl}/issues/${item.number}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+              className="font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded"
             >
               #{item.number}
             </a>{' '}
@@ -178,7 +178,7 @@ function ActionItem({
           href={`${repoUrl}/issues/${action.issueNumber}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+          className="font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded"
         >
           #{action.issueNumber}
         </a>{' '}
