@@ -22,6 +22,7 @@ export interface Issue {
 export interface PullRequest {
   number: number;
   title: string;
+  body?: string;
   state: 'open' | 'closed' | 'merged';
   draft?: boolean;
   author: string;

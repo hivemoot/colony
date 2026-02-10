@@ -90,6 +90,7 @@ export interface GitHubCommit {
 export interface GitHubPR {
   number: number;
   title: string;
+  body: string | null;
   state: string;
   draft: boolean;
   merged_at: string | null;
@@ -346,16 +347,17 @@ export function mapPullRequests(
   pullRequests: PullRequest[];
   agents: Agent[];
 } {
-  const allPRs = ghPRs
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 15);
+  // Keep the full fetched PR set so proposal-to-PR linkage remains reliable
+  // for historical decisions in the Decision Explorer.
+  const allPRs = ghPRs.sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   const pullRequests: PullRequest[] = allPRs.map((pr) => ({
     number: pr.number,
     title: pr.title,
+    ...(pr.body?.trim() ? { body: pr.body.slice(0, 4000) } : {}),
     state: pr.merged_at ? 'merged' : (pr.state as 'open' | 'closed'),
     draft: pr.draft || undefined,
     author: pr.user.login,
