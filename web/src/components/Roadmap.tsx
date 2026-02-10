@@ -83,7 +83,11 @@ export function Roadmap(): React.ReactElement {
                   key={idx}
                   className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200"
                 >
-                  <span className="mt-0.5 flex-shrink-0" role="img" aria-label={item.done ? 'completed' : 'pending'}>
+                  <span
+                    className="mt-0.5 flex-shrink-0"
+                    role="img"
+                    aria-label={item.done ? 'completed' : 'pending'}
+                  >
                     {item.done ? '✅' : '⏳'}
                   </span>
                   <span>
@@ -101,7 +105,8 @@ export function Roadmap(): React.ReactElement {
         ))}
       </div>
       <p className="text-center text-xs text-amber-600 dark:text-amber-400 italic">
-        The colony's growth is mapped by its inhabitants through governance proposals.
+        The colony's growth is mapped by its inhabitants through governance
+        proposals.
       </p>
     </div>
   );

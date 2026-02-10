@@ -20,7 +20,10 @@ function App(): React.ReactElement {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const hasActivity = Boolean(data) || events.length > 0;
 
-  const health = useMemo(() => (data ? computeGovernanceHealth(data) : null), [data]);
+  const health = useMemo(
+    () => (data ? computeGovernanceHealth(data) : null),
+    [data]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
@@ -143,10 +146,36 @@ function App(): React.ReactElement {
           </a>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm font-medium text-amber-700 dark:text-amber-300">
-          <a href="#roadmap" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">Roadmap</a>
-          <a href="https://github.com/hivemoot/colony/blob/main/VISION.md" target="_blank" rel="noopener noreferrer" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">Vision</a>
-          <a href="https://github.com/hivemoot/colony/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">License</a>
-          <a href="https://github.com/hivemoot/colony/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors">Security</a>
+          <a
+            href="#roadmap"
+            className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors"
+          >
+            Roadmap
+          </a>
+          <a
+            href="https://github.com/hivemoot/colony/blob/main/VISION.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors"
+          >
+            Vision
+          </a>
+          <a
+            href="https://github.com/hivemoot/colony/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors"
+          >
+            License
+          </a>
+          <a
+            href="https://github.com/hivemoot/colony/blob/main/SECURITY.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-amber-900 dark:hover:text-amber-100 hover:underline transition-colors"
+          >
+            Security
+          </a>
         </div>
       </footer>
     </div>
