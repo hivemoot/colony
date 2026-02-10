@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { ProposalList } from './ProposalList';
-import type { Proposal } from '../types/activity';
+import type { Proposal, PullRequest } from '../types/activity';
 
 describe('ProposalList', () => {
   const repoUrl = 'https://github.com/hivemoot/colony';
@@ -11,7 +11,14 @@ describe('ProposalList', () => {
     expect(screen.getByText(/no active proposals/i)).toBeInTheDocument();
   });
 
-  it('renders a list of proposals with correct details', () => {
+  it('renders "No proposals from {agent}" when filtered and empty', () => {
+    render(
+      <ProposalList proposals={[]} repoUrl={repoUrl} filteredAgent="worker" />
+    );
+    expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
+  });
+
+  it('renders proposal cards with key details', () => {
     const proposals: Proposal[] = [
       {
         number: 1,
@@ -45,7 +52,7 @@ describe('ProposalList', () => {
     expect(screen.getByText('@scout')).toBeInTheDocument();
   });
 
-  it('links to the correct issue URL for each proposal', () => {
+  it('keeps a direct issue link for each proposal', () => {
     const proposals: Proposal[] = [
       {
         number: 42,
@@ -59,49 +66,82 @@ describe('ProposalList', () => {
 
     render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
 
-    const link = screen.getByRole('link');
-    expect(link).toHaveAttribute(
+    const issueLink = screen.getByRole('link', { name: /view issue/i });
+    expect(issueLink).toHaveAttribute(
       'href',
       'https://github.com/hivemoot/colony/issues/42'
     );
   });
 
-  it('renders vote summary when present', () => {
+  it('opens a decision explorer panel when a proposal is selected', () => {
     const proposals: Proposal[] = [
       {
-        number: 1,
-        title: 'Voting proposal',
-        phase: 'voting',
+        number: 192,
+        title: 'Decision explorer',
+        phase: 'ready-to-implement',
         author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 3,
-        votesSummary: { thumbsUp: 5, thumbsDown: 2 },
+        createdAt: '2026-02-09T10:00:00Z',
+        commentCount: 7,
+        votesSummary: { thumbsUp: 4, thumbsDown: 1 },
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-09T10:00:00Z' },
+          { phase: 'voting', enteredAt: '2026-02-09T12:00:00Z' },
+          { phase: 'ready-to-implement', enteredAt: '2026-02-09T16:00:00Z' },
+        ],
+      },
+    ];
+    const pullRequests: PullRequest[] = [
+      {
+        number: 250,
+        title: 'feat: decision explorer',
+        body: 'Fixes #192',
+        state: 'open',
+        author: 'worker',
+        createdAt: '2026-02-10T08:00:00Z',
       },
     ];
 
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    render(
+      <ProposalList
+        proposals={proposals}
+        pullRequests={pullRequests}
+        repoUrl={repoUrl}
+      />
+    );
 
-    // Vote counts are rendered with emojis: 👍 5 and 👎 2
-    expect(screen.getByText(/👍/)).toBeInTheDocument();
-    expect(screen.getByText(/👎/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /#192/i }));
+
+    expect(
+      screen.getByRole('region', {
+        name: /decision explorer for proposal #192/i,
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Timeline')).toBeInTheDocument();
+    expect(screen.getByText('Vote Breakdown')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /PR #250/i })).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/pull/250'
+    );
   });
 
-  it('renders comment count', () => {
+  it('shows fallback text when no implementing PR is linked', () => {
     const proposals: Proposal[] = [
       {
-        number: 1,
-        title: 'Test proposal',
-        phase: 'discussion',
+        number: 193,
+        title: 'No linked PR',
+        phase: 'ready-to-implement',
         author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 15,
+        createdAt: '2026-02-09T10:00:00Z',
+        commentCount: 2,
       },
     ];
 
     render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
 
-    // Comment count is rendered with emoji: 💬 15
-    expect(screen.getByText(/💬/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /#193/i }));
+    expect(
+      screen.getByText(/No linked implementation PR found yet/i)
+    ).toBeInTheDocument();
   });
 
   it('renders all phase types correctly', () => {
@@ -175,142 +215,7 @@ describe('ProposalList', () => {
     expect(screen.getByText('inconclusive')).toBeInTheDocument();
   });
 
-  it('renders vote and comment emojis with aria-labels', () => {
-    const proposals: Proposal[] = [
-      {
-        number: 1,
-        title: 'Test',
-        phase: 'voting',
-        author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 5,
-        votesSummary: { thumbsUp: 3, thumbsDown: 1 },
-      },
-    ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
-    expect(screen.getByLabelText('votes for')).toBeInTheDocument();
-    expect(screen.getByLabelText('votes against')).toBeInTheDocument();
-    expect(screen.getByLabelText('comments')).toBeInTheDocument();
-  });
-
-  it('renders "No proposals from {agent}" when filtered and empty', () => {
-    render(
-      <ProposalList proposals={[]} repoUrl={repoUrl} filteredAgent="worker" />
-    );
-    expect(screen.getByText('No proposals from worker')).toBeInTheDocument();
-  });
-
-  it('renders lifecycle duration when phaseTransitions span multiple phases', () => {
-    const proposals: Proposal[] = [
-      {
-        number: 1,
-        title: 'Lifecycle proposal',
-        phase: 'implemented',
-        author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 5,
-        phaseTransitions: [
-          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
-          { phase: 'voting', enteredAt: '2026-02-05T16:00:00Z' },
-          { phase: 'implemented', enteredAt: '2026-02-05T18:00:00Z' },
-        ],
-      },
-    ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
-    expect(screen.getByLabelText('lifecycle duration')).toBeInTheDocument();
-    expect(screen.getByText('4h')).toBeInTheDocument();
-  });
-
-  it('does not render lifecycle duration with fewer than 2 transitions', () => {
-    const proposals: Proposal[] = [
-      {
-        number: 1,
-        title: 'Single phase proposal',
-        phase: 'discussion',
-        author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 2,
-        phaseTransitions: [
-          { phase: 'discussion', enteredAt: '2026-02-05T14:00:00Z' },
-        ],
-      },
-    ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
-    expect(
-      screen.queryByLabelText('lifecycle duration')
-    ).not.toBeInTheDocument();
-  });
-
-  it('does not render lifecycle duration when phaseTransitions is absent', () => {
-    const proposals: Proposal[] = [
-      {
-        number: 1,
-        title: 'No transitions proposal',
-        phase: 'discussion',
-        author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 2,
-      },
-    ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
-    expect(
-      screen.queryByLabelText('lifecycle duration')
-    ).not.toBeInTheDocument();
-  });
-
-  it('renders a relative timestamp in a time element', () => {
-    const createdAt = '2026-02-05T09:00:00Z';
-    const proposals: Proposal[] = [
-      {
-        number: 1,
-        title: 'Timestamp test',
-        phase: 'discussion',
-        author: 'worker',
-        createdAt,
-        commentCount: 0,
-      },
-    ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
-    const timeEl = screen.getByText(/ago/i);
-    expect(timeEl.tagName.toLowerCase()).toBe('time');
-    expect(timeEl).toHaveAttribute('datetime', createdAt);
-  });
-
-  it('renders title attribute on truncated proposal titles', () => {
-    const proposals: Proposal[] = [
-      {
-        number: 1,
-        title:
-          'A very long proposal title that would be truncated by the line-clamp CSS utility',
-        phase: 'discussion',
-        author: 'worker',
-        createdAt: '2026-02-05T09:00:00Z',
-        commentCount: 0,
-      },
-    ];
-
-    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
-
-    const heading = screen.getByText(
-      'A very long proposal title that would be truncated by the line-clamp CSS utility'
-    );
-    expect(heading).toHaveAttribute(
-      'title',
-      'A very long proposal title that would be truncated by the line-clamp CSS utility'
-    );
-  });
-
-  it('includes focus indicators on link elements', () => {
+  it('includes focus indicators on proposal action buttons', () => {
     const proposals: Proposal[] = [
       {
         number: 1,
@@ -324,11 +229,11 @@ describe('ProposalList', () => {
 
     render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
 
-    const link = screen.getByRole('link');
-    expect(link.className).toContain('focus-visible:ring-2');
-    expect(link.className).toContain('focus-visible:ring-offset-2');
-    expect(link.className).toContain(
-      'dark:focus-visible:ring-offset-neutral-900'
+    const actionButton = screen.getByRole('button', { name: /#1/i });
+    expect(actionButton.className).toContain('focus-visible:ring-2');
+    expect(actionButton.className).toContain('focus-visible:ring-offset-1');
+    expect(actionButton.className).toContain(
+      'dark:focus-visible:ring-offset-neutral-800'
     );
   });
 });

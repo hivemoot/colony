@@ -90,6 +90,7 @@ export interface GitHubCommit {
 export interface GitHubPR {
   number: number;
   title: string;
+  body: string | null;
   state: string;
   draft: boolean;
   merged_at: string | null;
@@ -356,6 +357,7 @@ export function mapPullRequests(
   const pullRequests: PullRequest[] = allPRs.map((pr) => ({
     number: pr.number,
     title: pr.title,
+    ...(pr.body?.trim() ? { body: pr.body.slice(0, 4000) } : {}),
     state: pr.merged_at ? 'merged' : (pr.state as 'open' | 'closed'),
     draft: pr.draft || undefined,
     author: pr.user.login,

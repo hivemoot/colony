@@ -249,6 +249,7 @@ export function ActivityFeed({
               </h2>
               <ProposalList
                 proposals={filteredProposals}
+                pullRequests={data.pullRequests}
                 repoUrl={data.repository.url}
                 filteredAgent={selectedAgent}
               />
