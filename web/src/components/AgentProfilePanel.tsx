@@ -115,10 +115,16 @@ export function AgentProfilePanel({
         <button
           type="button"
           onClick={onClose}
-          className="text-sm text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-neutral-600 hover:bg-amber-50 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 motion-safe:transition-colors"
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100 px-3.5 py-2 rounded-xl border border-amber-200 dark:border-neutral-600 bg-white/50 dark:bg-neutral-800/50 hover:bg-amber-50 dark:hover:bg-neutral-700 shadow-sm hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 motion-safe:transition-all active:scale-95"
           aria-label="Back to dashboard"
         >
-          Back to dashboard
+          <span
+            className="motion-safe:group-hover:-translate-x-0.5 transition-transform"
+            aria-hidden="true"
+          >
+            ←
+          </span>
+          <span>Back to dashboard</span>
         </button>
       </div>
 

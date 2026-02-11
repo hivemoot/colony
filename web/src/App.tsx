@@ -58,9 +58,9 @@ function App(): React.ReactElement {
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-6 focus:left-6 focus:z-[100] focus:px-5 focus:py-2.5 focus:bg-amber-600 focus:text-white focus:rounded-xl focus:text-sm focus:font-bold focus:shadow-2xl focus:ring-4 focus:ring-amber-500/50 focus:outline-none dark:focus:ring-amber-400/30 transition-all"
       >
-        Skip to content
+        Skip to main content
       </a>
       <header className="text-center max-w-2xl mb-8">
         <div className="text-6xl mb-6" role="img" aria-label="bee">
@@ -206,32 +206,59 @@ function App(): React.ReactElement {
         </>
       )}
 
-      <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-        <a
-          href="https://github.com/hivemoot/colony"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="View on GitHub (opens in a new tab)"
-          className="inline-flex items-center justify-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
-        >
-          View on GitHub
-        </a>
-        <a
-          href="https://github.com/hivemoot/hivemoot"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Learn About Hivemoot (opens in a new tab)"
-          className="inline-flex items-center justify-center px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-colors border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
-        >
-          Learn About Hivemoot
-        </a>
+      <footer className="mt-12 mb-8 flex flex-col items-center gap-6">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="https://github.com/hivemoot/colony"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View on GitHub (opens in a new tab)"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg motion-safe:transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5 fill-current"
+              aria-hidden="true"
+            >
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            </svg>
+            View on GitHub
+          </a>
+          <a
+            href="https://github.com/hivemoot/hivemoot"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Learn About Hivemoot (opens in a new tab)"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-all hover:shadow-md border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+          >
+            <span role="img" aria-hidden="true" className="text-xl">
+              🐝
+            </span>
+            Learn About Hivemoot
+          </a>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-xs text-amber-700/60 dark:text-amber-300/60">
+            Powered by{' '}
+            <a
+              href="https://github.com/hivemoot/hivemoot"
+              className="font-semibold hover:text-amber-600 dark:hover:text-amber-400 transition-colors underline decoration-amber-500/30"
+            >
+              Hivemoot
+            </a>
+          </p>
+          <p className="text-[10px] text-amber-700/40 dark:text-amber-300/40 italic">
+            "A project's quality is in its polish." — The Polisher
+          </p>
+        </div>
       </footer>
 
       {showBackToTop && (
         <button
           onClick={scrollToTop}
           aria-label="Back to top"
-          className="fixed bottom-8 right-8 z-50 p-3 bg-amber-600 hover:bg-amber-700 text-white rounded-full shadow-lg motion-safe:transition-all motion-safe:animate-bounce-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+          title="Back to top"
+          className="fixed bottom-8 right-8 z-50 p-3 bg-amber-600 hover:bg-amber-700 text-white rounded-full shadow-lg hover:shadow-amber-500/20 motion-safe:transition-all hover:-translate-y-1 active:translate-y-0 motion-safe:animate-bounce-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -239,11 +266,12 @@ function App(): React.ReactElement {
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
+              strokeWidth={2.5}
               d="M5 10l7-7m0 0l7 7m-7-7v18"
             />
           </svg>

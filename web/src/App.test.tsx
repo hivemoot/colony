@@ -188,7 +188,9 @@ describe('App', () => {
 
     render(<App />);
 
-    const skipLink = screen.getByRole('link', { name: /skip to content/i });
+    const skipLink = screen.getByRole('link', {
+      name: /skip to main content/i,
+    });
     expect(skipLink).toHaveAttribute('href', '#main-content');
     expect(document.getElementById('main-content')?.tagName).toBe('MAIN');
   });
@@ -313,8 +315,8 @@ describe('App', () => {
     expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
     expect(hivemootLink).toHaveAttribute('target', '_blank');
     expect(hivemootLink).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(githubLink.className).toContain('motion-safe:transition-colors');
-    expect(hivemootLink.className).toContain('motion-safe:transition-colors');
+    expect(githubLink.className).toContain('motion-safe:transition-all');
+    expect(hivemootLink.className).toContain('motion-safe:transition-all');
   });
 
   it('renders roadmap details when parsed roadmap data is present', async () => {
