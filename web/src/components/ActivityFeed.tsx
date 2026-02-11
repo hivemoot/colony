@@ -19,6 +19,7 @@ import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
 import { ColonyStory } from './ColonyStory';
 import { ColonyIntelligence } from './ColonyIntelligence';
+import { ColonyLiveMode } from './ColonyLiveMode';
 import { useGovernanceHistory } from '../hooks/useGovernanceHistory';
 import { formatTimeAgo } from '../utils/time';
 
@@ -71,6 +72,8 @@ export function ActivityFeed({
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
+      {data && <ColonyLiveMode data={data} events={filteredEvents} />}
+
       <section
         id="activity"
         aria-labelledby="section-live-feed"

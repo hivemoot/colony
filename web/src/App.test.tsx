@@ -212,6 +212,7 @@ describe('App', () => {
       name: /dashboard sections/i,
     });
     expect(sectionNav.querySelector('a[href="#main-content"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#live-mode"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#activity"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#intelligence"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#proposals"]')).not.toBeNull();
