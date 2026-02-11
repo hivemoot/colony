@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { GovernanceSnapshot } from '../../shared/governance-snapshot.ts';
+import {
+  parseGovernanceHistoryArtifact,
+  type GovernanceSnapshot,
+} from '../../shared/governance-snapshot.ts';
 
 const BASE_URL = import.meta.env.BASE_URL ?? '/';
 
@@ -28,9 +31,10 @@ export function useGovernanceHistory(): UseGovernanceHistoryResult {
           setHistory([]);
           return;
         }
-        const data: GovernanceSnapshot[] = await res.json();
+        const data: unknown = await res.json();
+        const artifact = parseGovernanceHistoryArtifact(data);
         if (!cancelled) {
-          setHistory(Array.isArray(data) ? data : []);
+          setHistory(artifact?.snapshots ?? []);
         }
       } catch {
         // Fetch failed — show empty history

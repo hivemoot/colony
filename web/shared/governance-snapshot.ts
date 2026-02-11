@@ -19,6 +19,202 @@ export interface GovernanceSnapshot {
   proposalVelocity: number | null;
 }
 
+export const GOVERNANCE_HISTORY_SCHEMA_VERSION = 1;
+
+export type GovernanceCompletenessStatus = 'complete' | 'partial';
+
+export interface GovernanceHistoryProvenance {
+  repositories: string[];
+  generatedBy: string;
+  generatorVersion: string;
+  sourceCommitSha: string | null;
+}
+
+export interface GovernanceHistoryCompleteness {
+  status: GovernanceCompletenessStatus;
+  missingRepositories: string[];
+  permissionGaps: string[];
+  apiPartials: string[];
+}
+
+export interface GovernanceHistoryIntegrity {
+  algorithm: 'sha256';
+  digest: string;
+}
+
+export interface GovernanceHistoryArtifact {
+  schemaVersion: number;
+  generatedAt: string;
+  snapshots: GovernanceSnapshot[];
+  provenance: GovernanceHistoryProvenance;
+  completeness: GovernanceHistoryCompleteness;
+  integrity: GovernanceHistoryIntegrity | null;
+}
+
+interface BuildGovernanceHistoryArtifactInput {
+  generatedAt: string;
+  snapshots: GovernanceSnapshot[];
+  repositories: string[];
+  generatedBy: string;
+  generatorVersion: string;
+  sourceCommitSha?: string | null;
+  missingRepositories?: string[];
+  permissionGaps?: string[];
+  apiPartials?: string[];
+  schemaVersion?: number;
+  integrity?: GovernanceHistoryIntegrity | null;
+}
+
+export function buildGovernanceHistoryArtifact({
+  generatedAt,
+  snapshots,
+  repositories,
+  generatedBy,
+  generatorVersion,
+  sourceCommitSha,
+  missingRepositories = [],
+  permissionGaps = [],
+  apiPartials = [],
+  schemaVersion = GOVERNANCE_HISTORY_SCHEMA_VERSION,
+  integrity = null,
+}: BuildGovernanceHistoryArtifactInput): GovernanceHistoryArtifact {
+  const completenessStatus: GovernanceCompletenessStatus =
+    missingRepositories.length > 0 ||
+    permissionGaps.length > 0 ||
+    apiPartials.length > 0
+      ? 'partial'
+      : 'complete';
+
+  return {
+    schemaVersion,
+    generatedAt,
+    snapshots: [...snapshots],
+    provenance: {
+      repositories: [...repositories],
+      generatedBy,
+      generatorVersion,
+      sourceCommitSha: sourceCommitSha ?? null,
+    },
+    completeness: {
+      status: completenessStatus,
+      missingRepositories: [...missingRepositories],
+      permissionGaps: [...permissionGaps],
+      apiPartials: [...apiPartials],
+    },
+    integrity,
+  };
+}
+
+export function serializeGovernanceHistoryForIntegrity(
+  artifact:
+    | GovernanceHistoryArtifact
+    | Omit<GovernanceHistoryArtifact, 'integrity'>
+): string {
+  return JSON.stringify({
+    schemaVersion: artifact.schemaVersion,
+    generatedAt: artifact.generatedAt,
+    snapshots: artifact.snapshots,
+    provenance: artifact.provenance,
+    completeness: artifact.completeness,
+  });
+}
+
+export function parseGovernanceHistoryArtifact(
+  raw: unknown
+): GovernanceHistoryArtifact | null {
+  if (isGovernanceSnapshotArray(raw)) {
+    return buildGovernanceHistoryArtifact({
+      schemaVersion: 0,
+      generatedAt:
+        raw.length > 0
+          ? raw[raw.length - 1].timestamp
+          : new Date(0).toISOString(),
+      snapshots: raw,
+      repositories: [],
+      generatedBy: 'legacy-governance-history',
+      generatorVersion: 'unknown',
+      missingRepositories: [],
+      permissionGaps: [
+        'Legacy history format: provenance metadata unavailable',
+      ],
+      apiPartials: [],
+      integrity: null,
+    });
+  }
+
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  const snapshots = raw.snapshots;
+  if (!isGovernanceSnapshotArray(snapshots)) {
+    return null;
+  }
+
+  const provenance = isRecord(raw.provenance) ? raw.provenance : {};
+  const completeness = isRecord(raw.completeness) ? raw.completeness : {};
+  const integrity = isRecord(raw.integrity) ? raw.integrity : null;
+
+  const missingRepositories = readStringArray(completeness.missingRepositories);
+  const permissionGaps = readStringArray(completeness.permissionGaps);
+  const apiPartials = readStringArray(completeness.apiPartials);
+  const explicitStatus =
+    completeness.status === 'complete' || completeness.status === 'partial'
+      ? completeness.status
+      : null;
+
+  const artifact = buildGovernanceHistoryArtifact({
+    schemaVersion:
+      typeof raw.schemaVersion === 'number'
+        ? raw.schemaVersion
+        : GOVERNANCE_HISTORY_SCHEMA_VERSION,
+    generatedAt:
+      typeof raw.generatedAt === 'string'
+        ? raw.generatedAt
+        : snapshots.length > 0
+          ? snapshots[snapshots.length - 1].timestamp
+          : new Date(0).toISOString(),
+    snapshots,
+    repositories: readStringArray(provenance.repositories),
+    generatedBy:
+      typeof provenance.generatedBy === 'string'
+        ? provenance.generatedBy
+        : 'unknown',
+    generatorVersion:
+      typeof provenance.generatorVersion === 'string'
+        ? provenance.generatorVersion
+        : 'unknown',
+    sourceCommitSha:
+      typeof provenance.sourceCommitSha === 'string'
+        ? provenance.sourceCommitSha
+        : null,
+    missingRepositories,
+    permissionGaps,
+    apiPartials,
+    integrity:
+      integrity &&
+      integrity.algorithm === 'sha256' &&
+      typeof integrity.digest === 'string'
+        ? {
+            algorithm: 'sha256',
+            digest: integrity.digest,
+          }
+        : null,
+  });
+
+  if (!explicitStatus) {
+    return artifact;
+  }
+
+  return {
+    ...artifact,
+    completeness: {
+      ...artifact.completeness,
+      status: explicitStatus,
+    },
+  };
+}
+
 /** Maximum number of snapshots to retain (30 days at 6h intervals) */
 export const MAX_HISTORY_ENTRIES = 120;
 
@@ -286,4 +482,39 @@ export function appendSnapshot(
     return updated.slice(updated.length - MAX_HISTORY_ENTRIES);
   }
   return updated;
+}
+
+function isGovernanceSnapshotArray(
+  value: unknown
+): value is GovernanceSnapshot[] {
+  return Array.isArray(value) && value.every(isGovernanceSnapshot);
+}
+
+function isGovernanceSnapshot(value: unknown): value is GovernanceSnapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.timestamp === 'string' &&
+    typeof value.healthScore === 'number' &&
+    typeof value.participation === 'number' &&
+    typeof value.pipelineFlow === 'number' &&
+    typeof value.followThrough === 'number' &&
+    typeof value.consensusQuality === 'number' &&
+    typeof value.activeProposals === 'number' &&
+    typeof value.totalProposals === 'number' &&
+    typeof value.activeAgents === 'number' &&
+    (typeof value.proposalVelocity === 'number' ||
+      value.proposalVelocity === null)
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string');
 }

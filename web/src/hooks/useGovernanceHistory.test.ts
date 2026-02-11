@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useGovernanceHistory } from './useGovernanceHistory';
-import type { GovernanceSnapshot } from '../../shared/governance-snapshot';
+import type {
+  GovernanceHistoryArtifact,
+  GovernanceSnapshot,
+} from '../../shared/governance-snapshot';
 
 const mockSnapshot: GovernanceSnapshot = {
   timestamp: '2026-02-08T00:00:00Z',
@@ -14,6 +17,28 @@ const mockSnapshot: GovernanceSnapshot = {
   totalProposals: 20,
   activeAgents: 4,
   proposalVelocity: 0.5,
+};
+
+const mockArtifact: GovernanceHistoryArtifact = {
+  schemaVersion: 1,
+  generatedAt: '2026-02-08T00:00:00Z',
+  snapshots: [mockSnapshot],
+  provenance: {
+    repositories: ['hivemoot/colony'],
+    generatedBy: 'web/scripts/generate-data.ts',
+    generatorVersion: '0.1.0',
+    sourceCommitSha: null,
+  },
+  completeness: {
+    status: 'complete',
+    missingRepositories: [],
+    permissionGaps: [],
+    apiPartials: [],
+  },
+  integrity: {
+    algorithm: 'sha256',
+    digest: 'abc123',
+  },
 };
 
 afterEach(() => {
@@ -66,6 +91,22 @@ describe('useGovernanceHistory', () => {
     });
 
     expect(result.current.history).toEqual([]);
+  });
+
+  it('loads governance history from versioned artifact format', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockArtifact,
+    } as Response);
+
+    const { result } = renderHook(() => useGovernanceHistory());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.history).toHaveLength(1);
+    expect(result.current.history[0].timestamp).toBe('2026-02-08T00:00:00Z');
   });
 
   it('handles non-array response gracefully', async () => {

@@ -37,8 +37,11 @@ import type {
 import {
   computeGovernanceSnapshot,
   appendSnapshot,
-  type GovernanceSnapshot,
+  buildGovernanceHistoryArtifact,
+  parseGovernanceHistoryArtifact,
+  type GovernanceHistoryArtifact,
 } from '../shared/governance-snapshot.ts';
+import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -53,6 +56,8 @@ const ROBOTS_PATH = join(ROOT_DIR, 'web', 'public', 'robots.txt');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
+const HISTORY_GENERATOR_ID = 'web/scripts/generate-data.ts';
+const HISTORY_GENERATOR_VERSION = process.env.npm_package_version ?? '0.1.0';
 
 export interface GitHubRepo {
   stargazers_count: number;
@@ -1085,20 +1090,47 @@ async function generateActivityData(): Promise<ActivityData> {
 }
 
 /**
- * Load existing governance history from disk, or return empty array
- * if the file doesn't exist yet.
+ * Build an empty governance history artifact.
  */
-function loadHistory(): GovernanceSnapshot[] {
-  if (!existsSync(HISTORY_FILE)) return [];
+function emptyHistoryArtifact(generatedAt: string): GovernanceHistoryArtifact {
+  const artifactWithoutIntegrity = buildGovernanceHistoryArtifact({
+    generatedAt,
+    snapshots: [],
+    repositories: [],
+    generatedBy: HISTORY_GENERATOR_ID,
+    generatorVersion: HISTORY_GENERATOR_VERSION,
+  });
+
+  return {
+    ...artifactWithoutIntegrity,
+    integrity: computeGovernanceHistoryIntegrity(artifactWithoutIntegrity),
+  };
+}
+
+/**
+ * Load existing governance history from disk, normalizing legacy array format.
+ */
+function loadHistory(): GovernanceHistoryArtifact {
+  if (!existsSync(HISTORY_FILE)) {
+    return emptyHistoryArtifact(new Date(0).toISOString());
+  }
+
   try {
     const raw = readFileSync(HISTORY_FILE, 'utf-8');
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as GovernanceSnapshot[];
+    const parsed = parseGovernanceHistoryArtifact(JSON.parse(raw));
+    if (parsed) {
+      return parsed;
+    }
   } catch {
-    console.warn('Could not parse governance history, starting fresh');
-    return [];
+    // Handled by fallback below.
   }
+
+  console.warn('Could not parse governance history, starting fresh');
+  return emptyHistoryArtifact(new Date(0).toISOString());
+}
+
+function toRepoTag(repo: { owner: string; name: string }): string {
+  return `${repo.owner}/${repo.name}`;
 }
 
 async function main(): Promise<void> {
@@ -1113,12 +1145,53 @@ async function main(): Promise<void> {
     console.log(`Activity data written to ${OUTPUT_FILE}`);
 
     // Compute and append governance snapshot for historical tracking
+    const requestedRepos = resolveRepositories().map(
+      (repo) => `${repo.owner}/${repo.repo}`
+    );
+    const fetchedRepos = (data.repositories ?? [data.repository]).map(
+      toRepoTag
+    );
+    const fetchedRepoSet = new Set(fetchedRepos);
+    const missingRepositories = requestedRepos.filter(
+      (repo) => !fetchedRepoSet.has(repo)
+    );
+    const permissionGaps: string[] = [];
+
+    if (!process.env.GITHUB_TOKEN && !process.env.GH_TOKEN) {
+      permissionGaps.push(
+        'Generated without GITHUB_TOKEN/GH_TOKEN; API responses may be rate-limited.'
+      );
+    }
+
+    const apiPartials =
+      missingRepositories.length > 0
+        ? [
+            `Missing repositories in this run: ${missingRepositories.join(', ')}`,
+          ]
+        : [];
+
     const snapshot = computeGovernanceSnapshot(data, data.generatedAt);
     const history = loadHistory();
-    const updated = appendSnapshot(history, snapshot);
-    writeFileSync(HISTORY_FILE, JSON.stringify(updated, null, 2));
+    const updatedSnapshots = appendSnapshot(history.snapshots, snapshot);
+    const artifactWithoutIntegrity = buildGovernanceHistoryArtifact({
+      generatedAt: data.generatedAt,
+      snapshots: updatedSnapshots,
+      repositories: fetchedRepos,
+      generatedBy: HISTORY_GENERATOR_ID,
+      generatorVersion: HISTORY_GENERATOR_VERSION,
+      sourceCommitSha: process.env.GITHUB_SHA ?? null,
+      missingRepositories,
+      permissionGaps,
+      apiPartials,
+    });
+    const updatedHistory: GovernanceHistoryArtifact = {
+      ...artifactWithoutIntegrity,
+      integrity: computeGovernanceHistoryIntegrity(artifactWithoutIntegrity),
+    };
+
+    writeFileSync(HISTORY_FILE, JSON.stringify(updatedHistory, null, 2));
     console.log(
-      `Governance snapshot appended (${updated.length} entries, score: ${snapshot.healthScore})`
+      `Governance snapshot appended (${updatedSnapshots.length} entries, score: ${snapshot.healthScore}, schema: v${updatedHistory.schemaVersion}, completeness: ${updatedHistory.completeness.status})`
     );
   } catch (error) {
     console.error('Failed to generate activity data:', error);
