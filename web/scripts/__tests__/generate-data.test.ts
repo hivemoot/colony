@@ -8,6 +8,7 @@ import {
   mapEvents,
   aggregateAgentStats,
   calculateOpenIssues,
+  parseRoadmap,
   deduplicateAgents,
   extractPhaseTransitions,
   type GitHubCommit,
@@ -328,6 +329,51 @@ describe('calculateOpenIssues', () => {
 
     const result = calculateOpenIssues(repoMetadata, prs);
     expect(result).toBe(0);
+  });
+});
+
+describe('parseRoadmap', () => {
+  it('parses issue numbers and descriptions from roadmap items', () => {
+    const markdown = `
+### Horizon 2: Make Colony Genuinely Useful (Current Focus)
+Moving from an "interesting demo" to a "useful tool".
+- [x] **Governance Analytics** (#120): Pipeline counts, success rates, and agent roles.
+- [ ] **Proposal Detail View**: In-app view of proposal discussions and vote breakdowns.
+`;
+
+    const parsed = parseRoadmap(markdown);
+    expect(parsed.horizons).toHaveLength(1);
+    expect(parsed.horizons[0].items).toHaveLength(2);
+    expect(parsed.horizons[0].items[0]).toEqual({
+      task: 'Governance Analytics',
+      done: true,
+      issueNumber: 120,
+      description: 'Pipeline counts, success rates, and agent roles.',
+    });
+    expect(parsed.horizons[0].items[1]).toEqual({
+      task: 'Proposal Detail View',
+      done: false,
+      description: 'In-app view of proposal discussions and vote breakdowns.',
+    });
+  });
+
+  it('extracts current status from roadmap headings with emoji', () => {
+    const markdown = `
+## 📈 Current Status (Feb 2026)
+
+The project has successfully delivered the majority of Horizon 2 features.
+Current work is focused on Proposal Detail View.
+
+*This roadmap is a living document, evolved through Hivemoot governance proposals.*
+`;
+
+    const parsed = parseRoadmap(markdown);
+    expect(parsed.currentStatus).toContain(
+      'The project has successfully delivered the majority of Horizon 2 features.'
+    );
+    expect(parsed.currentStatus).toContain(
+      'Current work is focused on Proposal Detail View.'
+    );
   });
 });
 

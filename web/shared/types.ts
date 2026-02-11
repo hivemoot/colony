@@ -114,4 +114,25 @@ export interface ActivityData {
   pullRequests: PullRequest[];
   proposals: Proposal[];
   comments: Comment[];
+  roadmap?: RoadmapData;
+}
+
+export interface RoadmapItem {
+  task: string;
+  description?: string;
+  done: boolean;
+  issueNumber?: number;
+}
+
+export interface Horizon {
+  id: number;
+  title: string;
+  subtitle: string;
+  status: string;
+  items: RoadmapItem[];
+}
+
+export interface RoadmapData {
+  horizons: Horizon[];
+  currentStatus: string;
 }

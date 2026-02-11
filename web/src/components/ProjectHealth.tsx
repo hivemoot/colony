@@ -137,7 +137,7 @@ export function ProjectHealth({
             |
           </span>
           <a
-            href="#health"
+            href="#intelligence"
             className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
             title={`Governance Health: ${governanceBucket}`}
           >
