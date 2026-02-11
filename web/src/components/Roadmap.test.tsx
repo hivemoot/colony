@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { Roadmap } from './Roadmap';
-import type { RoadmapData } from '../shared/types';
+import type { RoadmapData } from '../../shared/types';
 
 const mockRoadmapData: RoadmapData = {
   horizons: [
@@ -22,7 +22,9 @@ const mockRoadmapData: RoadmapData = {
 describe('Roadmap', () => {
   it('renders nothing when no data is provided', () => {
     render(<Roadmap data={undefined} />);
-    expect(screen.getByText(/roadmap data is not available/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/roadmap data is not available/i)
+    ).toBeInTheDocument();
   });
 
   it('renders horizons and items correctly', () => {
