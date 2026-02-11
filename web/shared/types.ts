@@ -112,7 +112,14 @@ export interface VisibilityCheck {
     | 'has-description'
     | 'has-structured-data'
     | 'has-sitemap-lastmod'
-    | 'has-robots';
+    | 'has-robots'
+    | 'deployed-root-reachable'
+    | 'deployed-jsonld'
+    | 'deployed-robots-reachable'
+    | 'deployed-robots-sitemap'
+    | 'deployed-sitemap-reachable'
+    | 'deployed-sitemap-lastmod'
+    | 'deployed-activity-freshness';
   label: string;
   ok: boolean;
   details?: string;

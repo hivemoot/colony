@@ -750,9 +750,9 @@ export function parseRoadmap(content: string): RoadmapData {
   return { horizons, currentStatus };
 }
 
-export function buildExternalVisibility(
+export async function buildExternalVisibility(
   repositories: RepositoryInfo[]
-): ExternalVisibility {
+): Promise<ExternalVisibility> {
   const primary = repositories[0];
 
   const hasHomepage = Boolean(primary?.homepage?.trim());
@@ -828,6 +828,122 @@ export function buildExternalVisibility(
         : 'Missing Sitemap directive in web/public/robots.txt',
     },
   ];
+
+  // Deployed site parity checks (Scout Intelligence)
+  const homepage = primary?.homepage;
+  if (homepage && homepage.startsWith('http')) {
+    const baseUrl = homepage.endsWith('/') ? homepage.slice(0, -1) : homepage;
+
+    const fetchWithTimeout = async (url: string) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        return response;
+      } catch (e) {
+        clearTimeout(id);
+        return null;
+      }
+    };
+
+    const [rootRes, robotsRes, sitemapRes, activityRes] = await Promise.all([
+      fetchWithTimeout(baseUrl),
+      fetchWithTimeout(`${baseUrl}/robots.txt`),
+      fetchWithTimeout(`${baseUrl}/sitemap.xml`),
+      fetchWithTimeout(`${baseUrl}/data/activity.json`),
+    ]);
+
+    // Root check
+    checks.push({
+      id: 'deployed-root-reachable',
+      label: 'Deployed site is reachable',
+      ok: rootRes?.status === 200,
+      details: rootRes
+        ? `GET / returned ${rootRes.status}`
+        : 'Connection failed or timed out',
+    });
+
+    // JSON-LD on deployed root
+    let deployedJsonLd = false;
+    if (rootRes?.status === 200) {
+      const html = await rootRes.text();
+      deployedJsonLd = /<script\s+type=["']application\/ld\+json["']>/i.test(
+        html
+      );
+    }
+    checks.push({
+      id: 'deployed-jsonld',
+      label: 'Deployed site has JSON-LD metadata',
+      ok: deployedJsonLd,
+      details: deployedJsonLd
+        ? 'JSON-LD found on deployed homepage'
+        : 'Missing JSON-LD on deployed homepage',
+    });
+
+    // Robots check
+    const robotsText =
+      robotsRes?.status === 200 ? await robotsRes.text() : '';
+    const hasDeployedRobotsSitemap =
+      /Sitemap:\s*https?:\/\/\S+/i.test(robotsText);
+    checks.push({
+      id: 'deployed-robots-reachable',
+      label: 'Deployed robots.txt reachable',
+      ok: robotsRes?.status === 200,
+      details: robotsRes ? `Status ${robotsRes.status}` : 'Fetch failed',
+    });
+    checks.push({
+      id: 'deployed-robots-sitemap',
+      label: 'Deployed robots.txt has sitemap',
+      ok: hasDeployedRobotsSitemap,
+      details: hasDeployedRobotsSitemap
+        ? 'Sitemap directive found'
+        : 'Missing Sitemap directive in live robots.txt',
+    });
+
+    // Sitemap check
+    const sitemapText =
+      sitemapRes?.status === 200 ? await sitemapRes.text() : '';
+    const hasDeployedSitemapLastmod =
+      /<lastmod>[^<]+<\/lastmod>/i.test(sitemapText);
+    checks.push({
+      id: 'deployed-sitemap-reachable',
+      label: 'Deployed sitemap.xml reachable',
+      ok: sitemapRes?.status === 200,
+      details: sitemapRes ? `Status ${sitemapRes.status}` : 'Fetch failed',
+    });
+    checks.push({
+      id: 'deployed-sitemap-lastmod',
+      label: 'Deployed sitemap has <lastmod>',
+      ok: hasDeployedSitemapLastmod,
+      details: hasDeployedSitemapLastmod
+        ? 'Found lastmod in live sitemap'
+        : 'Missing lastmod in live sitemap',
+    });
+
+    // Freshness check
+    let freshnessDetails = 'Could not fetch deployed activity data';
+    let freshnessOk = false;
+    if (activityRes?.status === 200) {
+      try {
+        const activity = await activityRes.json();
+        if (activity.generatedAt) {
+          const ageMs = Date.now() - new Date(activity.generatedAt).getTime();
+          const ageHours = ageMs / (1000 * 60 * 60);
+          freshnessOk = ageHours <= 18; // Critical threshold from proposal
+          freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
+        }
+      } catch (e) {
+        freshnessDetails = 'Invalid activity.json format on deployed site';
+      }
+    }
+    checks.push({
+      id: 'deployed-activity-freshness',
+      label: 'Deployed data freshness',
+      ok: freshnessOk,
+      details: freshnessDetails,
+    });
+  }
 
   const passCount = checks.filter((check) => check.ok).length;
   const score = Math.round((passCount / checks.length) * 100);
@@ -1069,7 +1185,7 @@ async function generateActivityData(): Promise<ActivityData> {
     `Total: ${totalCommits} commits, ${totalIssues} issues, ${totalPRs} PRs, ${totalProposals} proposals, ${totalComments} comments, ${agents.length} agents across ${repos.length} repo(s)`
   );
 
-  const externalVisibility = buildExternalVisibility(allRepoInfos);
+  const externalVisibility = await buildExternalVisibility(allRepoInfos);
 
   return {
     generatedAt: new Date().toISOString(),

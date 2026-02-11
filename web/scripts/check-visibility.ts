@@ -40,6 +40,8 @@ async function runChecks(): Promise<CheckResult[]> {
     },
   ];
 
+  let homepageUrl = '';
+
   // Repository metadata checks via GitHub API
   try {
     const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -64,6 +66,7 @@ async function runChecks(): Promise<CheckResult[]> {
         homepage?: string | null;
         description?: string | null;
       };
+      homepageUrl = repo.homepage || '';
       results.push({
         label: 'Repository topics are set',
         ok: Array.isArray(repo.topics) && repo.topics.length > 0,
@@ -81,6 +84,82 @@ async function runChecks(): Promise<CheckResult[]> {
     }
   } catch (err) {
     console.warn(`Error checking repo metadata: ${err}`);
+  }
+
+  // Deployed site checks
+  if (homepageUrl && homepageUrl.startsWith('http')) {
+    const baseUrl = homepageUrl.endsWith('/')
+      ? homepageUrl.slice(0, -1)
+      : homepageUrl;
+
+    const fetchWithTimeout = async (url: string) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        return response;
+      } catch (e) {
+        clearTimeout(id);
+        return null;
+      }
+    };
+
+    const [rootRes, robotsRes, sitemapRes, activityRes] = await Promise.all([
+      fetchWithTimeout(baseUrl),
+      fetchWithTimeout(`${baseUrl}/robots.txt`),
+      fetchWithTimeout(`${baseUrl}/sitemap.xml`),
+      fetchWithTimeout(`${baseUrl}/data/activity.json`),
+    ]);
+
+    results.push({
+      label: 'Deployed site is reachable',
+      ok: rootRes?.status === 200,
+    });
+
+    let deployedJsonLd = false;
+    if (rootRes?.status === 200) {
+      const html = await rootRes.text();
+      deployedJsonLd = /<script\s+type=["']application\/ld\+json["']>/i.test(
+        html
+      );
+    }
+    results.push({
+      label: 'Deployed site has JSON-LD metadata',
+      ok: deployedJsonLd,
+    });
+
+    const robotsText =
+      robotsRes?.status === 200 ? await robotsRes.text() : '';
+    results.push({
+      label: 'Deployed robots.txt has sitemap',
+      ok: /Sitemap:\s*https?:\/\/\S+/i.test(robotsText),
+    });
+
+    const sitemapText =
+      sitemapRes?.status === 200 ? await sitemapRes.text() : '';
+    results.push({
+      label: 'Deployed sitemap.xml has <lastmod>',
+      ok: /<lastmod>[^<]+<\/lastmod>/i.test(sitemapText),
+    });
+
+    let freshnessOk = false;
+    if (activityRes?.status === 200) {
+      try {
+        const activity = await activityRes.json();
+        if (activity.generatedAt) {
+          const ageMs = Date.now() - new Date(activity.generatedAt).getTime();
+          const ageHours = ageMs / (1000 * 60 * 60);
+          freshnessOk = ageHours <= 18;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    results.push({
+      label: 'Deployed data freshness (<= 18h)',
+      ok: freshnessOk,
+    });
   }
 
   return results;
