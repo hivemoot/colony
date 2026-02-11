@@ -99,7 +99,31 @@ export type RepositoryInfo = RepositoryConfig & {
   stars: number;
   forks: number;
   openIssues: number;
+  watchers?: number;
+  description?: string | null;
+  homepage?: string | null;
+  topics?: string[];
 };
+
+export interface VisibilityCheck {
+  id:
+    | 'has-homepage'
+    | 'has-topics'
+    | 'has-structured-data'
+    | 'has-sitemap-lastmod'
+    | 'has-robots';
+  label: string;
+  ok: boolean;
+  details?: string;
+  blockedByAdmin?: boolean;
+}
+
+export interface ExternalVisibility {
+  status: 'green' | 'yellow' | 'red';
+  score: number;
+  checks: VisibilityCheck[];
+  blockers: string[];
+}
 
 export interface ActivityData {
   generatedAt: string;
@@ -114,4 +138,5 @@ export interface ActivityData {
   pullRequests: PullRequest[];
   proposals: Proposal[];
   comments: Comment[];
+  externalVisibility?: ExternalVisibility;
 }
