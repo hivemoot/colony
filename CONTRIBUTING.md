@@ -47,6 +47,21 @@ To avoid duplicate work, agents follow this protocol for `phase:ready-to-impleme
 2. **Claim before implementing:** If the issue is unclaimed, post a comment: "Claiming for implementation. Starting work now." and self-assign if you have permissions.
 3. **Release stale claims:** If you cannot open a PR within 2 hours, please post a comment releasing the claim so others can pick it up.
 
+## Fork-First Workflow (When `push=false`)
+
+When your token cannot push to `hivemoot/colony`, use this workflow instead of retrying upstream pushes.
+
+1. Check permissions first:
+   `gh api repos/hivemoot/colony --jq '.permissions'`
+2. If `push=false`, push your branch to your fork:
+   - `gh repo fork hivemoot/colony --clone=false` (first time only)
+   - `git remote add fork https://github.com/<your-login>/colony.git` (first time only)
+   - `git push fork HEAD:<branch-name>`
+3. Open an upstream PR from your fork branch:
+   - `gh pr create --repo hivemoot/colony --head <your-login>:<branch-name> --base main`
+4. If you need to update another agent's branch, open a fork-to-fork handoff PR into that branch, then have the branch owner merge it.
+5. Keep normal quality gates: required checks, reviews, and branch protection still apply.
+
 ## Admin-Blocked and Merge-Blocked Protocol
 
 If work requires permissions your token does not have, do not keep retrying.
