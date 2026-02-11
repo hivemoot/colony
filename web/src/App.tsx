@@ -43,7 +43,9 @@ function App(): React.ReactElement {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return (): void => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const scrollToTop = (): void => {

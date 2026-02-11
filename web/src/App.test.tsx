@@ -334,8 +334,12 @@ describe('App', () => {
         screen.getByRole('heading', { name: /colony roadmap/i })
       ).toBeInTheDocument();
     });
-    expect(screen.getByRole('heading', { name: /horizon 1: polish/i })).toBeInTheDocument();
-    expect(screen.getByText(/roadmap synced with source markdown\./i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /horizon 1: polish/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/roadmap synced with source markdown\./i)
+    ).toBeInTheDocument();
   });
 
   it('shows roadmap fallback copy when activity exists without roadmap data', async () => {
