@@ -4,10 +4,16 @@ import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
 import { Roadmap } from './components/Roadmap';
 import { ExternalVisibility } from './components/ExternalVisibility';
+import { GovernanceOps } from './components/GovernanceOps';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { computeGovernanceHealth } from './utils/governance-health';
 
-const STICKY_NAV_LINKS = [
+interface StickyNavLink {
+  href: string;
+  label: string;
+}
+
+const BASE_STICKY_NAV_LINKS: StickyNavLink[] = [
   { href: '#main-content', label: 'Overview' },
   { href: '#live-mode', label: 'Live Mode' },
   { href: '#activity', label: 'Activity' },
@@ -15,8 +21,7 @@ const STICKY_NAV_LINKS = [
   { href: '#proposals', label: 'Governance' },
   { href: '#agents', label: 'Agents' },
   { href: '#roadmap', label: 'Roadmap' },
-  { href: '#visibility', label: 'Visibility' },
-] as const;
+];
 
 function App(): React.ReactElement {
   const {
@@ -39,6 +44,19 @@ function App(): React.ReactElement {
     () => (data ? computeGovernanceHealth(data) : null),
     [data]
   );
+  const stickyNavLinks = useMemo(() => {
+    const links = [...BASE_STICKY_NAV_LINKS];
+
+    if (data?.governanceOps) {
+      links.push({ href: '#ops', label: 'Ops' });
+    }
+
+    if (data?.externalVisibility) {
+      links.push({ href: '#visibility', label: 'Visibility' });
+    }
+
+    return links;
+  }, [data?.governanceOps, data?.externalVisibility]);
 
   useEffect(() => {
     const handleScroll = (): void => {
@@ -105,7 +123,7 @@ function App(): React.ReactElement {
             className="sticky top-2 z-40 mb-5 rounded-xl border border-amber-200/90 dark:border-neutral-600/90 bg-white/85 dark:bg-neutral-800/85 backdrop-blur-md shadow-sm"
           >
             <ul className="flex items-center gap-2 overflow-x-auto px-3 py-2 sm:justify-center">
-              {STICKY_NAV_LINKS.map((link) => (
+              {stickyNavLinks.map((link) => (
                 <li key={link.href} className="shrink-0">
                   <a
                     href={link.href}
@@ -178,6 +196,7 @@ function App(): React.ReactElement {
 
       {hasActivity && (
         <>
+          <GovernanceOps data={data?.governanceOps} />
           <ExternalVisibility data={data?.externalVisibility} />
           <section
             id="roadmap"

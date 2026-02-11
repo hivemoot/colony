@@ -126,6 +126,54 @@ export interface ExternalVisibility {
   blockers: string[];
 }
 
+export type GovernanceSLOStatus = 'healthy' | 'at-risk' | 'breach';
+
+export interface GovernanceSLO {
+  id:
+    | 'proposal-cycle-time'
+    | 'implementation-lead-time'
+    | 'blocked-ready-work'
+    | 'dashboard-freshness'
+    | 'discoverability-health';
+  label: string;
+  target: string;
+  current: string;
+  status: GovernanceSLOStatus;
+  details?: string;
+}
+
+export type GovernanceIncidentClass =
+  | 'permissions'
+  | 'automation-failure'
+  | 'ci-regression'
+  | 'governance-deadlock'
+  | 'maintainer-gate';
+
+export interface GovernanceIncident {
+  id: string;
+  class: GovernanceIncidentClass;
+  severity: 'low' | 'medium' | 'high';
+  sourceType: 'issue' | 'pr';
+  sourceNumber: number;
+  sourceUrl: string;
+  marker: string;
+  summary: string;
+  detectedAt: string;
+  ageHours: number;
+}
+
+export interface GovernanceOps {
+  status: 'green' | 'yellow' | 'red';
+  score: number;
+  slos: GovernanceSLO[];
+  incidents: GovernanceIncident[];
+  reliabilityBudget: {
+    remaining: number;
+    policy: string;
+    recommendation: string;
+  };
+}
+
 export interface ActivityData {
   generatedAt: string;
   /** Primary repository — kept for backward compatibility */
@@ -140,6 +188,7 @@ export interface ActivityData {
   proposals: Proposal[];
   comments: Comment[];
   externalVisibility?: ExternalVisibility;
+  governanceOps?: GovernanceOps;
   roadmap?: RoadmapData;
 }
 

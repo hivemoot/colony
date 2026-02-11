@@ -42,6 +42,7 @@ import {
   type GovernanceHistoryArtifact,
 } from '../shared/governance-snapshot.ts';
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
+import { computeGovernanceOps } from '../shared/governance-ops.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -1071,8 +1072,9 @@ async function generateActivityData(): Promise<ActivityData> {
 
   const externalVisibility = buildExternalVisibility(allRepoInfos);
 
-  return {
-    generatedAt: new Date().toISOString(),
+  const generatedAt = new Date().toISOString();
+  const baseData: ActivityData = {
+    generatedAt,
     // Primary repo for backward compatibility
     repository: allRepoInfos[0],
     // All repos for multi-repo aware consumers
@@ -1086,6 +1088,11 @@ async function generateActivityData(): Promise<ActivityData> {
     proposals: allProposals,
     roadmap,
     externalVisibility,
+  };
+
+  return {
+    ...baseData,
+    governanceOps: computeGovernanceOps(baseData, generatedAt),
   };
 }
 
