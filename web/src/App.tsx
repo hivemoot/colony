@@ -13,6 +13,7 @@ const STICKY_NAV_LINKS = [
   { href: '#activity', label: 'Activity' },
   { href: '#intelligence', label: 'Intelligence' },
   { href: '#proposals', label: 'Governance' },
+  { href: '#ops', label: 'Ops' },
   { href: '#agents', label: 'Agents' },
   { href: '#roadmap', label: 'Roadmap' },
   { href: '#visibility', label: 'Visibility' },

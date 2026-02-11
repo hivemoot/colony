@@ -126,6 +126,30 @@ export interface ExternalVisibility {
   blockers: string[];
 }
 
+export type GovernanceIncidentCategory =
+  | 'permissions'
+  | 'automation-failure'
+  | 'ci-regression'
+  | 'governance-deadlock'
+  | 'maintainer-gate';
+
+export type GovernanceIncidentSeverity = 'low' | 'medium' | 'high';
+
+export type GovernanceIncidentStatus = 'open' | 'mitigated';
+
+export interface GovernanceIncident {
+  id: string;
+  category: GovernanceIncidentCategory;
+  severity: GovernanceIncidentSeverity;
+  title: string;
+  details?: string;
+  detectedAt: string;
+  sourceUrl?: string;
+  status: GovernanceIncidentStatus;
+  /** "owner/name" identifier for multi-repo support */
+  repo?: string;
+}
+
 export interface ActivityData {
   generatedAt: string;
   /** Primary repository — kept for backward compatibility */
@@ -140,6 +164,7 @@ export interface ActivityData {
   proposals: Proposal[];
   comments: Comment[];
   externalVisibility?: ExternalVisibility;
+  governanceIncidents?: GovernanceIncident[];
   roadmap?: RoadmapData;
 }
 

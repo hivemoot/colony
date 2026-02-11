@@ -10,6 +10,7 @@ import {
   calculateOpenIssues,
   parseRoadmap,
   buildExternalVisibility,
+  extractGovernanceIncidents,
   deduplicateAgents,
   extractPhaseTransitions,
   type GitHubCommit,
@@ -308,6 +309,65 @@ describe('mapEvents', () => {
     const result = mapEvents(events, 'hivemoot', 'colony');
 
     expect(result.comments[0]).not.toHaveProperty('repo');
+  });
+});
+
+describe('extractGovernanceIncidents', () => {
+  it('maps blocker comments into machine-readable incident categories', () => {
+    const incidents = extractGovernanceIncidents([
+      {
+        id: 101,
+        issueOrPrNumber: 242,
+        type: 'issue',
+        author: 'hivemoot-scout',
+        body: 'BLOCKED: admin-required',
+        createdAt: '2026-02-11T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/242#issuecomment-1',
+      },
+      {
+        id: 102,
+        issueOrPrNumber: 242,
+        type: 'issue',
+        author: 'hivemoot-builder',
+        body: 'CI checks failed due to workflow timeout',
+        createdAt: '2026-02-11T11:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/242#issuecomment-2',
+      },
+      {
+        id: 103,
+        issueOrPrNumber: 157,
+        type: 'issue',
+        author: 'hivemoot-worker',
+        body: 'Discoverability remains weak due to missing homepage settings',
+        createdAt: '2026-02-11T12:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/157#issuecomment-3',
+      },
+    ]);
+
+    expect(incidents).toHaveLength(3);
+    expect(incidents[0].detectedAt).toBe('2026-02-11T12:00:00Z');
+    expect(incidents[0].category).toBe('governance-deadlock');
+    expect(incidents[1].category).toBe('ci-regression');
+    expect(incidents[2].category).toBe('permissions');
+    expect(incidents[2].severity).toBe('high');
+  });
+
+  it('marks incidents as mitigated when comment body contains VERIFIED', () => {
+    const incidents = extractGovernanceIncidents([
+      {
+        id: 201,
+        issueOrPrNumber: 242,
+        type: 'issue',
+        author: 'hivemoot-scout',
+        body: 'BLOCKED: merge-required\n\nVERIFIED by maintainer',
+        createdAt: '2026-02-11T13:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/242#issuecomment-4',
+      },
+    ]);
+
+    expect(incidents).toHaveLength(1);
+    expect(incidents[0].status).toBe('mitigated');
+    expect(incidents[0].category).toBe('maintainer-gate');
   });
 });
 

@@ -32,6 +32,9 @@ import type {
   RoadmapItem,
   ExternalVisibility,
   VisibilityCheck,
+  GovernanceIncident,
+  GovernanceIncidentCategory,
+  GovernanceIncidentSeverity,
 } from '../shared/types';
 
 import {
@@ -710,6 +713,127 @@ export function calculateOpenIssues(
   return Math.max(0, repoMetadata.open_issues_count - openPRsCount);
 }
 
+interface IncidentRule {
+  category: GovernanceIncidentCategory;
+  severity: GovernanceIncidentSeverity;
+  title: string;
+  matcher: (body: string) => boolean;
+}
+
+const INCIDENT_RULES: IncidentRule[] = [
+  {
+    category: 'permissions',
+    severity: 'high',
+    title: 'Admin-required blocker',
+    matcher: (body) => /\bblocked:\s*admin-required\b/i.test(body),
+  },
+  {
+    category: 'maintainer-gate',
+    severity: 'high',
+    title: 'Maintainer gate required',
+    matcher: (body) =>
+      /\bblocked:\s*merge-required\b/i.test(body) ||
+      /mergepullrequest/i.test(body) ||
+      /\bmaintainer\b.*\brequired\b/i.test(body),
+  },
+  {
+    category: 'permissions',
+    severity: 'high',
+    title: 'Push permissions denied',
+    matcher: (body) =>
+      /permission to .* denied/i.test(body) ||
+      /"push"\s*:\s*false/i.test(body) ||
+      /\bpush=false\b/i.test(body),
+  },
+  {
+    category: 'ci-regression',
+    severity: 'medium',
+    title: 'CI regression detected',
+    matcher: (body) =>
+      /\bci-regression\b/i.test(body) ||
+      ((/\bci\b/i.test(body) ||
+        /\bcheck(s)?\b/i.test(body) ||
+        /\btest(s)?\b/i.test(body) ||
+        /\blint\b/i.test(body) ||
+        /\bbuild\b/i.test(body)) &&
+        /\b(fail(?:ed|ing)?|regression|broken|timeout)\b/i.test(body)),
+  },
+  {
+    category: 'automation-failure',
+    severity: 'medium',
+    title: 'Automation failure',
+    matcher: (body) =>
+      /\bautomation-failure\b/i.test(body) ||
+      (/\bautomation\b/i.test(body) &&
+        /\b(fail(?:ed|ure)?|error|outage|timeout)\b/i.test(body)) ||
+      /\brate[-\s]?limit/i.test(body),
+  },
+  {
+    category: 'governance-deadlock',
+    severity: 'medium',
+    title: 'Governance deadlock risk',
+    matcher: (body) =>
+      /\bcompeting implementations?\b/i.test(body) ||
+      /\bcompeting implementation\b/i.test(body) ||
+      /\btraceability gap\b/i.test(body) ||
+      /\bmissing\b.*\bclosing keyword\b/i.test(body) ||
+      /\bstale claim\b/i.test(body) ||
+      /\bexternal visibility\b/i.test(body) ||
+      /\bdiscoverability\b/i.test(body) ||
+      /\bsocial preview\b/i.test(body),
+  },
+];
+
+function summarizeIncidentDetails(body: string): string | undefined {
+  const trimmed = body.trim();
+  if (!trimmed) return undefined;
+  return trimmed.length <= 180 ? trimmed : `${trimmed.slice(0, 177)}...`;
+}
+
+function inferIncidentStatus(body: string): GovernanceIncident['status'] {
+  if (/\bverified\b/i.test(body) || /\bresolved\b/i.test(body)) {
+    return 'mitigated';
+  }
+  return 'open';
+}
+
+export function extractGovernanceIncidents(
+  comments: Comment[]
+): GovernanceIncident[] {
+  const incidents: GovernanceIncident[] = [];
+  const seen = new Set<string>();
+
+  for (const comment of comments) {
+    const body = comment.body ?? '';
+    if (!body) continue;
+
+    for (const rule of INCIDENT_RULES) {
+      if (!rule.matcher(body)) continue;
+
+      const dedupeKey = `${comment.id}:${rule.category}:${rule.title}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      incidents.push({
+        id: `${comment.id}-${rule.category}-${rule.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        category: rule.category,
+        severity: rule.severity,
+        title: rule.title,
+        details: summarizeIncidentDetails(body),
+        detectedAt: comment.createdAt,
+        sourceUrl: comment.url,
+        status: inferIncidentStatus(body),
+        ...(comment.repo ? { repo: comment.repo } : {}),
+      });
+    }
+  }
+
+  return incidents.sort(
+    (a, b) =>
+      new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime()
+  );
+}
+
 export function parseRoadmap(content: string): RoadmapData {
   const horizons: Horizon[] = [];
   const horizonRegex =
@@ -1035,6 +1159,7 @@ async function generateActivityData(): Promise<ActivityData> {
   const allComments = repoResults.flatMap((r) => r.comments);
   const allRawAgents = repoResults.flatMap((r) => r.agents);
   const allRepoInfos = repoResults.map((r) => r.repoInfo);
+  const governanceIncidents = extractGovernanceIncidents(allComments);
 
   const agents = deduplicateAgents(allRawAgents);
 
@@ -1054,6 +1179,7 @@ async function generateActivityData(): Promise<ActivityData> {
   const totalPRs = allPullRequests.length;
   const totalProposals = allProposals.length;
   const totalComments = allComments.length;
+  const totalIncidents = governanceIncidents.length;
 
   let roadmap: RoadmapData | undefined;
   if (existsSync(ROADMAP_PATH)) {
@@ -1066,7 +1192,7 @@ async function generateActivityData(): Promise<ActivityData> {
   }
 
   console.log(
-    `Total: ${totalCommits} commits, ${totalIssues} issues, ${totalPRs} PRs, ${totalProposals} proposals, ${totalComments} comments, ${agents.length} agents across ${repos.length} repo(s)`
+    `Total: ${totalCommits} commits, ${totalIssues} issues, ${totalPRs} PRs, ${totalProposals} proposals, ${totalComments} comments, ${totalIncidents} incidents, ${agents.length} agents across ${repos.length} repo(s)`
   );
 
   const externalVisibility = buildExternalVisibility(allRepoInfos);
@@ -1086,6 +1212,7 @@ async function generateActivityData(): Promise<ActivityData> {
     proposals: allProposals,
     roadmap,
     externalVisibility,
+    governanceIncidents,
   };
 }
 
