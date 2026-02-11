@@ -3,6 +3,10 @@ import {
   computeGovernanceSnapshot,
   appendSnapshot,
   MAX_HISTORY_ENTRIES,
+  GOVERNANCE_HISTORY_SCHEMA_VERSION,
+  buildGovernanceHistoryArtifact,
+  parseGovernanceHistoryArtifact,
+  serializeGovernanceHistoryForIntegrity,
   type GovernanceSnapshot,
 } from '../governance-snapshot';
 import type { ActivityData, Proposal, AgentStats } from '../types';
@@ -251,5 +255,104 @@ describe('appendSnapshot', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].timestamp).toBe('2026-02-01T00:00:00Z');
+  });
+});
+
+describe('governance history artifact', () => {
+  const snapshot: GovernanceSnapshot = {
+    timestamp: '2026-02-08T00:00:00Z',
+    healthScore: 65,
+    participation: 15,
+    pipelineFlow: 16,
+    followThrough: 17,
+    consensusQuality: 17,
+    activeProposals: 4,
+    totalProposals: 14,
+    activeAgents: 5,
+    proposalVelocity: 0.42,
+  };
+
+  it('builds a complete artifact when no gaps are provided', () => {
+    const artifact = buildGovernanceHistoryArtifact({
+      generatedAt: '2026-02-08T00:00:00Z',
+      snapshots: [snapshot],
+      repositories: ['hivemoot/colony'],
+      generatedBy: 'web/scripts/generate-data.ts',
+      generatorVersion: '0.1.0',
+    });
+
+    expect(artifact.schemaVersion).toBe(GOVERNANCE_HISTORY_SCHEMA_VERSION);
+    expect(artifact.completeness.status).toBe('complete');
+    expect(artifact.completeness.permissionGaps).toEqual([]);
+    expect(artifact.integrity).toBeNull();
+  });
+
+  it('marks completeness as partial when gaps exist', () => {
+    const artifact = buildGovernanceHistoryArtifact({
+      generatedAt: '2026-02-08T00:00:00Z',
+      snapshots: [snapshot],
+      repositories: ['hivemoot/colony'],
+      generatedBy: 'web/scripts/generate-data.ts',
+      generatorVersion: '0.1.0',
+      missingRepositories: ['hivemoot/hivemoot'],
+    });
+
+    expect(artifact.completeness.status).toBe('partial');
+  });
+
+  it('parses legacy array history format', () => {
+    const parsed = parseGovernanceHistoryArtifact([snapshot]);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.schemaVersion).toBe(0);
+    expect(parsed?.snapshots).toHaveLength(1);
+    expect(parsed?.completeness.status).toBe('partial');
+  });
+
+  it('parses versioned artifact format', () => {
+    const input = {
+      schemaVersion: 1,
+      generatedAt: '2026-02-08T00:00:00Z',
+      snapshots: [snapshot],
+      provenance: {
+        repositories: ['hivemoot/colony'],
+        generatedBy: 'web/scripts/generate-data.ts',
+        generatorVersion: '0.1.0',
+        sourceCommitSha: null,
+      },
+      completeness: {
+        status: 'complete',
+        missingRepositories: [],
+        permissionGaps: [],
+        apiPartials: [],
+      },
+      integrity: {
+        algorithm: 'sha256',
+        digest: 'deadbeef',
+      },
+    };
+
+    const parsed = parseGovernanceHistoryArtifact(input);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.schemaVersion).toBe(1);
+    expect(parsed?.provenance.repositories).toEqual(['hivemoot/colony']);
+    expect(parsed?.integrity?.digest).toBe('deadbeef');
+  });
+
+  it('serializes integrity payload without integrity field', () => {
+    const artifact = buildGovernanceHistoryArtifact({
+      generatedAt: '2026-02-08T00:00:00Z',
+      snapshots: [snapshot],
+      repositories: ['hivemoot/colony'],
+      generatedBy: 'web/scripts/generate-data.ts',
+      generatorVersion: '0.1.0',
+    });
+
+    const serialized = serializeGovernanceHistoryForIntegrity(artifact);
+    const decoded = JSON.parse(serialized) as Record<string, unknown>;
+
+    expect(decoded.integrity).toBeUndefined();
+    expect(decoded.schemaVersion).toBe(GOVERNANCE_HISTORY_SCHEMA_VERSION);
   });
 });
