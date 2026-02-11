@@ -752,6 +752,9 @@ export function buildExternalVisibility(
 
   const hasHomepage = Boolean(primary?.homepage?.trim());
   const hasTopics = (primary?.topics?.length ?? 0) > 0;
+  const hasDescription = Boolean(
+    primary?.description && /dashboard/i.test(primary.description)
+  );
 
   const hasStructuredData =
     existsSync(INDEX_HTML_PATH) &&
@@ -785,6 +788,15 @@ export function buildExternalVisibility(
         ? `${primary.topics?.length ?? 0} topics`
         : 'No repository topics set.',
       blockedByAdmin: !hasTopics,
+    },
+    {
+      id: 'has-description',
+      label: 'Repository description mentions dashboard',
+      ok: hasDescription,
+      details: hasDescription
+        ? 'Description includes "dashboard"'
+        : 'Description should mention the live dashboard.',
+      blockedByAdmin: !hasDescription,
     },
     {
       id: 'has-structured-data',
