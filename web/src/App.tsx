@@ -9,6 +9,7 @@ import { computeGovernanceHealth } from './utils/governance-health';
 
 const STICKY_NAV_LINKS = [
   { href: '#main-content', label: 'Overview' },
+  { href: '#live-mode', label: 'Live Mode' },
   { href: '#activity', label: 'Activity' },
   { href: '#intelligence', label: 'Intelligence' },
   { href: '#proposals', label: 'Governance' },

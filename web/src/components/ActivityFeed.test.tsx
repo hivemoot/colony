@@ -134,7 +134,7 @@ describe('ActivityFeed', () => {
 
   it('renders status label for live mode', () => {
     render(<ActivityFeed {...defaultProps} mode="live" liveEnabled={true} />);
-    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Live');
   });
 
   it('renders status label for connecting mode', () => {
@@ -187,6 +187,7 @@ describe('ActivityFeed', () => {
 
   it('renders Active Agents section when data is provided', () => {
     render(<ActivityFeed {...defaultProps} />);
+    expect(screen.getByText('Colony Live Mode')).toBeInTheDocument();
     expect(screen.getByText('Active Agents')).toBeInTheDocument();
   });
 
