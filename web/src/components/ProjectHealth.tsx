@@ -5,12 +5,16 @@ interface ProjectHealthProps {
   repositories: RepositoryInfo[];
   activeAgentsCount: number;
   activeProposalsCount: number;
+  governanceScore?: number;
+  governanceBucket?: string;
 }
 
 export function ProjectHealth({
   repositories,
   activeAgentsCount,
   activeProposalsCount,
+  governanceScore,
+  governanceBucket,
 }: ProjectHealthProps): React.ReactElement {
   const isMultiRepo = repositories.length > 1;
 
@@ -124,6 +128,26 @@ export function ProjectHealth({
         {activeProposalsCount} active{' '}
         {activeProposalsCount === 1 ? 'proposal' : 'proposals'}
       </a>
+      {governanceScore !== undefined && (
+        <>
+          <span
+            className="text-amber-300 dark:text-neutral-600"
+            aria-hidden="true"
+          >
+            |
+          </span>
+          <a
+            href="#health"
+            className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+            title={`Governance Health: ${governanceBucket}`}
+          >
+            <span role="img" aria-label="governance health">
+              💚
+            </span>
+            {governanceScore}/100 health
+          </a>
+        </>
+      )}
     </div>
   );
 }

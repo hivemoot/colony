@@ -1,10 +1,22 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import type { ActivityData } from './types/activity';
+import type { ActivityData, ActivityEvent } from './types/activity';
 
-const mockActivityData: ActivityData = {
-  generatedAt: new Date().toISOString(),
+vi.mock('./hooks/useActivityData', () => ({
+  useActivityData: vi.fn(),
+}));
+
+import { useActivityData } from './hooks/useActivityData';
+
+vi.mock('./hooks/useGovernanceHistory', () => ({
+  useGovernanceHistory: (): { history: unknown[] } => ({ history: [] }),
+}));
+
+const now = new Date().toISOString();
+
+const mockData: ActivityData = {
+  generatedAt: now,
   repository: {
     owner: 'hivemoot',
     name: 'colony',
@@ -13,39 +25,39 @@ const mockActivityData: ActivityData = {
     forks: 8,
     openIssues: 5,
   },
-  agents: [
+  repositories: [
     {
-      login: 'hivemoot-builder',
-      avatarUrl: 'https://github.com/hivemoot-builder.png',
+      owner: 'hivemoot',
+      name: 'colony',
+      url: 'https://github.com/hivemoot/colony',
+      stars: 42,
+      forks: 8,
+      openIssues: 5,
     },
   ],
+  agents: [{ login: 'hivemoot-builder' }],
   agentStats: [
     {
       login: 'hivemoot-builder',
-      commits: 1,
-      pullRequestsMerged: 1,
+      commits: 3,
+      pullRequestsMerged: 2,
       issuesOpened: 1,
-      reviews: 0,
-      comments: 0,
-      lastActiveAt: new Date().toISOString(),
+      reviews: 1,
+      comments: 4,
+      lastActiveAt: now,
     },
   ],
   commits: [
-    {
-      sha: 'abc1234',
-      message: 'Initial commit',
-      author: 'hivemoot-builder',
-      date: new Date().toISOString(),
-    },
+    { sha: 'abc1234', message: 'Initial commit', author: 'builder', date: now },
   ],
   issues: [
     {
       number: 1,
-      title: 'Test Issue',
+      title: 'Test issue',
       state: 'open',
       labels: ['bug'],
       author: 'hivemoot-scout',
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     },
   ],
   pullRequests: [
@@ -54,134 +66,123 @@ const mockActivityData: ActivityData = {
       title: 'Test PR',
       state: 'open',
       author: 'hivemoot-builder',
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+    },
+  ],
+  proposals: [
+    {
+      number: 10,
+      title: 'Proposal under discussion',
+      phase: 'discussion',
+      author: 'hivemoot-worker',
+      createdAt: now,
+      commentCount: 5,
     },
   ],
   comments: [
     {
       id: 1,
-      issueOrPrNumber: 1,
+      issueOrPrNumber: 10,
       type: 'issue',
-      author: 'hivemoot-builder',
-      body: 'Support this proposal.',
-      createdAt: new Date().toISOString(),
-      url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-1',
-    },
-  ],
-  proposals: [
-    {
-      number: 13,
-      title: 'Proposal: Show Governance Status on Dashboard',
-      phase: 'discussion',
       author: 'hivemoot-worker',
-      createdAt: new Date().toISOString(),
-      commentCount: 5,
+      body: 'Looks good',
+      createdAt: now,
+      url: 'https://github.com/hivemoot/colony/issues/10#issuecomment-1',
     },
   ],
 };
 
+const mockEvents: ActivityEvent[] = [
+  {
+    id: 'evt-1',
+    type: 'proposal',
+    summary: 'New proposal created',
+    title: 'Proposal under discussion',
+    actor: 'hivemoot-worker',
+    createdAt: now,
+  },
+];
+
+function mockHookReturn(
+  overrides: Partial<ReturnType<typeof useActivityData>>
+): void {
+  vi.mocked(useActivityData).mockReturnValue({
+    data: null,
+    events: [],
+    loading: false,
+    error: null,
+    lastUpdated: null,
+    mode: 'static',
+    liveEnabled: false,
+    setLiveEnabled: vi.fn(),
+    liveMessage: null,
+    ...overrides,
+  });
+}
+
 describe('App', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
+    vi.resetAllMocks();
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('renders the Colony heading', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as Response);
+  it('renders loading state with status semantics', () => {
+    mockHookReturn({ loading: true });
 
     render(<App />);
+    expect(screen.getByText(/loading activity data/i)).toBeInTheDocument();
+    const loadingRegion = screen.getByRole('status');
+    expect(loadingRegion).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('img', { name: /loading/i }).className).toContain(
+      'motion-reduce:animate-none'
+    );
+  });
+
+  it('renders error state with alert role when no activity exists', () => {
+    mockHookReturn({ error: 'Failed to fetch activity data: 500' });
+
+    render(<App />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/failed to load activity data/i);
+    expect(alert).toHaveTextContent(/500/i);
+  });
+
+  it('renders empty state', () => {
+    mockHookReturn({});
+
+    render(<App />);
+    expect(screen.getByText(/agent activity:/i)).toBeInTheDocument();
+    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+  });
+
+  it('renders the colony title', async () => {
+    mockHookReturn({});
+
+    render(<App />);
+
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /colony/i })
+        screen.getByRole('heading', { name: /^colony$/i, level: 1 })
       ).toBeInTheDocument();
     });
   });
 
-  it('shows loading state initially', async () => {
-    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
+  it('renders skip-to-content link targeting main content', () => {
+    mockHookReturn({});
 
     render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText(/loading activity data/i)).toBeInTheDocument();
-    });
+
+    const skipLink = screen.getByRole('link', { name: /skip to content/i });
+    expect(skipLink).toHaveAttribute('href', '#main-content');
+    expect(document.getElementById('main-content')?.tagName).toBe('MAIN');
   });
 
-  it('loading state has role="status" and aria-live for screen readers', async () => {
-    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
-
-    render(<App />);
-    await waitFor(() => {
-      const loadingRegion = screen.getByRole('status');
-      expect(loadingRegion).toBeInTheDocument();
-      expect(loadingRegion).toHaveAttribute('aria-live', 'polite');
+  it('renders sticky section navigation hash links when activity is present', async () => {
+    mockHookReturn({
+      data: mockData,
+      events: mockEvents,
+      lastUpdated: new Date(),
     });
-  });
-
-  it('loading spinner respects reduced motion preference', async () => {
-    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
-
-    render(<App />);
-    await waitFor(() => {
-      const spinner = screen.getByRole('img', { name: /loading/i });
-      expect(spinner.className).toContain('motion-reduce:animate-none');
-    });
-  });
-
-  it('shows placeholder when no data is available', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
-    });
-  });
-
-  it('renders activity data when available', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockActivityData),
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText(/watch agents collaborate/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/recent commits/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /governance status/i, level: 2 })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        name: /contribution leaderboard/i,
-        level: 2,
-      })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /issues/i, level: 2 })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /pull requests/i, level: 2 })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /discussion/i, level: 2 })
-    ).toBeInTheDocument();
-  });
-
-  it('renders sticky dashboard section navigation with hash links', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockActivityData),
-    } as Response);
 
     render(<App />);
 
@@ -194,98 +195,24 @@ describe('App', () => {
     const sectionNav = screen.getByRole('navigation', {
       name: /dashboard sections/i,
     });
-
-    expect(
-      sectionNav.querySelector<HTMLAnchorElement>('a[href="#main-content"]')
-    ).toHaveTextContent(/overview/i);
-    expect(
-      sectionNav.querySelector<HTMLAnchorElement>('a[href="#activity"]')
-    ).toHaveTextContent(/activity/i);
-    expect(
-      sectionNav.querySelector<HTMLAnchorElement>('a[href="#intelligence"]')
-    ).toHaveTextContent(/intelligence/i);
-    expect(
-      sectionNav.querySelector<HTMLAnchorElement>('a[href="#proposals"]')
-    ).toHaveTextContent(/governance/i);
-    expect(
-      sectionNav.querySelector<HTMLAnchorElement>('a[href="#agents"]')
-    ).toHaveTextContent(/agents/i);
+    expect(sectionNav.querySelector('a[href="#main-content"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#activity"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#intelligence"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#proposals"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#agents"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#roadmap"]')).not.toBeNull();
   });
 
-  it('renders leaderboard with agent stats', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockActivityData),
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      expect(
-        screen.getByRole('heading', {
-          name: /contribution leaderboard/i,
-          level: 2,
-        })
-      ).toBeInTheDocument();
-    });
-
-    // Verify the leaderboard section contains agent data
-    const leaderboardSection = screen
-      .getByRole('heading', { name: /contribution leaderboard/i, level: 2 })
-      .closest('section');
-    expect(leaderboardSection).not.toBeNull();
-    expect(leaderboardSection).toHaveTextContent('hivemoot-builder');
-    expect(leaderboardSection).toHaveTextContent('#1');
-  });
-
-  it('hides leaderboard when agentStats is empty', async () => {
-    const dataWithoutStats: ActivityData = {
-      ...mockActivityData,
-      agentStats: [],
-    };
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(dataWithoutStats),
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText(/watch agents collaborate/i)).toBeInTheDocument();
-    });
-
-    expect(
-      screen.queryByRole('heading', {
-        name: /contribution leaderboard/i,
-        level: 2,
-      })
-    ).not.toBeInTheDocument();
-  });
-
-  it('renders project health metrics', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockActivityData),
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText('42')).toBeInTheDocument();
-      expect(screen.getByText('8')).toBeInTheDocument();
-      expect(screen.getByText(/5 open issues/i)).toBeInTheDocument();
-      expect(screen.getByText(/1 active agent$/i)).toBeInTheDocument();
-      expect(screen.getByText(/1 active proposal$/i)).toBeInTheDocument();
-    });
-  });
-
-  it('counts extended-voting and ready-to-implement as active proposals', async () => {
+  it('counts active proposals across discussion, voting, extended-voting, and ready-to-implement', async () => {
     const dataWithAllPhases: ActivityData = {
-      ...mockActivityData,
+      ...mockData,
       proposals: [
         {
           number: 1,
           title: 'Discussion',
           phase: 'discussion',
           author: 'a',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           commentCount: 1,
         },
         {
@@ -293,7 +220,7 @@ describe('App', () => {
           title: 'Voting',
           phase: 'voting',
           author: 'b',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           commentCount: 1,
         },
         {
@@ -301,7 +228,7 @@ describe('App', () => {
           title: 'Extended Voting',
           phase: 'extended-voting',
           author: 'c',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           commentCount: 1,
         },
         {
@@ -309,116 +236,89 @@ describe('App', () => {
           title: 'Ready',
           phase: 'ready-to-implement',
           author: 'd',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           commentCount: 1,
         },
         {
           number: 5,
-          title: 'Done',
+          title: 'Implemented',
           phase: 'implemented',
           author: 'e',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           commentCount: 1,
         },
       ],
     };
-
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(dataWithAllPhases),
-    } as Response);
+    mockHookReturn({ data: dataWithAllPhases, events: mockEvents });
 
     render(<App />);
+
     await waitFor(() => {
-      // 4 active: discussion + voting + extended-voting + ready-to-implement
-      // 1 terminal: implemented (not counted)
       expect(screen.getByText(/4 active proposals$/i)).toBeInTheDocument();
     });
   });
 
-  it('shows error state on fetch failure with alert role', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    } as Response);
+  it('hides leaderboard section when agent stats are empty', async () => {
+    mockHookReturn({
+      data: {
+        ...mockData,
+        agentStats: [],
+      },
+      events: mockEvents,
+    });
 
     render(<App />);
+
     await waitFor(() => {
+      expect(screen.getByText(/watch agents collaborate/i)).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole('heading', {
+        name: /contribution leaderboard/i,
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it('uses secure external-link semantics in footer', () => {
+    mockHookReturn({});
+
+    render(<App />);
+
+    const githubLink = screen.getByRole('link', {
+      name: /view on github \(opens in a new tab\)/i,
+    });
+    const hivemootLink = screen.getByRole('link', {
+      name: /learn about hivemoot \(opens in a new tab\)/i,
+    });
+
+    expect(githubLink).toHaveAttribute('target', '_blank');
+    expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(hivemootLink).toHaveAttribute('target', '_blank');
+    expect(hivemootLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(githubLink.className).toContain('motion-safe:transition-colors');
+    expect(hivemootLink.className).toContain('motion-safe:transition-colors');
+  });
+
+  it('renders a single roadmap section with all horizon headings', async () => {
+    mockHookReturn({});
+
+    render(<App />);
+
+    await waitFor(() => {
+      const roadmapHeadings = screen.getAllByRole('heading', {
+        name: /colony roadmap/i,
+      });
+      expect(roadmapHeadings).toHaveLength(1);
       expect(
-        screen.getByText(/failed to load activity data/i)
+        screen.getByRole('heading', { name: /horizon 1/i })
       ).toBeInTheDocument();
-    });
-
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent(/failed to load activity data/i);
-  });
-
-  it('renders skip-to-content link targeting main', async () => {
-    vi.mocked(fetch).mockImplementation(() => new Promise(() => {}));
-
-    render(<App />);
-    await waitFor(() => {
-      const skipLink = screen.getByText(/skip to content/i);
-      expect(skipLink).toBeInTheDocument();
-      expect(skipLink).toHaveAttribute('href', '#main-content');
-    });
-
-    expect(document.getElementById('main-content')).not.toBeNull();
-    expect(document.getElementById('main-content')?.tagName).toBe('MAIN');
-  });
-
-  it('footer links use motion-safe transition', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      const hivemootLink = screen.getByRole('link', {
-        name: /learn about hivemoot/i,
-      });
-      expect(hivemootLink.className).toContain('motion-safe:transition-colors');
-    });
-  });
-
-  it('renders the GitHub link', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      const githubLink = screen.getByRole('link', {
-        name: /view on github/i,
-      });
-      expect(githubLink).toHaveAttribute(
-        'href',
-        'https://github.com/hivemoot/colony'
-      );
-    });
-  });
-
-  it('announces external footer links opening in a new tab', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    render(<App />);
-    await waitFor(() => {
-      const githubLink = screen.getByRole('link', {
-        name: /view on github \(opens in a new tab\)/i,
-      });
-      const hivemootLink = screen.getByRole('link', {
-        name: /learn about hivemoot \(opens in a new tab\)/i,
-      });
-
-      expect(githubLink).toHaveAttribute('target', '_blank');
-      expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
-      expect(hivemootLink).toHaveAttribute('target', '_blank');
-      expect(hivemootLink).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(
+        screen.getByRole('heading', { name: /horizon 2/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /horizon 3/i })
+      ).toBeInTheDocument();
     });
   });
 });

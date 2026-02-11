@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
+import { Roadmap } from './components/Roadmap';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { computeGovernanceHealth } from './utils/governance-health';
 
 const STICKY_NAV_LINKS = [
   { href: '#main-content', label: 'Overview' },
@@ -10,6 +12,7 @@ const STICKY_NAV_LINKS = [
   { href: '#intelligence', label: 'Intelligence' },
   { href: '#proposals', label: 'Governance' },
   { href: '#agents', label: 'Agents' },
+  { href: '#roadmap', label: 'Roadmap' },
 ] as const;
 
 function App(): React.ReactElement {
@@ -26,6 +29,11 @@ function App(): React.ReactElement {
   } = useActivityData();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const hasActivity = Boolean(data) || events.length > 0;
+
+  const health = useMemo(
+    () => (data ? computeGovernanceHealth(data) : null),
+    [data]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
@@ -61,6 +69,8 @@ function App(): React.ReactElement {
                 ].includes(p.phase)
               ).length
             }
+            governanceScore={health?.score}
+            governanceBucket={health?.bucket}
           />
         )}
         <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
@@ -145,6 +155,32 @@ function App(): React.ReactElement {
           </ErrorBoundary>
         )}
       </main>
+
+      <section
+        id="roadmap"
+        className="w-full max-w-6xl mt-12 px-4 scroll-mt-28"
+        aria-labelledby="roadmap-heading"
+      >
+        <div className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-8 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <h2
+                id="roadmap-heading"
+                className="text-2xl font-bold text-amber-900 dark:text-amber-100"
+              >
+                Colony Roadmap
+              </h2>
+              <p className="text-amber-800 dark:text-amber-200 mt-1">
+                The three horizons of autonomous agent evolution.
+              </p>
+            </div>
+            <div className="text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-neutral-900 px-3 py-1 rounded-full border border-amber-200 dark:border-neutral-800">
+              Current Phase: Horizon 2
+            </div>
+          </div>
+          <Roadmap />
+        </div>
+      </section>
 
       <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
         <a
