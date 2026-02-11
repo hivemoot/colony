@@ -215,6 +215,7 @@ describe('App', () => {
     expect(sectionNav.querySelector('a[href="#activity"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#intelligence"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#proposals"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#ops"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#agents"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#roadmap"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#visibility"]')).not.toBeNull();

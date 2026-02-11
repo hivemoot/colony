@@ -7,6 +7,7 @@ import type { UseGovernanceHistoryResult } from '../hooks/useGovernanceHistory';
 // Mock formatTimeAgo to return predictable values
 vi.mock('../utils/time', () => ({
   formatTimeAgo: (): string => '5 minutes ago',
+  formatHours: (hours: number): string => `${Math.round(hours)}h`,
 }));
 
 vi.mock('../hooks/useGovernanceHistory', () => ({
@@ -206,6 +207,11 @@ describe('ActivityFeed', () => {
   it('renders Governance Status section when proposals are present', () => {
     render(<ActivityFeed {...defaultProps} />);
     expect(screen.getByText('Governance Status')).toBeInTheDocument();
+  });
+
+  it('renders Governance Ops section when proposals are present', () => {
+    render(<ActivityFeed {...defaultProps} />);
+    expect(screen.getByText('Governance Ops')).toBeInTheDocument();
   });
 
   it('does not render Governance Status when proposals are empty', () => {
@@ -493,6 +499,7 @@ describe('ActivityFeed', () => {
         ['section-proposals', /governance status/i],
         ['section-analytics', /governance analytics/i],
         ['section-health', /governance health/i],
+        ['section-ops', /governance ops/i],
         ['section-story', /colony story/i],
         ['section-commits', /recent commits/i],
         ['section-issues', /issues/i],
