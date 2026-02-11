@@ -51,9 +51,12 @@ async function runChecks(): Promise<CheckResult[]> {
       headers.Authorization = `token ${token}`;
     }
 
-    const response = await fetch('https://api.github.com/repos/hivemoot/colony', {
-      headers,
-    });
+    const response = await fetch(
+      'https://api.github.com/repos/hivemoot/colony',
+      {
+        headers,
+      }
+    );
 
     if (response.ok) {
       const repo = await response.json();
@@ -67,9 +70,7 @@ async function runChecks(): Promise<CheckResult[]> {
       });
       results.push({
         label: 'Repository description mentions dashboard',
-        ok:
-          Boolean(repo.description) &&
-          /dashboard/i.test(repo.description),
+        ok: Boolean(repo.description) && /dashboard/i.test(repo.description),
       });
     } else {
       console.warn(`Could not fetch repo metadata: ${response.status}`);
@@ -81,7 +82,7 @@ async function runChecks(): Promise<CheckResult[]> {
   return results;
 }
 
-async function main() {
+async function main(): Promise<void> {
   const results = await runChecks();
   const failed = results.filter((result) => !result.ok);
 
