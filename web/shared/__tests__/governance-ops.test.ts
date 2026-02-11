@@ -176,4 +176,88 @@ describe('computeGovernanceOps', () => {
     expect(ops.incidents).toEqual([]);
     expect(ops.reliabilityBudget.remaining).toBe(100);
   });
+
+  it('keeps proposal-to-PR linkage repo-scoped when issue numbers collide', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 42,
+          repo: 'hivemoot/colony',
+          phase: 'ready-to-implement',
+          createdAt: '2026-02-08T00:00:00Z',
+          phaseTransitions: [
+            { phase: 'discussion', enteredAt: '2026-02-08T00:00:00Z' },
+            { phase: 'ready-to-implement', enteredAt: '2026-02-09T00:00:00Z' },
+          ],
+        }),
+        makeProposal({
+          number: 42,
+          repo: 'hivemoot/hivemoot',
+          phase: 'ready-to-implement',
+          createdAt: '2026-02-08T00:00:00Z',
+          phaseTransitions: [
+            { phase: 'discussion', enteredAt: '2026-02-08T00:00:00Z' },
+            { phase: 'ready-to-implement', enteredAt: '2026-02-09T00:00:00Z' },
+          ],
+        }),
+      ],
+      pullRequests: [
+        {
+          number: 501,
+          title: 'Implements colony #42',
+          state: 'merged',
+          author: 'hivemoot-worker',
+          createdAt: '2026-02-09T06:00:00Z',
+          mergedAt: '2026-02-09T12:00:00Z',
+          body: 'Fixes #42',
+          repo: 'hivemoot/colony',
+        },
+      ],
+    });
+
+    const ops = computeGovernanceOps(data, '2026-02-11T12:00:00Z');
+
+    const leadTime = ops.slos.find(
+      (slo) => slo.id === 'implementation-lead-time'
+    );
+    const blockedReady = ops.slos.find(
+      (slo) => slo.id === 'blocked-ready-work'
+    );
+
+    expect(leadTime?.details).toBe('1 ready-to-merge cycle measured.');
+    expect(blockedReady?.current).toBe('1/2 blocked (50%)');
+    expect(blockedReady?.status).toBe('breach');
+  });
+
+  it('does not deduplicate incidents across repos when issue numbers collide', () => {
+    const data = makeActivityData({
+      comments: [
+        {
+          id: 10,
+          issueOrPrNumber: 77,
+          type: 'issue',
+          author: 'hivemoot-worker',
+          body: 'BLOCKED: admin-required',
+          createdAt: '2026-02-10T00:00:00Z',
+          url: 'https://github.com/hivemoot/colony/issues/77#issuecomment-10',
+          repo: 'hivemoot/colony',
+        },
+        {
+          id: 11,
+          issueOrPrNumber: 77,
+          type: 'issue',
+          author: 'hivemoot-builder',
+          body: 'BLOCKED: admin-required',
+          createdAt: '2026-02-10T01:00:00Z',
+          url: 'https://github.com/hivemoot/hivemoot/issues/77#issuecomment-11',
+          repo: 'hivemoot/hivemoot',
+        },
+      ],
+    });
+
+    const ops = computeGovernanceOps(data, '2026-02-11T12:00:00Z');
+
+    expect(ops.incidents).toHaveLength(2);
+    expect(new Set(ops.incidents.map((incident) => incident.id)).size).toBe(2);
+  });
 });

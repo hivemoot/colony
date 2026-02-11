@@ -10,6 +10,7 @@ import {
   buildStaticEvents,
   type GitHubEvent,
 } from '../utils/activity';
+import { computeGovernanceOps } from '../../shared/governance-ops';
 
 interface UseActivityDataResult {
   data: ActivityData | null;
@@ -21,6 +22,13 @@ interface UseActivityDataResult {
   liveEnabled: boolean;
   setLiveEnabled: (enabled: boolean) => void;
   liveMessage: string | null;
+}
+
+function withRuntimeGovernanceOps(activityData: ActivityData): ActivityData {
+  return {
+    ...activityData,
+    governanceOps: computeGovernanceOps(activityData, new Date().toISOString()),
+  };
 }
 
 const DEFAULT_REPOSITORY: RepositoryConfig = {
@@ -78,7 +86,9 @@ export function useActivityData(config?: {
           throw new Error(`Failed to fetch activity data: ${response.status}`);
         }
 
-        const activityData: ActivityData = await response.json();
+        const activityData = withRuntimeGovernanceOps(
+          (await response.json()) as ActivityData
+        );
         if (!active) return;
 
         hasDataRef.current = true;

@@ -12,7 +12,7 @@ import type {
 
 const HOUR_MS = 1000 * 60 * 60;
 const CLOSING_KEYWORD_REGEX =
-  /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi;
+  /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\s*)?#(\d+)\b/gi;
 const BLOCKED_MARKER_REGEX = /\bBLOCKED:\s*([a-z-]+)/i;
 const VERIFIED_REGEX = /\bVERIFIED\b/i;
 const RESOLVED_REGEX = /\bresolved\b/i;
@@ -77,34 +77,48 @@ export function computeGovernanceOps(
 
 function indexPullRequestsByIssue(
   pullRequests: PullRequest[]
-): Map<number, PullRequest[]> {
-  const map = new Map<number, PullRequest[]>();
+): Map<string, PullRequest[]> {
+  const map = new Map<string, PullRequest[]>();
 
   for (const pr of pullRequests) {
     const linkedIssues = extractClosingIssueNumbers(pr.body);
-    for (const issueNumber of linkedIssues) {
-      if (!map.has(issueNumber)) {
-        map.set(issueNumber, []);
+    for (const linkedIssue of linkedIssues) {
+      const issueKey = issueScopeKey(
+        linkedIssue.issueNumber,
+        linkedIssue.repo ?? pr.repo
+      );
+
+      if (!map.has(issueKey)) {
+        map.set(issueKey, []);
       }
-      map.get(issueNumber)?.push(pr);
+      map.get(issueKey)?.push(pr);
     }
   }
 
   return map;
 }
 
-function extractClosingIssueNumbers(body?: string): number[] {
+function extractClosingIssueNumbers(
+  body?: string
+): Array<{ issueNumber: number; repo?: string }> {
   if (!body) return [];
 
-  const matches = new Set<number>();
+  const seen = new Set<string>();
+  const matches: Array<{ issueNumber: number; repo?: string }> = [];
+
   for (const match of body.matchAll(CLOSING_KEYWORD_REGEX)) {
-    const issueNumber = Number.parseInt(match[1], 10);
+    const repo = normalizeRepo(match[1]);
+    const issueNumber = Number.parseInt(match[2], 10);
     if (!Number.isNaN(issueNumber)) {
-      matches.add(issueNumber);
+      const key = issueScopeKey(issueNumber, repo ?? undefined);
+      if (!seen.has(key)) {
+        seen.add(key);
+        matches.push(repo ? { issueNumber, repo } : { issueNumber });
+      }
     }
   }
 
-  return Array.from(matches.values());
+  return matches;
 }
 
 function computeProposalCycleSlo(proposals: Proposal[]): GovernanceSLO {
@@ -146,7 +160,7 @@ function computeProposalCycleSlo(proposals: Proposal[]): GovernanceSLO {
 
 function computeImplementationLeadSlo(
   proposals: Proposal[],
-  issueToPrs: Map<number, PullRequest[]>
+  issueToPrs: Map<string, PullRequest[]>
 ): GovernanceSLO {
   const leadHours: number[] = [];
   let readyWithoutMerged = 0;
@@ -155,7 +169,8 @@ function computeImplementationLeadSlo(
     const readyAt = phaseTimestamp(proposal, 'ready-to-implement');
     if (!readyAt) continue;
 
-    const linkedPrs = issueToPrs.get(proposal.number) ?? [];
+    const linkedPrs =
+      issueToPrs.get(issueScopeKey(proposal.number, proposal.repo)) ?? [];
     const mergedAts = linkedPrs
       .filter((pr) => pr.state === 'merged' && pr.mergedAt)
       .map((pr) => pr.mergedAt as string)
@@ -204,7 +219,7 @@ function computeImplementationLeadSlo(
 
 function computeBlockedReadyWorkSlo(
   proposals: Proposal[],
-  issueToPrs: Map<number, PullRequest[]>,
+  issueToPrs: Map<string, PullRequest[]>,
   nowMs: number
 ): GovernanceSLO {
   const readyProposals = proposals.filter(
@@ -218,7 +233,8 @@ function computeBlockedReadyWorkSlo(
     const ageHours = diffHours(readyAt, new Date(nowMs).toISOString());
     if (ageHours === null || ageHours < 24) continue;
 
-    const linkedPrs = issueToPrs.get(proposal.number) ?? [];
+    const linkedPrs =
+      issueToPrs.get(issueScopeKey(proposal.number, proposal.repo)) ?? [];
     const hasActiveImplementation = linkedPrs.some(
       (pr) => pr.state === 'open' || pr.state === 'merged'
     );
@@ -419,7 +435,17 @@ function sourceTypeForComment(
 }
 
 function sourceScopeKey(comment: Comment): string {
-  return `${sourceTypeForComment(comment)}:${comment.issueOrPrNumber}`;
+  return `${sourceTypeForComment(comment)}:${issueScopeKey(comment.issueOrPrNumber, comment.repo)}`;
+}
+
+function issueScopeKey(issueNumber: number, repo?: string): string {
+  return `${normalizeRepo(repo) ?? 'default'}#${issueNumber}`;
+}
+
+function normalizeRepo(repo?: string): string | null {
+  if (!repo) return null;
+  const normalized = repo.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
 }
 
 function summarize(body: string): string {

@@ -78,12 +78,39 @@ describe('useActivityData', () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(result.current.data).toEqual(mockStaticData);
+      expect(result.current.data).toMatchObject(mockStaticData);
+      expect(result.current.data?.governanceOps).toBeDefined();
       expect(result.current.mode).toBe('static');
       expect(result.current.error).toBeNull();
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/data/activity.json')
       );
+    });
+
+    it('recomputes dashboard freshness against wall-clock time at read time', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-02-11T12:00:00Z'));
+
+      mockFetch.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ...mockStaticData,
+            generatedAt: '2026-02-09T12:00:00Z',
+          })
+        )
+      );
+
+      const { result } = renderHook(() => useActivityData());
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      const freshness = result.current.data?.governanceOps?.slos.find(
+        (slo) => slo.id === 'dashboard-freshness'
+      );
+      expect(freshness?.current).toBe('48h old');
+      expect(freshness?.status).toBe('at-risk');
     });
 
     it('returns events built from static data', async () => {
@@ -138,7 +165,8 @@ describe('useActivityData', () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(result.current.data).toEqual(mockStaticData);
+      const firstData = result.current.data;
+      expect(firstData).toMatchObject(mockStaticData);
       expect(result.current.error).toBeNull();
 
       // Second fetch fails — data should be preserved
@@ -149,7 +177,7 @@ describe('useActivityData', () => {
       });
 
       // Stale data preserved, no error shown
-      expect(result.current.data).toEqual(mockStaticData);
+      expect(result.current.data).toEqual(firstData);
       expect(result.current.error).toBeNull();
     });
 
@@ -167,7 +195,8 @@ describe('useActivityData', () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(result.current.data).toEqual(mockStaticData);
+      const firstData = result.current.data;
+      expect(firstData).toMatchObject(mockStaticData);
 
       // Refetch returns 404 — stale data preserved
       mockFetch.mockResolvedValueOnce(new Response(null, { status: 404 }));
@@ -176,7 +205,7 @@ describe('useActivityData', () => {
         await vi.advanceTimersByTimeAsync(60_000);
       });
 
-      expect(result.current.data).toEqual(mockStaticData);
+      expect(result.current.data).toEqual(firstData);
       expect(result.current.events.length).toBeGreaterThan(0);
     });
 
