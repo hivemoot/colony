@@ -92,14 +92,14 @@ async function runChecks(): Promise<CheckResult[]> {
       ? homepageUrl.slice(0, -1)
       : homepageUrl;
 
-    const fetchWithTimeout = async (url: string) => {
+    const fetchWithTimeout = async (url: string): Promise<Response | null> => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 5000);
       try {
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         return response;
-      } catch (e) {
+      } catch {
         clearTimeout(id);
         return null;
       }
@@ -129,8 +129,7 @@ async function runChecks(): Promise<CheckResult[]> {
       ok: deployedJsonLd,
     });
 
-    const robotsText =
-      robotsRes?.status === 200 ? await robotsRes.text() : '';
+    const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
     results.push({
       label: 'Deployed robots.txt has sitemap',
       ok: /Sitemap:\s*https?:\/\/\S+/i.test(robotsText),
@@ -146,13 +145,15 @@ async function runChecks(): Promise<CheckResult[]> {
     let freshnessOk = false;
     if (activityRes?.status === 200) {
       try {
-        const activity = await activityRes.json();
-        if (activity.generatedAt) {
+        const activity = (await activityRes.json()) as {
+          generatedAt?: unknown;
+        };
+        if (typeof activity.generatedAt === 'string') {
           const ageMs = Date.now() - new Date(activity.generatedAt).getTime();
           const ageHours = ageMs / (1000 * 60 * 60);
           freshnessOk = ageHours <= 18;
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

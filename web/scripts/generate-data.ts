@@ -834,14 +834,14 @@ export async function buildExternalVisibility(
   if (homepage && homepage.startsWith('http')) {
     const baseUrl = homepage.endsWith('/') ? homepage.slice(0, -1) : homepage;
 
-    const fetchWithTimeout = async (url: string) => {
+    const fetchWithTimeout = async (url: string): Promise<Response | null> => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 8000);
       try {
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         return response;
-      } catch (e) {
+      } catch {
         clearTimeout(id);
         return null;
       }
@@ -882,10 +882,10 @@ export async function buildExternalVisibility(
     });
 
     // Robots check
-    const robotsText =
-      robotsRes?.status === 200 ? await robotsRes.text() : '';
-    const hasDeployedRobotsSitemap =
-      /Sitemap:\s*https?:\/\/\S+/i.test(robotsText);
+    const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
+    const hasDeployedRobotsSitemap = /Sitemap:\s*https?:\/\/\S+/i.test(
+      robotsText
+    );
     checks.push({
       id: 'deployed-robots-reachable',
       label: 'Deployed robots.txt reachable',
@@ -904,8 +904,9 @@ export async function buildExternalVisibility(
     // Sitemap check
     const sitemapText =
       sitemapRes?.status === 200 ? await sitemapRes.text() : '';
-    const hasDeployedSitemapLastmod =
-      /<lastmod>[^<]+<\/lastmod>/i.test(sitemapText);
+    const hasDeployedSitemapLastmod = /<lastmod>[^<]+<\/lastmod>/i.test(
+      sitemapText
+    );
     checks.push({
       id: 'deployed-sitemap-reachable',
       label: 'Deployed sitemap.xml reachable',
@@ -926,14 +927,16 @@ export async function buildExternalVisibility(
     let freshnessOk = false;
     if (activityRes?.status === 200) {
       try {
-        const activity = await activityRes.json();
-        if (activity.generatedAt) {
+        const activity = (await activityRes.json()) as {
+          generatedAt?: unknown;
+        };
+        if (typeof activity.generatedAt === 'string') {
           const ageMs = Date.now() - new Date(activity.generatedAt).getTime();
           const ageHours = ageMs / (1000 * 60 * 60);
           freshnessOk = ageHours <= 18; // Critical threshold from proposal
           freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
         }
-      } catch (e) {
+      } catch {
         freshnessDetails = 'Invalid activity.json format on deployed site';
       }
     }
