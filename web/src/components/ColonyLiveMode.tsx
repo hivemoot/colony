@@ -84,6 +84,15 @@ export function ColonyLiveMode({
       })
       .slice(0, 5);
   }, [scene.events]);
+  const activeAgentCount = useMemo(() => {
+    const activeAgents = new Set<string>();
+    for (const event of scene.events) {
+      if (event.actor) {
+        activeAgents.add(event.actor);
+      }
+    }
+    return activeAgents.size;
+  }, [scene.events]);
 
   const motionHint = prefersReducedMotion
     ? 'Reduced motion is enabled. Replay animation is paused while keeping all event data visible.'
@@ -221,8 +230,7 @@ export function ColonyLiveMode({
             Replay Snapshot
           </h3>
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-            {scene.events.length} events across {scene.agentLogins.length}{' '}
-            agents
+            {scene.events.length} events across {activeAgentCount} active agents
           </p>
 
           {activeFrame ? (

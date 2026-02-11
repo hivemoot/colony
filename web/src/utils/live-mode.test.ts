@@ -68,6 +68,39 @@ describe('selectLiveModeEvents', () => {
       selectLiveModeEvents(events, '7d', NOW).map((event) => event.id)
     ).toEqual(['within-7d', 'within-24h']);
   });
+
+  it('caps non-live windows to deterministic recent event limits', () => {
+    const dayEvents: ActivityEvent[] = Array.from({ length: 100 }, (_, index) =>
+      makeEvent({
+        id: `day-${index}`,
+        actor: `agent-${index % 5}`,
+        createdAt: new Date(
+          NOW.getTime() - (100 - index) * 10 * 60 * 1000
+        ).toISOString(),
+      })
+    );
+    const weekEvents: ActivityEvent[] = Array.from(
+      { length: 150 },
+      (_, index) =>
+        makeEvent({
+          id: `week-${index}`,
+          actor: `agent-${index % 5}`,
+          createdAt: new Date(
+            NOW.getTime() - (150 - index) * 60 * 60 * 1000
+          ).toISOString(),
+        })
+    );
+
+    const daySelection = selectLiveModeEvents(dayEvents, '24h', NOW);
+    const weekSelection = selectLiveModeEvents(weekEvents, '7d', NOW);
+
+    expect(daySelection).toHaveLength(72);
+    expect(daySelection[0]?.id).toBe('day-28');
+    expect(daySelection.at(-1)?.id).toBe('day-99');
+    expect(weekSelection).toHaveLength(120);
+    expect(weekSelection[0]?.id).toBe('week-30');
+    expect(weekSelection.at(-1)?.id).toBe('week-149');
+  });
 });
 
 describe('buildLiveModeScene', () => {

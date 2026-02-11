@@ -23,6 +23,7 @@ const mockData: ActivityData = {
     { login: 'hivemoot-builder' },
     { login: 'hivemoot-worker' },
     { login: 'hivemoot-scout' },
+    { login: 'hivemoot-architect' },
   ],
   agentStats: [],
   commits: [],
@@ -149,10 +150,14 @@ describe('ColonyLiveMode', () => {
 
     render(<ColonyLiveMode data={mockData} events={withOlderEvent} />);
 
-    expect(screen.getByText(/3 events across 3 agents/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/3 events across 3 active agents/i)
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Last 7d' }));
-    expect(screen.getByText(/4 events across 3 agents/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/4 events across 3 active agents/i)
+    ).toBeInTheDocument();
   });
 
   it('renders an empty replay message when no events exist', () => {

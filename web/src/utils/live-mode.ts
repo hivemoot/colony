@@ -75,6 +75,8 @@ interface LinkAccumulator {
 
 const LIVE_WINDOW_HOURS = 2;
 const LIVE_MAX_EVENTS = 12;
+const DAY_MAX_EVENTS = 72;
+const WEEK_MAX_EVENTS = 120;
 
 export function buildLiveModeScene({
   events,
@@ -212,8 +214,16 @@ export function selectLiveModeEvents(
   const lookbackMs =
     window === '24h' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
   const thresholdMs = now.getTime() - lookbackMs;
+  const scoped = sorted.filter(
+    (event) => parseIsoMs(event.createdAt) >= thresholdMs
+  );
+  const maxEvents = window === '24h' ? DAY_MAX_EVENTS : WEEK_MAX_EVENTS;
 
-  return sorted.filter((event) => parseIsoMs(event.createdAt) >= thresholdMs);
+  if (scoped.length <= maxEvents) {
+    return scoped;
+  }
+
+  return scoped.slice(-maxEvents);
 }
 
 function collectAgentLogins(
