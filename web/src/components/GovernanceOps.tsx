@@ -51,10 +51,10 @@ const MODE_STYLES: Record<ReliabilityMode, { dot: string; label: string }> = {
 
 const INCIDENT_LABELS: Record<GovernanceIncidentCategory, string> = {
   permissions: 'Permissions',
-  'automation-failure': 'Automation',
-  coordination: 'Coordination',
-  process: 'Process',
-  visibility: 'Visibility',
+  'automation-failure': 'Automation Failure',
+  'ci-regression': 'CI Regression',
+  'governance-deadlock': 'Governance Deadlock',
+  'maintainer-gate': 'Maintainer Gate',
 };
 
 const SEVERITY_STYLES: Record<GovernanceIncidentSeverity, string> = {

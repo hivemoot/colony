@@ -346,8 +346,8 @@ describe('extractGovernanceIncidents', () => {
 
     expect(incidents).toHaveLength(3);
     expect(incidents[0].detectedAt).toBe('2026-02-11T12:00:00Z');
-    expect(incidents[0].category).toBe('visibility');
-    expect(incidents[1].category).toBe('automation-failure');
+    expect(incidents[0].category).toBe('governance-deadlock');
+    expect(incidents[1].category).toBe('ci-regression');
     expect(incidents[2].category).toBe('permissions');
     expect(incidents[2].severity).toBe('high');
   });
@@ -367,7 +367,7 @@ describe('extractGovernanceIncidents', () => {
 
     expect(incidents).toHaveLength(1);
     expect(incidents[0].status).toBe('mitigated');
-    expect(incidents[0].category).toBe('permissions');
+    expect(incidents[0].category).toBe('maintainer-gate');
   });
 });
 

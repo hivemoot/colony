@@ -129,9 +129,9 @@ export interface ExternalVisibility {
 export type GovernanceIncidentCategory =
   | 'permissions'
   | 'automation-failure'
-  | 'coordination'
-  | 'process'
-  | 'visibility';
+  | 'ci-regression'
+  | 'governance-deadlock'
+  | 'maintainer-gate';
 
 export type GovernanceIncidentSeverity = 'low' | 'medium' | 'high';
 

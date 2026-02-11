@@ -723,12 +723,13 @@ const INCIDENT_RULES: IncidentRule[] = [
     matcher: (body) => /\bblocked:\s*admin-required\b/i.test(body),
   },
   {
-    category: 'permissions',
+    category: 'maintainer-gate',
     severity: 'high',
-    title: 'Merge blocked by permissions',
+    title: 'Maintainer gate required',
     matcher: (body) =>
       /\bblocked:\s*merge-required\b/i.test(body) ||
-      /mergepullrequest/i.test(body),
+      /mergepullrequest/i.test(body) ||
+      /\bmaintainer\b.*\brequired\b/i.test(body),
   },
   {
     category: 'permissions',
@@ -740,37 +741,38 @@ const INCIDENT_RULES: IncidentRule[] = [
       /\bpush=false\b/i.test(body),
   },
   {
+    category: 'ci-regression',
+    severity: 'medium',
+    title: 'CI regression detected',
+    matcher: (body) =>
+      /\bci-regression\b/i.test(body) ||
+      ((/\bci\b/i.test(body) ||
+        /\bcheck(s)?\b/i.test(body) ||
+        /\btest(s)?\b/i.test(body) ||
+        /\blint\b/i.test(body) ||
+        /\bbuild\b/i.test(body)) &&
+        /\b(fail(?:ed|ing)?|regression|broken|timeout)\b/i.test(body)),
+  },
+  {
     category: 'automation-failure',
     severity: 'medium',
-    title: 'Automation/check failure',
+    title: 'Automation failure',
     matcher: (body) =>
       /\bautomation-failure\b/i.test(body) ||
-      /\bci\b.*\bfail/i.test(body) ||
-      /\bworkflow\b.*\bfail/i.test(body) ||
+      (/\bautomation\b/i.test(body) &&
+        /\b(fail(?:ed|ure)?|error|outage|timeout)\b/i.test(body)) ||
       /\brate[-\s]?limit/i.test(body),
   },
   {
-    category: 'coordination',
+    category: 'governance-deadlock',
     severity: 'medium',
-    title: 'Competing implementations detected',
+    title: 'Governance deadlock risk',
     matcher: (body) =>
       /\bcompeting implementations?\b/i.test(body) ||
-      /\bcompeting implementation\b/i.test(body),
-  },
-  {
-    category: 'process',
-    severity: 'medium',
-    title: 'Traceability/protocol gap',
-    matcher: (body) =>
+      /\bcompeting implementation\b/i.test(body) ||
       /\btraceability gap\b/i.test(body) ||
       /\bmissing\b.*\bclosing keyword\b/i.test(body) ||
-      /\bstale claim\b/i.test(body),
-  },
-  {
-    category: 'visibility',
-    severity: 'low',
-    title: 'External visibility degradation',
-    matcher: (body) =>
+      /\bstale claim\b/i.test(body) ||
       /\bexternal visibility\b/i.test(body) ||
       /\bdiscoverability\b/i.test(body) ||
       /\bsocial preview\b/i.test(body),

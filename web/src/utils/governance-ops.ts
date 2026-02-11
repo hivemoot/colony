@@ -55,9 +55,9 @@ const DISCOVERABILITY_WARN_SCORE = 60;
 const INCIDENT_CATEGORIES: GovernanceIncidentCategory[] = [
   'permissions',
   'automation-failure',
-  'coordination',
-  'process',
-  'visibility',
+  'ci-regression',
+  'governance-deadlock',
+  'maintainer-gate',
 ];
 
 export function computeGovernanceOpsReport(
@@ -113,14 +113,19 @@ function computeProposalCycleCheck(data: ActivityData): GovernanceSLOCheck {
 function computeImplementationLeadTimeCheck(
   data: ActivityData
 ): GovernanceSLOCheck {
-  const issueToPrs = mapIssueToPRs(data.pullRequests);
+  const defaultRepo = getDefaultRepoTag(data);
+  const issueToPrs = mapIssueToPRs(data.pullRequests, defaultRepo);
   const leadSamples: number[] = [];
 
   for (const proposal of data.proposals) {
     const readyTime = getReadyEnteredAt(proposal);
     if (readyTime === null) continue;
 
-    const linkedPrs = issueToPrs.get(proposal.number);
+    const proposalKey = issueKey(
+      resolveRepoTag(proposal.repo, defaultRepo),
+      proposal.number
+    );
+    const linkedPrs = issueToPrs.get(proposalKey);
     if (!linkedPrs || linkedPrs.length === 0) continue;
 
     const firstPr = linkedPrs
@@ -170,8 +175,10 @@ function computeBlockedReadyWorkCheck(
   data: ActivityData,
   now: Date
 ): GovernanceSLOCheck {
+  const defaultRepo = getDefaultRepoTag(data);
   const issueToOpenPrs = mapIssueToPRs(
-    data.pullRequests.filter((pr) => pr.state === 'open')
+    data.pullRequests.filter((pr) => pr.state === 'open'),
+    defaultRepo
   );
 
   let blockedCount = 0;
@@ -185,7 +192,11 @@ function computeBlockedReadyWorkCheck(
 
     if (ageHours < READY_STALE_HOURS) continue;
 
-    const hasOpenPr = (issueToOpenPrs.get(proposal.number)?.length ?? 0) > 0;
+    const proposalKey = issueKey(
+      resolveRepoTag(proposal.repo, defaultRepo),
+      proposal.number
+    );
+    const hasOpenPr = (issueToOpenPrs.get(proposalKey)?.length ?? 0) > 0;
     if (!hasOpenPr) {
       blockedCount += 1;
     }
@@ -320,26 +331,50 @@ function computeIncidentSummary(incidents: GovernanceIncident[]): {
 }
 
 function mapIssueToPRs(
-  pullRequests: PullRequest[]
-): Map<number, PullRequest[]> {
-  const map = new Map<number, PullRequest[]>();
+  pullRequests: PullRequest[],
+  defaultRepo: string
+): Map<string, PullRequest[]> {
+  const map = new Map<string, PullRequest[]>();
 
   for (const pr of pullRequests) {
     const searchArea = `${pr.title} ${pr.body ?? ''}`;
     CLOSING_KEYWORD_PATTERN.lastIndex = 0;
+    const prRepo = resolveRepoTag(pr.repo, defaultRepo);
 
     let match;
     while ((match = CLOSING_KEYWORD_PATTERN.exec(searchArea)) !== null) {
       const issueNumber = parseInt(match[1], 10);
-      const existing = map.get(issueNumber) ?? [];
-      if (!existing.some((entry) => entry.number === pr.number)) {
+      const key = issueKey(prRepo, issueNumber);
+      const existing = map.get(key) ?? [];
+      if (
+        !existing.some(
+          (entry) =>
+            entry.number === pr.number &&
+            resolveRepoTag(entry.repo, defaultRepo) === prRepo
+        )
+      ) {
         existing.push(pr);
       }
-      map.set(issueNumber, existing);
+      map.set(key, existing);
     }
   }
 
   return map;
+}
+
+function getDefaultRepoTag(data: ActivityData): string {
+  return `${data.repository.owner}/${data.repository.name}`;
+}
+
+function resolveRepoTag(
+  repo: string | undefined,
+  fallbackRepo: string
+): string {
+  return repo && repo.trim().length > 0 ? repo : fallbackRepo;
+}
+
+function issueKey(repo: string, issueNumber: number): string {
+  return `${repo}#${issueNumber}`;
 }
 
 function getReadyEnteredAt(proposal: Proposal): number | null {
