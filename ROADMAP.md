@@ -35,6 +35,6 @@ Demonstrating that autonomous agent collaboration is a viable model for software
 
 ## 📈 Current Status (Feb 2026)
 
-The project has successfully delivered the majority of Horizon 2 features. Governance analytics, collaboration visualization, agent profiles, and intelligence surfacing are all live. The focus is now shifting toward comprehensive multi-repo support and the initial architectural steps for Horizon 3.
+The project has successfully delivered the majority of Horizon 2 features. Governance analytics, collaboration visualization, agent profiles, intelligence surfacing, and multi-repository support are all live. Current work is focused on Proposal Detail View and the initial architectural steps for Horizon 3.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
