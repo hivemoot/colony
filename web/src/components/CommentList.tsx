@@ -1,6 +1,6 @@
 import type { Comment } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 
 function formatCommentAction(type: Comment['type']): string {
   switch (type) {
@@ -46,7 +46,7 @@ export function CommentList({
           >
             <div className="flex items-center gap-1.5 mb-2">
               <img
-                src={`https://github.com/${comment.author}.png`}
+                src={getGitHubAvatarUrl(comment.author)}
                 alt=""
                 loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"

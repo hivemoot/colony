@@ -221,14 +221,14 @@ describe('ActivityTimeline', () => {
     expect(timeEl).toHaveAttribute('datetime', '2026-02-05T10:00:00Z');
   });
 
-  it('renders actor avatars', () => {
+  it('renders actor avatars with proper encoding', () => {
     const events: ActivityEvent[] = [
       {
         id: 'commit-1',
         type: 'commit',
         summary: 'Commit pushed',
         title: 'Test',
-        actor: 'worker',
+        actor: 'hivemoot[bot]',
         createdAt: '2026-02-05T10:00:00Z',
       },
     ];
@@ -236,7 +236,10 @@ describe('ActivityTimeline', () => {
     const { container } = render(<ActivityTimeline events={events} />);
 
     const avatar = container.querySelector('img');
-    expect(avatar).toHaveAttribute('src', 'https://github.com/worker.png');
+    expect(avatar).toHaveAttribute(
+      'src',
+      'https://github.com/hivemoot%5Bbot%5D.png'
+    );
     expect(avatar).toHaveAttribute('alt', '');
     expect(avatar).toHaveAttribute('loading', 'lazy');
   });

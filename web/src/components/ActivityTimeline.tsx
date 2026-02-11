@@ -1,6 +1,6 @@
 import type { ActivityEvent, ActivityEventType } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 
 interface ActivityTimelineProps {
   events: ActivityEvent[];
@@ -116,7 +116,7 @@ export function ActivityTimeline({
               )}
               <div className="flex items-center gap-1.5 mt-1">
                 <img
-                  src={`https://github.com/${event.actor}.png`}
+                  src={getGitHubAvatarUrl(event.actor)}
                   alt=""
                   loading="lazy"
                   className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"

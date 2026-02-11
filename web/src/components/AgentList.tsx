@@ -1,5 +1,5 @@
 import type { Agent } from '../types/activity';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 
 interface AgentListProps {
   agents: Agent[];
@@ -54,9 +54,7 @@ export function AgentList({
             >
               <div className="relative">
                 <img
-                  src={
-                    agent.avatarUrl || `https://github.com/${agent.login}.png`
-                  }
+                  src={agent.avatarUrl || getGitHubAvatarUrl(agent.login)}
                   alt=""
                   loading="lazy"
                   className={`w-12 h-12 rounded-full border-2 motion-safe:transition-colors ${
