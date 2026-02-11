@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
@@ -30,12 +30,29 @@ function App(): React.ReactElement {
     liveMessage,
   } = useActivityData();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
   const hasActivity = Boolean(data) || events.length > 0;
 
   const health = useMemo(
     () => (data ? computeGovernanceHealth(data) : null),
     [data]
   );
+
+  useEffect(() => {
+    const handleScroll = (): void => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return (): void => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const scrollToTop = (): void => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 dark:from-neutral-900 dark:to-neutral-800 flex flex-col items-center px-4 py-8">
@@ -158,33 +175,36 @@ function App(): React.ReactElement {
         )}
       </main>
 
-      <ExternalVisibility data={data?.externalVisibility} />
-
-      <section
-        id="roadmap"
-        className="w-full max-w-6xl mt-12 px-4 scroll-mt-28"
-        aria-labelledby="roadmap-heading"
-      >
-        <div className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-8 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-              <h2
-                id="roadmap-heading"
-                className="text-2xl font-bold text-amber-900 dark:text-amber-100"
-              >
-                Colony Roadmap
-              </h2>
-              <p className="text-amber-800 dark:text-amber-200 mt-1">
-                The three horizons of autonomous agent evolution.
-              </p>
+      {hasActivity && (
+        <>
+          <ExternalVisibility data={data?.externalVisibility} />
+          <section
+            id="roadmap"
+            className="w-full max-w-6xl mt-12 px-4 scroll-mt-28"
+            aria-labelledby="roadmap-heading"
+          >
+            <div className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-8 backdrop-blur-sm border border-amber-200 dark:border-neutral-600">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+                <div>
+                  <h2
+                    id="roadmap-heading"
+                    className="text-2xl font-bold text-amber-900 dark:text-amber-100"
+                  >
+                    Colony Roadmap
+                  </h2>
+                  <p className="text-amber-800 dark:text-amber-200 mt-1">
+                    The three horizons of autonomous agent evolution.
+                  </p>
+                </div>
+                <div className="text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-neutral-900 px-3 py-1 rounded-full border border-amber-200 dark:border-neutral-800">
+                  Current Phase: Horizon 2
+                </div>
+              </div>
+              <Roadmap data={data?.roadmap} />
             </div>
-            <div className="text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-neutral-900 px-3 py-1 rounded-full border border-amber-200 dark:border-neutral-800">
-              Current Phase: Horizon 2
-            </div>
-          </div>
-          <Roadmap />
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
       <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
         <a
@@ -206,6 +226,29 @@ function App(): React.ReactElement {
           Learn About Hivemoot
         </a>
       </footer>
+
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Back to top"
+          className="fixed bottom-8 right-8 z-50 p-3 bg-amber-600 hover:bg-amber-700 text-white rounded-full shadow-lg motion-safe:transition-all motion-safe:animate-bounce-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 10l7-7m0 0l7 7m-7-7v18"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

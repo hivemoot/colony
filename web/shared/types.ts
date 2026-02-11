@@ -139,4 +139,25 @@ export interface ActivityData {
   proposals: Proposal[];
   comments: Comment[];
   externalVisibility?: ExternalVisibility;
+  roadmap?: RoadmapData;
+}
+
+export interface RoadmapItem {
+  task: string;
+  description?: string;
+  done: boolean;
+  issueNumber?: number;
+}
+
+export interface Horizon {
+  id: number;
+  title: string;
+  subtitle: string;
+  status: string;
+  items: RoadmapItem[];
+}
+
+export interface RoadmapData {
+  horizons: Horizon[];
+  currentStatus: string;
 }

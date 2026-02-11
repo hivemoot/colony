@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { ActivityData, ActivityEvent } from './types/activity';
 
@@ -135,6 +135,10 @@ function mockHookReturn(
 describe('App', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders loading state with status semantics', () => {
@@ -313,26 +317,85 @@ describe('App', () => {
     expect(hivemootLink.className).toContain('motion-safe:transition-colors');
   });
 
-  it('renders a single roadmap section with all horizon headings', async () => {
-    mockHookReturn({});
+  it('renders roadmap details when parsed roadmap data is present', async () => {
+    const dataWithRoadmap: ActivityData = {
+      ...mockData,
+      roadmap: {
+        horizons: [
+          {
+            id: 1,
+            title: 'Horizon 1: Polish',
+            subtitle: 'Polish baseline',
+            status: 'Done',
+            items: [{ task: 'A11y pass', done: true }],
+          },
+        ],
+        currentStatus: 'Roadmap synced with source markdown.',
+      },
+    };
+
+    mockHookReturn({
+      data: dataWithRoadmap,
+      events: mockEvents,
+      lastUpdated: new Date(),
+    });
 
     render(<App />);
 
     await waitFor(() => {
-      const roadmapHeadings = screen.getAllByRole('heading', {
-        name: /colony roadmap/i,
-      });
-      expect(roadmapHeadings).toHaveLength(1);
       expect(
-        screen.getByRole('heading', { name: /horizon 1/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { name: /horizon 2/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { name: /horizon 3/i })
+        screen.getByRole('heading', { name: /colony roadmap/i })
       ).toBeInTheDocument();
     });
+    expect(
+      screen.getByRole('heading', { name: /horizon 1: polish/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/roadmap synced with source markdown\./i)
+    ).toBeInTheDocument();
+  });
+
+  it('shows roadmap fallback copy when activity exists without roadmap data', async () => {
+    mockHookReturn({
+      data: mockData,
+      events: mockEvents,
+      lastUpdated: new Date(),
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/roadmap data is not available yet\./i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('shows back-to-top button after scrolling and scrolls smoothly on click', async () => {
+    const scrollToSpy = vi.fn();
+    vi.stubGlobal('scrollTo', scrollToSpy);
+
+    mockHookReturn({
+      data: mockData,
+      events: mockEvents,
+      lastUpdated: new Date(),
+    });
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 500,
+      writable: true,
+      configurable: true,
+    });
+
+    render(<App />);
+    fireEvent.scroll(window);
+
+    const backToTopButton = await screen.findByRole('button', {
+      name: /back to top/i,
+    });
+    fireEvent.click(backToTopButton);
+
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
   it('renders external visibility section when visibility data is present', async () => {

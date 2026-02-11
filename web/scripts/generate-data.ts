@@ -27,6 +27,9 @@ import type {
   AgentStats,
   ActivityData,
   RepositoryInfo,
+  RoadmapData,
+  Horizon,
+  RoadmapItem,
   ExternalVisibility,
   VisibilityCheck,
 } from '../shared/types';
@@ -42,6 +45,7 @@ const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'web', 'public', 'robots.txt');
@@ -701,6 +705,46 @@ export function calculateOpenIssues(
   return Math.max(0, repoMetadata.open_issues_count - openPRsCount);
 }
 
+export function parseRoadmap(content: string): RoadmapData {
+  const horizons: Horizon[] = [];
+  const horizonRegex =
+    /### Horizon (\d+): (.*?) \((.*?)\)\n(.*?)\n([\s\S]*?)(?=### Horizon|\n---|$)/g;
+  let match;
+
+  while ((match = horizonRegex.exec(content)) !== null) {
+    const [, id, title, status, subtitle, itemsRaw] = match;
+    const items: RoadmapItem[] = [];
+    const itemRegex =
+      /- \[(x| )\] \*\*(.*?)\*\*(?: \(#(\d+)\))?(?:: (.*?))?$/gm;
+    let itemMatch;
+
+    while ((itemMatch = itemRegex.exec(itemsRaw)) !== null) {
+      const [, doneChar, task, issueNumber, description] = itemMatch;
+      items.push({
+        task,
+        done: doneChar === 'x',
+        ...(description ? { description: description.trim() } : {}),
+        ...(issueNumber ? { issueNumber: parseInt(issueNumber, 10) } : {}),
+      });
+    }
+
+    horizons.push({
+      id: parseInt(id, 10),
+      title: `Horizon ${id}: ${title}`,
+      subtitle: subtitle.trim(),
+      status: status.trim(),
+      items,
+    });
+  }
+
+  const statusRegex =
+    /##\s+.*Current Status.*?\n\n([\s\S]*?)(?=\n\n\*|\n##\s+|$)/;
+  const statusMatch = content.match(statusRegex);
+  const currentStatus = statusMatch ? statusMatch[1].trim() : '';
+
+  return { horizons, currentStatus };
+}
+
 export function buildExternalVisibility(
   repositories: RepositoryInfo[]
 ): ExternalVisibility {
@@ -994,6 +1038,16 @@ async function generateActivityData(): Promise<ActivityData> {
   const totalProposals = allProposals.length;
   const totalComments = allComments.length;
 
+  let roadmap: RoadmapData | undefined;
+  if (existsSync(ROADMAP_PATH)) {
+    try {
+      const content = readFileSync(ROADMAP_PATH, 'utf-8');
+      roadmap = parseRoadmap(content);
+    } catch (e) {
+      console.warn(`Failed to parse ROADMAP.md: ${e}`);
+    }
+  }
+
   console.log(
     `Total: ${totalCommits} commits, ${totalIssues} issues, ${totalPRs} PRs, ${totalProposals} proposals, ${totalComments} comments, ${agents.length} agents across ${repos.length} repo(s)`
   );
@@ -1013,6 +1067,7 @@ async function generateActivityData(): Promise<ActivityData> {
     pullRequests: allPullRequests,
     comments: allComments,
     proposals: allProposals,
+    roadmap,
     externalVisibility,
   };
 }
