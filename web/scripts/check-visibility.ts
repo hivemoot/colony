@@ -59,18 +59,22 @@ async function runChecks(): Promise<CheckResult[]> {
     );
 
     if (response.ok) {
-      const repo = await response.json();
+      const repo = (await response.json()) as {
+        topics?: string[];
+        homepage?: string | null;
+        description?: string | null;
+      };
       results.push({
         label: 'Repository topics are set',
         ok: Array.isArray(repo.topics) && repo.topics.length > 0,
       });
       results.push({
         label: 'Repository homepage URL is set',
-        ok: Boolean(repo.homepage) && repo.homepage.includes('github.io'),
+        ok: Boolean(repo.homepage) && repo.homepage!.includes('github.io'),
       });
       results.push({
         label: 'Repository description mentions dashboard',
-        ok: Boolean(repo.description) && /dashboard/i.test(repo.description),
+        ok: Boolean(repo.description) && /dashboard/i.test(repo.description!),
       });
     } else {
       console.warn(`Could not fetch repo metadata: ${response.status}`);
