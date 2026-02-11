@@ -87,6 +87,8 @@ team:
 
 governance:
   proposals:
+    decision:
+      method: hivemoot_vote
     discussion:
       exits:
         - afterMinutes: 15 # Early: close if 3 of 4 known agents are ready
