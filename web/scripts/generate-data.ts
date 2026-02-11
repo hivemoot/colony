@@ -27,6 +27,8 @@ import type {
   AgentStats,
   ActivityData,
   RepositoryInfo,
+  ExternalVisibility,
+  VisibilityCheck,
 } from '../shared/types';
 
 import {
@@ -36,9 +38,13 @@ import {
 } from '../shared/governance-snapshot.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
+const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
+const ROBOTS_PATH = join(ROOT_DIR, 'web', 'public', 'robots.txt');
 
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
@@ -48,6 +54,10 @@ export interface GitHubRepo {
   stargazers_count: number;
   forks_count: number;
   open_issues_count: number;
+  subscribers_count?: number;
+  homepage?: string | null;
+  description?: string | null;
+  topics?: string[];
 }
 
 export interface GitHubIssue {
@@ -691,6 +701,90 @@ export function calculateOpenIssues(
   return Math.max(0, repoMetadata.open_issues_count - openPRsCount);
 }
 
+export function buildExternalVisibility(
+  repositories: RepositoryInfo[]
+): ExternalVisibility {
+  const primary = repositories[0];
+
+  const hasHomepage = Boolean(primary?.homepage?.trim());
+  const hasTopics = (primary?.topics?.length ?? 0) > 0;
+
+  const hasStructuredData =
+    existsSync(INDEX_HTML_PATH) &&
+    /<script\s+type=["']application\/ld\+json["']>/i.test(
+      readFileSync(INDEX_HTML_PATH, 'utf-8')
+    );
+
+  const hasSitemapLastmod =
+    existsSync(SITEMAP_PATH) &&
+    /<lastmod>[^<]+<\/lastmod>/i.test(readFileSync(SITEMAP_PATH, 'utf-8'));
+
+  const hasRobots =
+    existsSync(ROBOTS_PATH) &&
+    /Sitemap:\s*https?:\/\/\S+/i.test(readFileSync(ROBOTS_PATH, 'utf-8'));
+
+  const checks: VisibilityCheck[] = [
+    {
+      id: 'has-homepage',
+      label: 'Repository homepage URL configured',
+      ok: hasHomepage,
+      details: hasHomepage
+        ? (primary.homepage ?? undefined)
+        : 'Missing homepage repository setting.',
+      blockedByAdmin: !hasHomepage,
+    },
+    {
+      id: 'has-topics',
+      label: 'Repository topics configured',
+      ok: hasTopics,
+      details: hasTopics
+        ? `${primary.topics?.length ?? 0} topics`
+        : 'No repository topics set.',
+      blockedByAdmin: !hasTopics,
+    },
+    {
+      id: 'has-structured-data',
+      label: 'Structured metadata (JSON-LD) in HTML',
+      ok: hasStructuredData,
+      details: hasStructuredData
+        ? 'application/ld+json found'
+        : 'Missing application/ld+json block in web/index.html',
+    },
+    {
+      id: 'has-sitemap-lastmod',
+      label: 'Sitemap includes <lastmod>',
+      ok: hasSitemapLastmod,
+      details: hasSitemapLastmod
+        ? 'Sitemap has lastmod metadata'
+        : 'Missing <lastmod> in web/public/sitemap.xml',
+    },
+    {
+      id: 'has-robots',
+      label: 'robots.txt points to sitemap',
+      ok: hasRobots,
+      details: hasRobots
+        ? 'robots.txt includes a Sitemap directive'
+        : 'Missing Sitemap directive in web/public/robots.txt',
+    },
+  ];
+
+  const passCount = checks.filter((check) => check.ok).length;
+  const score = Math.round((passCount / checks.length) * 100);
+  const failingCount = checks.length - passCount;
+  const status =
+    failingCount === 0 ? 'green' : failingCount <= 2 ? 'yellow' : 'red';
+  const blockers = checks
+    .filter((check) => !check.ok && check.blockedByAdmin)
+    .map((check) => check.label);
+
+  return {
+    status,
+    score,
+    checks,
+    blockers,
+  };
+}
+
 export function deduplicateAgents(agentSources: Agent[]): Agent[] {
   const agentMap = new Map<string, Agent>();
   agentSources.forEach((agent) => {
@@ -812,6 +906,10 @@ async function fetchRepoActivity(
     stars: repoMetadata.stargazers_count,
     forks: repoMetadata.forks_count,
     openIssues,
+    watchers: repoMetadata.subscribers_count,
+    description: repoMetadata.description ?? null,
+    homepage: repoMetadata.homepage ?? null,
+    topics: repoMetadata.topics ?? [],
   };
 
   const agents = [
@@ -900,6 +998,8 @@ async function generateActivityData(): Promise<ActivityData> {
     `Total: ${totalCommits} commits, ${totalIssues} issues, ${totalPRs} PRs, ${totalProposals} proposals, ${totalComments} comments, ${agents.length} agents across ${repos.length} repo(s)`
   );
 
+  const externalVisibility = buildExternalVisibility(allRepoInfos);
+
   return {
     generatedAt: new Date().toISOString(),
     // Primary repo for backward compatibility
@@ -913,6 +1013,7 @@ async function generateActivityData(): Promise<ActivityData> {
     pullRequests: allPullRequests,
     comments: allComments,
     proposals: allProposals,
+    externalVisibility,
   };
 }
 

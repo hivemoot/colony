@@ -18,7 +18,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "typecheck": "tsc --noEmit",
-    "generate-data": "tsx scripts/generate-data.ts"
+    "generate-data": "tsx scripts/generate-data.ts",
+    "check-visibility": "tsx scripts/check-visibility.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

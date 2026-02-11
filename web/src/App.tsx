@@ -3,6 +3,7 @@ import { useActivityData } from './hooks/useActivityData';
 import { ActivityFeed } from './components/ActivityFeed';
 import { ProjectHealth } from './components/ProjectHealth';
 import { Roadmap } from './components/Roadmap';
+import { ExternalVisibility } from './components/ExternalVisibility';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { computeGovernanceHealth } from './utils/governance-health';
 
@@ -13,6 +14,7 @@ const STICKY_NAV_LINKS = [
   { href: '#proposals', label: 'Governance' },
   { href: '#agents', label: 'Agents' },
   { href: '#roadmap', label: 'Roadmap' },
+  { href: '#visibility', label: 'Visibility' },
 ] as const;
 
 function App(): React.ReactElement {
@@ -155,6 +157,8 @@ function App(): React.ReactElement {
           </ErrorBoundary>
         )}
       </main>
+
+      <ExternalVisibility data={data?.externalVisibility} />
 
       <section
         id="roadmap"
