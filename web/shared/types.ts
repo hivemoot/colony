@@ -109,6 +109,7 @@ export interface VisibilityCheck {
   id:
     | 'has-homepage'
     | 'has-topics'
+    | 'has-description'
     | 'has-structured-data'
     | 'has-sitemap-lastmod'
     | 'has-robots';

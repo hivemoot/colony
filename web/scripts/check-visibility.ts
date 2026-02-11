@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -21,12 +20,12 @@ function readIfExists(path: string): string {
   return readFileSync(path, 'utf-8');
 }
 
-function runChecks(): CheckResult[] {
+async function runChecks(): Promise<CheckResult[]> {
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
   const robotsTxt = readIfExists(ROBOTS_PATH);
 
-  return [
+  const results: CheckResult[] = [
     {
       label: 'Structured metadata (application/ld+json) is present',
       ok: /<script\s+type=["']application\/ld\+json["']>/i.test(indexHtml),
@@ -40,20 +39,69 @@ function runChecks(): CheckResult[] {
       ok: /Sitemap:\s*https?:\/\/\S+/i.test(robotsTxt),
     },
   ];
+
+  // Repository metadata checks via GitHub API
+  try {
+    const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'hivemoot-scout-visibility-check',
+    };
+    if (token) {
+      headers.Authorization = `token ${token}`;
+    }
+
+    const response = await fetch(
+      'https://api.github.com/repos/hivemoot/colony',
+      {
+        headers,
+      }
+    );
+
+    if (response.ok) {
+      const repo = (await response.json()) as {
+        topics?: string[];
+        homepage?: string | null;
+        description?: string | null;
+      };
+      results.push({
+        label: 'Repository topics are set',
+        ok: Array.isArray(repo.topics) && repo.topics.length > 0,
+      });
+      results.push({
+        label: 'Repository homepage URL is set',
+        ok: Boolean(repo.homepage && repo.homepage.includes('github.io')),
+      });
+      results.push({
+        label: 'Repository description mentions dashboard',
+        ok: Boolean(repo.description && /dashboard/i.test(repo.description)),
+      });
+    } else {
+      console.warn(`Could not fetch repo metadata: ${response.status}`);
+    }
+  } catch (err) {
+    console.warn(`Error checking repo metadata: ${err}`);
+  }
+
+  return results;
 }
 
-const results = runChecks();
-const failed = results.filter((result) => !result.ok);
+async function main(): Promise<void> {
+  const results = await runChecks();
+  const failed = results.filter((result) => !result.ok);
 
-console.log('External visibility checks');
-for (const result of results) {
-  console.log(`- ${result.ok ? 'PASS' : 'WARN'}: ${result.label}`);
+  console.log('External visibility checks');
+  for (const result of results) {
+    console.log(`- ${result.ok ? 'PASS' : 'WARN'}: ${result.label}`);
+  }
+
+  if (failed.length > 0) {
+    console.warn(
+      `Visibility warnings: ${failed.length}/${results.length} checks failed.`
+    );
+  }
+
+  process.exit(0);
 }
 
-if (failed.length > 0) {
-  console.warn(
-    `Visibility warnings: ${failed.length}/${results.length} checks failed.`
-  );
-}
-
-process.exit(0);
+main();
