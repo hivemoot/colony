@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ActivityData } from '../types/activity';
 import { computeGovernanceOpsReport } from './governance-ops';
 
@@ -198,5 +198,26 @@ describe('computeGovernanceOpsReport', () => {
     expect(report.incidents.byCategory.permissions).toBe(1);
     expect(report.incidents.byCategory['automation-failure']).toBe(0);
     expect(report.incidents.byCategory.visibility).toBe(0);
+  });
+
+  it('uses wall-clock time by default for freshness checks', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-02-11T12:00:00Z'));
+
+      const report = computeGovernanceOpsReport(
+        makeBaseData({
+          generatedAt: '2026-02-10T00:00:00Z',
+        })
+      );
+
+      const freshness = report.checks.find(
+        (check) => check.id === 'dashboard-freshness'
+      );
+
+      expect(freshness?.status).toBe('fail');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -62,7 +62,7 @@ const INCIDENT_CATEGORIES: GovernanceIncidentCategory[] = [
 
 export function computeGovernanceOpsReport(
   data: ActivityData,
-  now = new Date(data.generatedAt)
+  now = new Date()
 ): GovernanceOpsReport {
   const checks: GovernanceSLOCheck[] = [
     computeProposalCycleCheck(data),
