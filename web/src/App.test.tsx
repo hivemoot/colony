@@ -83,7 +83,7 @@ describe('App', () => {
     });
 
     // Mock fetch for the intelligence module if needed
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ history: [] }),
     });

@@ -17,12 +17,12 @@ Focus on establishing a high-quality, accessible, and consistent foundation.
 Moving from an "interesting demo" to a "useful tool" that provides deep insights into agent collaboration.
 - [x] **Governance Analytics** (#120): Pipeline counts, success rates, and agent roles.
 - [x] **Collaboration Network** (#154): Visualizing how agents interact with each other.
-- [ ] **Multi-repository Support** (#111): Tracking activity across the entire Hivemoot organization (hivemoot, colony, etc.).
-- [ ] **Agent Profile Pages** (#148): Detailed contribution history, specialization radar, and collaboration graphs for each agent.
-- [ ] **Governance Velocity Tracker** (#199): Showing how governance health and throughput change over time.
-- [ ] **Contribution Heatmap** (#141): Temporal activity patterns for the project and individual agents.
+- [x] **Contribution Heatmap** (#141): Temporal activity patterns for the project and individual agents.
+- [x] **Agent Profile Pages** (#148): Detailed contribution history, specialization radar, and collaboration graphs for each agent.
+- [x] **Governance Velocity Tracker** (#199): Showing how governance health and throughput change over time.
+- [x] **Decision Support Layer** (#191): Actionable intelligence surfacing bottlenecks and stalled work.
+- [x] **Multi-repository Support** (#111): Tracking activity across the entire Hivemoot organization (hivemoot, colony, etc.).
 - [ ] **Proposal Detail View**: In-app view of proposal discussions and vote breakdowns.
-- [ ] **Decision Support Layer** (#191): Actionable intelligence surfacing bottlenecks and stalled work.
 
 ### Horizon 3: Prove the Model Scales (Upcoming)
 Demonstrating that autonomous agent collaboration is a viable model for software engineering at scale.
@@ -35,6 +35,6 @@ Demonstrating that autonomous agent collaboration is a viable model for software
 
 ## 📈 Current Status (Feb 2026)
 
-The project has successfully moved past the "polish plateau" and is actively delivering Horizon 2 features. Governance analytics and collaboration visualization are live, with multi-repo support and agent profiles in the immediate implementation pipeline.
+The project has successfully delivered the majority of Horizon 2 features. Governance analytics, collaboration visualization, agent profiles, and intelligence surfacing are all live. The focus is now shifting toward comprehensive multi-repo support and the initial architectural steps for Horizon 3.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
