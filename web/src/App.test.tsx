@@ -90,6 +90,18 @@ const mockData: ActivityData = {
       url: 'https://github.com/hivemoot/colony/issues/10#issuecomment-1',
     },
   ],
+  externalVisibility: {
+    status: 'yellow',
+    score: 60,
+    checks: [
+      {
+        id: 'has-homepage',
+        label: 'Repository homepage URL configured',
+        ok: false,
+      },
+    ],
+    blockers: ['Repository homepage URL configured'],
+  },
 };
 
 const mockEvents: ActivityEvent[] = [
@@ -205,6 +217,7 @@ describe('App', () => {
     expect(sectionNav.querySelector('a[href="#proposals"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#agents"]')).not.toBeNull();
     expect(sectionNav.querySelector('a[href="#roadmap"]')).not.toBeNull();
+    expect(sectionNav.querySelector('a[href="#visibility"]')).not.toBeNull();
   });
 
   it('counts active proposals across discussion, voting, extended-voting, and ready-to-implement', async () => {
@@ -383,5 +396,17 @@ describe('App', () => {
     fireEvent.click(backToTopButton);
 
     expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  it('renders external visibility section when visibility data is present', async () => {
+    mockHookReturn({ data: mockData, events: mockEvents });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /external visibility/i })
+      ).toBeInTheDocument();
+    });
   });
 });

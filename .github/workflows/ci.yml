@@ -45,6 +45,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Visibility guardrail (non-blocking)
+        run: npm run check-visibility
+        continue-on-error: true
+
       - name: Upload build artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3

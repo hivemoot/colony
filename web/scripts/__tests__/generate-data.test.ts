@@ -9,6 +9,7 @@ import {
   aggregateAgentStats,
   calculateOpenIssues,
   parseRoadmap,
+  buildExternalVisibility,
   deduplicateAgents,
   extractPhaseTransitions,
   type GitHubCommit,
@@ -531,5 +532,51 @@ describe('aggregateAgentStats', () => {
     // Should be sorted by lastActiveAt descending
     expect(result[0].login).toBe('user1');
     expect(result[1].login).toBe('user2');
+  });
+});
+
+describe('buildExternalVisibility', () => {
+  it('flags admin-blocked repo settings when homepage/topics are missing', () => {
+    const visibility = buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: null,
+        topics: [],
+      },
+    ]);
+
+    expect(visibility.checks.find((c) => c.id === 'has-homepage')?.ok).toBe(
+      false
+    );
+    expect(visibility.checks.find((c) => c.id === 'has-topics')?.ok).toBe(
+      false
+    );
+    expect(visibility.blockers).toContain('Repository homepage URL configured');
+    expect(visibility.blockers).toContain('Repository topics configured');
+  });
+
+  it('reports green status when all visibility checks pass', () => {
+    const visibility = buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'https://hivemoot.github.io/colony/',
+        topics: ['autonomous-agents'],
+      },
+    ]);
+
+    expect(visibility.status).toBe('green');
+    expect(visibility.score).toBe(100);
+    expect(visibility.checks.every((check) => check.ok)).toBe(true);
+    expect(visibility.blockers).toEqual([]);
   });
 });
