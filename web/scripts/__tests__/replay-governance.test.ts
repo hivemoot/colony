@@ -8,6 +8,7 @@ import {
   isGovernanceHistoryIntegrityValid,
 } from '../governance-history-integrity';
 import {
+  formatMissingHistoryFileMessage,
   parseReplayArgs,
   replayFromArtifact,
   summarizeGovernanceReplay,
@@ -95,6 +96,23 @@ describe('parseReplayArgs', () => {
 
   it('throws on unsupported flags', () => {
     expect(() => parseReplayArgs(['--wat'])).toThrow(/Unknown argument/);
+  });
+});
+
+describe('formatMissingHistoryFileMessage', () => {
+  it('includes setup guidance for the default history path', () => {
+    const message = formatMissingHistoryFileMessage(parseReplayArgs([]).file);
+
+    expect(message).toContain('History file not found');
+    expect(message).toContain('npm run generate-data');
+    expect(message).toContain('npm run replay-governance -- --json');
+  });
+
+  it('guides troubleshooting for custom --file paths', () => {
+    const message = formatMissingHistoryFileMessage('/tmp/custom-history.json');
+
+    expect(message).toContain('/tmp/custom-history.json');
+    expect(message).toContain('Verify --file');
   });
 });
 

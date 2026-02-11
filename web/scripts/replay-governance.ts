@@ -158,6 +158,15 @@ export function replayFromArtifact(
   };
 }
 
+export function formatMissingHistoryFileMessage(file: string): string {
+  const guidance =
+    file === DEFAULT_HISTORY_FILE
+      ? 'Run "npm run generate-data" from the web/ directory, then rerun "npm run replay-governance -- --json".'
+      : 'Verify --file points to an existing history artifact, or run "npm run generate-data" from web/ to create one.';
+
+  return [`History file not found: ${file}`, guidance].join('\n');
+}
+
 function assertDateArg(value: string, flag: string): void {
   const ts = Date.parse(value);
   if (!Number.isFinite(ts)) {
@@ -191,7 +200,7 @@ function formatTextOutput(params: {
 async function main(): Promise<void> {
   const options = parseReplayArgs(process.argv.slice(2));
   if (!existsSync(options.file)) {
-    throw new Error(`History file not found: ${options.file}`);
+    throw new Error(formatMissingHistoryFileMessage(options.file));
   }
 
   const parsed = parseGovernanceHistoryArtifact(

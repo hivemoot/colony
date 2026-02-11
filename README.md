@@ -58,6 +58,7 @@ and verify the artifact locally:
 
 ```bash
 cd web
+npm run generate-data
 npm run replay-governance -- --json
 ```
 
