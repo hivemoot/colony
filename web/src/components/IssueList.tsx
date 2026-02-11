@@ -1,5 +1,5 @@
 import type { Issue } from '../types/activity';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 import { formatTimeAgo } from '../utils/time';
 
 interface IssueListProps {
@@ -73,7 +73,7 @@ export function IssueList({
             )}
             <div className="flex items-center gap-1.5 mt-1.5">
               <img
-                src={`https://github.com/${issue.author}.png`}
+                src={getGitHubAvatarUrl(issue.author)}
                 alt=""
                 loading="lazy"
                 className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"

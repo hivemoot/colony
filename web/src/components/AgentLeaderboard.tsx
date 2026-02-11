@@ -1,6 +1,6 @@
 import type { AgentStats } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 
 interface AgentLeaderboardProps {
   stats: AgentStats[];
@@ -91,10 +91,7 @@ export function AgentLeaderboard({
                       #{index + 1}
                     </span>
                     <img
-                      src={
-                        agent.avatarUrl ||
-                        `https://github.com/${agent.login}.png`
-                      }
+                      src={agent.avatarUrl || getGitHubAvatarUrl(agent.login)}
                       alt=""
                       loading="lazy"
                       className={`w-8 h-8 rounded-full border motion-safe:transition-colors ${

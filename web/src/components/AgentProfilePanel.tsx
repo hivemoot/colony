@@ -11,7 +11,7 @@ import {
   type AgentRoleProfile,
 } from '../utils/governance';
 import { formatTimeAgo } from '../utils/time';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 import { AgentSpecialization } from './AgentSpecialization';
 
 interface AgentProfilePanelProps {
@@ -98,7 +98,7 @@ export function AgentProfilePanel({
   const avatarUrl =
     stats?.avatarUrl ??
     data.agents.find((a) => a.login === agentLogin)?.avatarUrl ??
-    `https://github.com/${agentLogin}.png`;
+    getGitHubAvatarUrl(agentLogin);
 
   return (
     <div className="space-y-6">

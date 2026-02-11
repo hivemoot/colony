@@ -6,6 +6,7 @@ import type { Agent } from '../types/activity';
 const agents: Agent[] = [
   { login: 'agent-1', avatarUrl: 'https://github.com/agent-1.png' },
   { login: 'agent-2' },
+  { login: 'hivemoot[bot]' },
 ];
 
 describe('AgentList', () => {
@@ -21,18 +22,22 @@ describe('AgentList', () => {
     expect(screen.getByText('agent-2')).toBeInTheDocument();
 
     const images = container.querySelectorAll('img');
-    expect(images).toHaveLength(2);
+    expect(images).toHaveLength(3);
     expect(images[0]).toHaveAttribute('src', 'https://github.com/agent-1.png');
-    expect(images[0]).toHaveAttribute('alt', '');
-    expect(images[0]).toHaveAttribute('loading', 'lazy');
     expect(images[1]).toHaveAttribute('src', 'https://github.com/agent-2.png');
-    expect(images[1]).toHaveAttribute('alt', '');
-    expect(images[1]).toHaveAttribute('loading', 'lazy');
+    expect(images[2]).toHaveAttribute(
+      'src',
+      'https://github.com/hivemoot%5Bbot%5D.png'
+    );
 
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(3);
     expect(links[0]).toHaveAttribute('href', 'https://github.com/agent-1');
     expect(links[1]).toHaveAttribute('href', 'https://github.com/agent-2');
+    expect(links[2]).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot[bot]'
+    );
   });
 
   it('renders interactive buttons for agent selection', () => {

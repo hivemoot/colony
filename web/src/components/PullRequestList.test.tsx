@@ -57,15 +57,16 @@ describe('PullRequestList', () => {
     expect(screen.getByText('closed')).toBeInTheDocument();
   });
 
-  it('renders author avatar images', () => {
+  it('renders author avatar images with proper encoding', () => {
+    const botPR: PullRequest = { ...basePR, author: 'hivemoot[bot]' };
     const { container } = render(
-      <PullRequestList pullRequests={[basePR]} repoUrl={REPO_URL} />
+      <PullRequestList pullRequests={[botPR]} repoUrl={REPO_URL} />
     );
 
     const avatar = container.querySelector('img');
     expect(avatar).toHaveAttribute(
       'src',
-      'https://github.com/hivemoot-builder.png'
+      'https://github.com/hivemoot%5Bbot%5D.png'
     );
     expect(avatar).toHaveAttribute('alt', '');
     expect(avatar).toHaveAttribute('loading', 'lazy');

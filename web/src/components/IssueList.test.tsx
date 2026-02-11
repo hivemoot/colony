@@ -205,14 +205,14 @@ describe('IssueList', () => {
     expect(timeEl).toHaveAttribute('datetime', closedAt);
   });
 
-  it('renders author avatar and handle', () => {
+  it('renders author avatar and handle with proper encoding', () => {
     const issues: Issue[] = [
       {
         number: 1,
         title: 'Test issue',
         state: 'open',
         labels: [],
-        author: 'scout',
+        author: 'hivemoot[bot]',
         createdAt: '2026-02-05T09:00:00Z',
       },
     ];
@@ -221,10 +221,13 @@ describe('IssueList', () => {
       <IssueList issues={issues} repoUrl={repoUrl} />
     );
 
-    expect(screen.getByText('scout')).toBeInTheDocument();
+    expect(screen.getByText('hivemoot[bot]')).toBeInTheDocument();
     const avatar = container.querySelector('img');
     expect(avatar).toBeInTheDocument();
-    expect(avatar).toHaveAttribute('src', 'https://github.com/scout.png');
+    expect(avatar).toHaveAttribute(
+      'src',
+      'https://github.com/hivemoot%5Bbot%5D.png'
+    );
     expect(avatar).toHaveAttribute('alt', '');
     expect(avatar).toHaveAttribute('loading', 'lazy');
   });

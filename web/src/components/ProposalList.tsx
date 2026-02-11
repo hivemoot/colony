@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Proposal, PullRequest } from '../types/activity';
-import { handleAvatarError } from '../utils/avatar';
+import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 import { formatDuration, formatTimeAgo } from '../utils/time';
 import { buildDecisionSnapshot } from '../utils/decision-explorer';
 
@@ -86,7 +86,7 @@ export function ProposalList({
                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-amber-100/50 dark:border-neutral-700/50">
                   <div className="flex items-center gap-2">
                     <img
-                      src={`https://github.com/${proposal.author}.png`}
+                      src={getGitHubAvatarUrl(proposal.author)}
                       alt=""
                       loading="lazy"
                       className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
