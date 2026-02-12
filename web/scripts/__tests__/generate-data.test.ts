@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   resolveRepository,
   resolveRepositories,
@@ -25,6 +25,10 @@ import {
   type Comment,
   type Agent,
 } from '../generate-data';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('resolveRepository', () => {
   it('should use default values if no env vars are present', () => {
@@ -596,8 +600,12 @@ describe('aggregateAgentStats', () => {
 });
 
 describe('buildExternalVisibility', () => {
-  it('flags admin-blocked repo settings when homepage/topics/description are missing', () => {
-    const visibility = buildExternalVisibility([
+  it('flags admin-blocked repo settings when homepage/topics/description are missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('not found', { status: 404 });
+    });
+
+    const visibility = await buildExternalVisibility([
       {
         owner: 'hivemoot',
         name: 'colony',
@@ -627,8 +635,29 @@ describe('buildExternalVisibility', () => {
     );
   });
 
-  it('reports green status when all visibility checks pass', () => {
-    const visibility = buildExternalVisibility([
+  it('marks freshness check as failed when deployed activity JSON has invalid timestamp', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(JSON.stringify({ generatedAt: 'not-a-date' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
       {
         owner: 'hivemoot',
         name: 'colony',
@@ -636,15 +665,198 @@ describe('buildExternalVisibility', () => {
         stars: 1,
         forks: 1,
         openIssues: 1,
-        homepage: 'https://hivemoot.github.io/colony/',
+        homepage: `${baseUrl}/`,
         topics: ['autonomous-agents'],
         description: 'Open-source dashboard for autonomous agent governance',
       },
     ]);
 
-    expect(visibility.status).toBe('green');
-    expect(visibility.score).toBe(100);
-    expect(visibility.checks.every((check) => check.ok)).toBe(true);
-    expect(visibility.blockers).toEqual([]);
+    const freshnessCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-activity-freshness'
+    );
+    expect(freshnessCheck?.ok).toBe(false);
+    expect(freshnessCheck?.details).toContain(
+      'Invalid timestamp in deployed activity.json'
+    );
+  });
+
+  it('runs deployed checks against configured homepage with deterministic fetch responses', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    const recentGeneratedAt = new Date(
+      Date.now() - 60 * 60 * 1000
+    ).toISOString();
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            '<html><script type="application/ld+json">{}</script></html>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: recentGeneratedAt }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: ['autonomous-agents'],
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-root-reachable')?.ok
+    ).toBe(true);
+    expect(visibility.checks.find((c) => c.id === 'deployed-jsonld')?.ok).toBe(
+      true
+    );
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-robots-sitemap')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-sitemap-lastmod')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-activity-freshness')?.ok
+    ).toBe(true);
+  });
+
+  it('uses fallback deployed URL when homepage is missing and handles fetch failures', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: null,
+        topics: ['autonomous-agents'],
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const rootCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-root-reachable'
+    );
+    expect(rootCheck?.ok).toBe(false);
+    expect(rootCheck?.details).toContain(
+      `Fallback URL used: ${fallbackBaseUrl}`
+    );
+    expect(visibility.checks.find((c) => c.id === 'has-homepage')?.ok).toBe(
+      false
+    );
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  it('marks freshness check as failed when deployed activity JSON is invalid', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            '<html><script type="application/ld+json">{}</script></html>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response('not-json', {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: ['autonomous-agents'],
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const freshnessCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-activity-freshness'
+    );
+    expect(freshnessCheck?.ok).toBe(false);
+    expect(freshnessCheck?.details).toContain(
+      'Invalid activity.json format on deployed site'
+    );
   });
 });
