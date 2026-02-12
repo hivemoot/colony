@@ -952,10 +952,17 @@ export async function buildExternalVisibility(
         generatedAt?: unknown;
       };
       if (typeof activity.generatedAt === 'string') {
-        const ageMs = Date.now() - new Date(activity.generatedAt).getTime();
-        const ageHours = ageMs / (1000 * 60 * 60);
-        freshnessOk = ageHours <= 18; // Critical threshold from proposal
-        freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
+        const timestamp = new Date(activity.generatedAt).getTime();
+        if (!isNaN(timestamp)) {
+          const ageMs = Date.now() - timestamp;
+          const ageHours = ageMs / (1000 * 60 * 60);
+          freshnessOk = ageHours <= 18; // Critical threshold from proposal
+          freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
+        } else {
+          freshnessDetails = `Invalid timestamp in deployed activity.json. ${deployedSourceDetails}`;
+        }
+      } else {
+        freshnessDetails = `Missing generatedAt in deployed activity.json. ${deployedSourceDetails}`;
       }
     } catch {
       freshnessDetails = `Invalid activity.json format on deployed site. ${deployedSourceDetails}`;

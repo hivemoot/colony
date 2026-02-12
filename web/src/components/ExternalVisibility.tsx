@@ -7,14 +7,15 @@ interface ExternalVisibilityProps {
 function statusMeta(status: ExternalVisibilityData['status']): {
   label: string;
   dotClass: string;
+  animate: boolean;
 } {
   if (status === 'green') {
-    return { label: 'Healthy', dotClass: 'bg-emerald-500' };
+    return { label: 'Healthy', dotClass: 'bg-emerald-500', animate: false };
   }
   if (status === 'yellow') {
-    return { label: 'At Risk', dotClass: 'bg-amber-500' };
+    return { label: 'At Risk', dotClass: 'bg-amber-500', animate: true };
   }
-  return { label: 'Critical', dotClass: 'bg-red-500' };
+  return { label: 'Critical', dotClass: 'bg-red-500', animate: true };
 }
 
 export function ExternalVisibility({
@@ -48,7 +49,7 @@ export function ExternalVisibility({
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 dark:border-neutral-600 px-3 py-1.5 bg-amber-50 dark:bg-neutral-900">
             <span
               aria-hidden="true"
-              className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass}`}
+              className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass} ${meta.animate ? 'animate-pulse' : ''}`}
             />
             <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">
               {meta.label} ({data.score}/100)
@@ -73,7 +74,11 @@ export function ExternalVisibility({
                 )}
               </div>
               <span
-                className={`text-xs font-semibold uppercase tracking-wide ${check.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}
+                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                  check.ok
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                }`}
               >
                 {check.ok ? 'pass' : 'fail'}
               </span>

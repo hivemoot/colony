@@ -171,9 +171,12 @@ async function runChecks(): Promise<CheckResult[]> {
         generatedAt?: unknown;
       };
       if (typeof activity.generatedAt === 'string') {
-        const ageMs = Date.now() - new Date(activity.generatedAt).getTime();
-        const ageHours = ageMs / (1000 * 60 * 60);
-        freshnessOk = ageHours <= 18;
+        const timestamp = new Date(activity.generatedAt).getTime();
+        if (!isNaN(timestamp)) {
+          const ageMs = Date.now() - timestamp;
+          const ageHours = ageMs / (1000 * 60 * 60);
+          freshnessOk = ageHours <= 18;
+        }
       }
     } catch {
       // ignore
