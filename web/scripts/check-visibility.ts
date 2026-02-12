@@ -57,6 +57,21 @@ function normalizeUrlForMatch(value: string): string {
   return value.replace(/\/+$/, '').toLowerCase();
 }
 
+function resolveMetadataUrl(
+  rawValue: string,
+  baseUrl: string
+): { url: string; error?: string } {
+  if (!rawValue) {
+    return { url: '' };
+  }
+
+  try {
+    return { url: new URL(rawValue, `${baseUrl}/`).toString() };
+  } catch {
+    return { url: '', error: `Invalid metadata URL: ${rawValue}` };
+  }
+}
+
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -209,14 +224,12 @@ async function runChecks(): Promise<CheckResult[]> {
     }
   };
 
-  const [rootRes, robotsRes, sitemapRes, activityRes, appleTouchIconRes] =
-    await Promise.all([
-      fetchWithTimeout(baseUrl),
-      fetchWithTimeout(`${baseUrl}/robots.txt`),
-      fetchWithTimeout(`${baseUrl}/sitemap.xml`),
-      fetchWithTimeout(`${baseUrl}/data/activity.json`),
-      fetchWithTimeout(`${baseUrl}/apple-touch-icon.png`),
-    ]);
+  const [rootRes, robotsRes, sitemapRes, activityRes] = await Promise.all([
+    fetchWithTimeout(baseUrl),
+    fetchWithTimeout(`${baseUrl}/robots.txt`),
+    fetchWithTimeout(`${baseUrl}/sitemap.xml`),
+    fetchWithTimeout(`${baseUrl}/data/activity.json`),
+  ]);
 
   results.push({
     label: 'Deployed site is reachable',
@@ -266,14 +279,10 @@ async function runChecks(): Promise<CheckResult[]> {
     'og:image',
     'content'
   );
-  let ogImageUrl = '';
-  if (ogImageRaw) {
-    try {
-      ogImageUrl = new URL(ogImageRaw, `${baseUrl}/`).toString();
-    } catch {
-      ogImageUrl = '';
-    }
-  }
+  const { url: ogImageUrl, error: ogImageError } = resolveMetadataUrl(
+    ogImageRaw,
+    baseUrl
+  );
   const ogImageRes = ogImageUrl ? await fetchWithTimeout(ogImageUrl) : null;
   const hasDeployedOgImage = ogImageRes?.status === 200;
   results.push({
@@ -283,19 +292,36 @@ async function runChecks(): Promise<CheckResult[]> {
       ? `GET ${ogImageUrl} returned 200`
       : ogImageUrl
         ? `GET ${ogImageUrl} returned ${ogImageRes?.status ?? 'no response'}`
-        : ogImageRaw
-          ? `Invalid og:image URL: ${ogImageRaw}`
+        : ogImageError
+          ? ogImageError
           : 'Missing og:image metadata on deployed homepage',
   });
+
+  const appleTouchIconRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'href'
+  );
+  const { url: appleTouchIconUrl, error: appleTouchIconError } =
+    resolveMetadataUrl(appleTouchIconRaw, baseUrl);
+  const appleTouchIconRes = appleTouchIconUrl
+    ? await fetchWithTimeout(appleTouchIconUrl)
+    : null;
   results.push({
     label: 'Deployed apple-touch-icon reachable',
-    ok: appleTouchIconRes?.status === 200,
+    ok: Boolean(appleTouchIconUrl) && appleTouchIconRes?.status === 200,
     details:
-      appleTouchIconRes?.status === 200
-        ? `GET ${baseUrl}/apple-touch-icon.png returned 200`
-        : `GET ${baseUrl}/apple-touch-icon.png returned ${
-            appleTouchIconRes?.status ?? 'no response'
-          }`,
+      appleTouchIconRes?.status === 200 && appleTouchIconUrl
+        ? `GET ${appleTouchIconUrl} returned 200`
+        : appleTouchIconUrl
+          ? `GET ${appleTouchIconUrl} returned ${
+              appleTouchIconRes?.status ?? 'no response'
+            }`
+          : appleTouchIconError
+            ? appleTouchIconError
+            : 'Missing apple-touch-icon metadata on deployed homepage',
   });
 
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
