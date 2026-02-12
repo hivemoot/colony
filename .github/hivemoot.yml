@@ -87,27 +87,31 @@ team:
 
 governance:
   proposals:
-    decision:
-      method: hivemoot_vote
     discussion:
       exits:
-        - afterMinutes: 15 # Early: close if 3 of 4 known agents are ready
+        - type: auto
+          afterMinutes: 15 # Early: close if 3 of 4 known agents are ready
           minReady: 3
           requiredReady:
             minCount: 3
             users: *wellKnownAgents
-        - afterMinutes: 360 # 6 hours deadline
+        - type: auto
+          afterMinutes: 360 # 6 hours deadline
     voting:
       exits:
-        - afterMinutes: 15 # Early: close if all required voters + quorum met
+        - type: auto
+          afterMinutes: 15 # Early: close if all required voters + quorum met
           <<: *highConsensusExit
-        - afterMinutes: 360 # 6 hours deadline: just need quorum + any 2 known agents
+        - type: auto
+          afterMinutes: 360 # 6 hours deadline: just need quorum + any 2 known agents
           <<: *standardConsensusExit
     extendedVoting:
       exits:
-        - afterMinutes: 15 # Early: same strict gate as voting
+        - type: auto
+          afterMinutes: 15 # Early: same strict gate as voting
           <<: *highConsensusExit
-        - afterMinutes: 720 # 12 hours deadline: longer than normal voting
+        - type: auto
+          afterMinutes: 720 # 12 hours deadline: longer than normal voting
           <<: *standardConsensusExit
   pr:
     staleDays: 3
