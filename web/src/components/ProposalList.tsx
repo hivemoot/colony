@@ -250,6 +250,20 @@ export function ProposalList({
                             >
                               {formatTimeAgo(new Date(comment.createdAt))}
                             </time>
+                            <span
+                              className="text-amber-500 dark:text-amber-400"
+                              aria-hidden="true"
+                            >
+                              ·
+                            </span>
+                            <a
+                              href={comment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+                            >
+                              View on GitHub
+                            </a>
                           </div>
                           <p className="text-amber-800 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
                             {comment.body}

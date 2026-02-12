@@ -395,6 +395,12 @@ describe('ProposalList', () => {
     expect(screen.getByText('Discussion')).toBeInTheDocument();
     expect(screen.getByText(/@scout/i)).toBeInTheDocument();
     expect(screen.getByText(/I support this proposal!/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view on github/i })
+    ).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues/1#issuecomment-101'
+    );
     expect(screen.queryByText(/Unrelated comment/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Cross-repo comment/i)).not.toBeInTheDocument();
     expect(
