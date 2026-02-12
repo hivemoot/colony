@@ -1432,4 +1432,24 @@ describe('updateSitemapLastmod', () => {
 
     expect(readFileSync(sitemapPath, 'utf-8')).toBe(content);
   });
+
+  it('should update all lastmod tags in a multi-URL sitemap', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    writeFileSync(
+      sitemapPath,
+      '<?xml version="1.0"?>\n<urlset>' +
+        '<url><loc>https://example.com/</loc><lastmod>2026-02-10</lastmod></url>' +
+        '<url><loc>https://example.com/about</loc><lastmod>2026-02-09</lastmod></url>' +
+        '</urlset>'
+    );
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    const result = readFileSync(sitemapPath, 'utf-8');
+    const matches = result.match(/<lastmod>2026-02-12<\/lastmod>/g);
+    expect(matches).toHaveLength(2);
+    expect(result).not.toContain('2026-02-10');
+    expect(result).not.toContain('2026-02-09');
+  });
 });

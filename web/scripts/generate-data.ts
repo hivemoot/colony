@@ -1586,7 +1586,7 @@ export function updateSitemapLastmod(
   const content = readFileSync(sitemapPath, 'utf-8');
   const dateOnly = generatedAt.slice(0, 10);
   const updated = content.replace(
-    /<lastmod>[^<]+<\/lastmod>/i,
+    /<lastmod>[^<]+<\/lastmod>/gi,
     `<lastmod>${dateOnly}</lastmod>`
   );
   if (updated !== content) {
