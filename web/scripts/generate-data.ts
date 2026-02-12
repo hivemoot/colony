@@ -906,6 +906,65 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   };
 }
 
+function normalizeUrlForMatch(value: string): string {
+  return value.replace(/\/+$/, '').toLowerCase();
+}
+
+function extractTagAttributeValue(
+  html: string,
+  tagName: string,
+  requiredAttribute: string,
+  requiredValue: string,
+  targetAttribute: string
+): string {
+  const tagPattern = new RegExp(`<${tagName}\\b[^>]*>`, 'gi');
+  const requiredValueNormalized = requiredValue.toLowerCase();
+  const requiredAttributeNormalized = requiredAttribute.toLowerCase();
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tag = match[0];
+    const attrPattern = (attribute: string): RegExp =>
+      new RegExp(
+        `\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+        'i'
+      );
+    const requiredAttrMatch = tag.match(attrPattern(requiredAttribute));
+    const requiredAttrValue = (
+      requiredAttrMatch?.[1] ??
+      requiredAttrMatch?.[2] ??
+      requiredAttrMatch?.[3] ??
+      ''
+    ).trim();
+    if (!requiredAttrValue) {
+      continue;
+    }
+
+    const requiredMatches =
+      requiredAttributeNormalized === 'rel'
+        ? requiredAttrValue
+            .toLowerCase()
+            .split(/\s+/)
+            .includes(requiredValueNormalized)
+        : requiredAttrValue.toLowerCase() === requiredValueNormalized;
+    if (!requiredMatches) {
+      continue;
+    }
+
+    const targetAttrMatch = tag.match(attrPattern(targetAttribute));
+    const targetAttrValue = (
+      targetAttrMatch?.[1] ??
+      targetAttrMatch?.[2] ??
+      targetAttrMatch?.[3] ??
+      ''
+    ).trim();
+    if (targetAttrValue) {
+      return targetAttrValue;
+    }
+  }
+
+  return '';
+}
+
 export async function buildExternalVisibility(
   repositories: RepositoryInfo[]
 ): Promise<ExternalVisibility> {
@@ -1028,9 +1087,11 @@ export async function buildExternalVisibility(
   });
 
   // JSON-LD on deployed root
+  let deployedRootHtml = '';
   let deployedJsonLd = false;
   if (rootRes?.status === 200) {
     const html = await rootRes.text();
+    deployedRootHtml = html;
     deployedJsonLd = /<script\s+type=["']application\/ld\+json["']>/i.test(
       html
     );
@@ -1042,6 +1103,59 @@ export async function buildExternalVisibility(
     details: deployedJsonLd
       ? 'JSON-LD found on deployed homepage'
       : 'Missing JSON-LD on deployed homepage',
+  });
+
+  const canonicalUrl = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'canonical',
+    'href'
+  );
+  const expectedCanonical = `${baseUrl}/`;
+  const hasCanonicalParity =
+    canonicalUrl.length > 0 &&
+    normalizeUrlForMatch(canonicalUrl) ===
+      normalizeUrlForMatch(expectedCanonical);
+  checks.push({
+    id: 'deployed-canonical',
+    label: 'Deployed canonical URL matches homepage',
+    ok: hasCanonicalParity,
+    details: hasCanonicalParity
+      ? `Canonical matches ${expectedCanonical}`
+      : canonicalUrl
+        ? `Canonical mismatch: expected ${expectedCanonical}, found ${canonicalUrl}`
+        : 'Missing canonical link on deployed homepage',
+  });
+
+  const ogImageRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image',
+    'content'
+  );
+  let ogImageUrl = '';
+  if (ogImageRaw) {
+    try {
+      ogImageUrl = new URL(ogImageRaw, `${baseUrl}/`).toString();
+    } catch {
+      ogImageUrl = '';
+    }
+  }
+  const ogImageRes = ogImageUrl ? await fetchWithTimeout(ogImageUrl) : null;
+  const hasDeployedOgImage = ogImageRes?.status === 200;
+  checks.push({
+    id: 'deployed-og-image',
+    label: 'Deployed Open Graph image reachable',
+    ok: hasDeployedOgImage,
+    details: hasDeployedOgImage
+      ? `GET ${ogImageUrl} returned 200`
+      : ogImageUrl
+        ? `GET ${ogImageUrl} returned ${ogImageRes?.status ?? 'no response'}`
+        : ogImageRaw
+          ? `Invalid og:image URL: ${ogImageRaw}`
+          : 'Missing og:image metadata on deployed homepage',
   });
 
   // Robots check

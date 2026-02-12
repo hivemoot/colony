@@ -53,6 +53,65 @@ function resolveDeployedBaseUrl(homepage?: string): {
   };
 }
 
+function normalizeUrlForMatch(value: string): string {
+  return value.replace(/\/+$/, '').toLowerCase();
+}
+
+function extractTagAttributeValue(
+  html: string,
+  tagName: string,
+  requiredAttribute: string,
+  requiredValue: string,
+  targetAttribute: string
+): string {
+  const tagPattern = new RegExp(`<${tagName}\\b[^>]*>`, 'gi');
+  const requiredValueNormalized = requiredValue.toLowerCase();
+  const requiredAttributeNormalized = requiredAttribute.toLowerCase();
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tag = match[0];
+    const attrPattern = (attribute: string): RegExp =>
+      new RegExp(
+        `\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+        'i'
+      );
+    const requiredAttrMatch = tag.match(attrPattern(requiredAttribute));
+    const requiredAttrValue = (
+      requiredAttrMatch?.[1] ??
+      requiredAttrMatch?.[2] ??
+      requiredAttrMatch?.[3] ??
+      ''
+    ).trim();
+    if (!requiredAttrValue) {
+      continue;
+    }
+
+    const requiredMatches =
+      requiredAttributeNormalized === 'rel'
+        ? requiredAttrValue
+            .toLowerCase()
+            .split(/\s+/)
+            .includes(requiredValueNormalized)
+        : requiredAttrValue.toLowerCase() === requiredValueNormalized;
+    if (!requiredMatches) {
+      continue;
+    }
+
+    const targetAttrMatch = tag.match(attrPattern(targetAttribute));
+    const targetAttrValue = (
+      targetAttrMatch?.[1] ??
+      targetAttrMatch?.[2] ??
+      targetAttrMatch?.[3] ??
+      ''
+    ).trim();
+    if (targetAttrValue) {
+      return targetAttrValue;
+    }
+  }
+
+  return '';
+}
+
 async function runChecks(): Promise<CheckResult[]> {
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
@@ -162,9 +221,11 @@ async function runChecks(): Promise<CheckResult[]> {
     ok: rootRes?.status === 200,
   });
 
+  let deployedRootHtml = '';
   let deployedJsonLd = false;
   if (rootRes?.status === 200) {
     const html = await rootRes.text();
+    deployedRootHtml = html;
     deployedJsonLd = /<script\s+type=["']application\/ld\+json["']>/i.test(
       html
     );
@@ -172,6 +233,57 @@ async function runChecks(): Promise<CheckResult[]> {
   results.push({
     label: 'Deployed site has JSON-LD metadata',
     ok: deployedJsonLd,
+  });
+
+  const canonicalUrl = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'canonical',
+    'href'
+  );
+  const expectedCanonical = `${baseUrl}/`;
+  const hasCanonicalParity =
+    canonicalUrl.length > 0 &&
+    normalizeUrlForMatch(canonicalUrl) ===
+      normalizeUrlForMatch(expectedCanonical);
+  results.push({
+    label: 'Deployed canonical URL matches homepage',
+    ok: hasCanonicalParity,
+    details: hasCanonicalParity
+      ? `Canonical matches ${expectedCanonical}`
+      : canonicalUrl
+        ? `Canonical mismatch: expected ${expectedCanonical}, found ${canonicalUrl}`
+        : 'Missing canonical link on deployed homepage',
+  });
+
+  const ogImageRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image',
+    'content'
+  );
+  let ogImageUrl = '';
+  if (ogImageRaw) {
+    try {
+      ogImageUrl = new URL(ogImageRaw, `${baseUrl}/`).toString();
+    } catch {
+      ogImageUrl = '';
+    }
+  }
+  const ogImageRes = ogImageUrl ? await fetchWithTimeout(ogImageUrl) : null;
+  const hasDeployedOgImage = ogImageRes?.status === 200;
+  results.push({
+    label: 'Deployed Open Graph image reachable',
+    ok: hasDeployedOgImage,
+    details: hasDeployedOgImage
+      ? `GET ${ogImageUrl} returned 200`
+      : ogImageUrl
+        ? `GET ${ogImageUrl} returned ${ogImageRes?.status ?? 'no response'}`
+        : ogImageRaw
+          ? `Invalid og:image URL: ${ogImageRaw}`
+          : 'Missing og:image metadata on deployed homepage',
   });
 
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';

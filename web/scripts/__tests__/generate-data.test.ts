@@ -709,9 +709,18 @@ describe('buildExternalVisibility', () => {
 
         if (url === baseUrl) {
           return new Response(
-            '<html><script type="application/ld+json">{}</script></html>',
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
             { status: 200 }
           );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
           return new Response(
@@ -759,6 +768,12 @@ describe('buildExternalVisibility', () => {
       true
     );
     expect(
+      visibility.checks.find((c) => c.id === 'deployed-canonical')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
+    ).toBe(true);
+    expect(
       visibility.checks.find((c) => c.id === 'deployed-robots-sitemap')?.ok
     ).toBe(true);
     expect(
@@ -805,6 +820,151 @@ describe('buildExternalVisibility', () => {
       fallbackBaseUrl,
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
+  });
+
+  it('flags canonical mismatch on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="https://example.com/wrong/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const canonicalCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-canonical'
+    );
+    expect(canonicalCheck?.ok).toBe(false);
+    expect(canonicalCheck?.details).toContain('Canonical mismatch');
+  });
+
+  it('accepts reversed attribute order for canonical and og:image metadata', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link href="${baseUrl}/" rel="canonical" />
+                <meta content="${baseUrl}/og-image.png" property="og:image" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-canonical')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
+    ).toBe(true);
   });
 
   it('marks freshness check as failed when deployed activity JSON is invalid', async () => {

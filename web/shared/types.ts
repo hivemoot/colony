@@ -115,6 +115,8 @@ export interface VisibilityCheck {
     | 'has-robots'
     | 'deployed-root-reachable'
     | 'deployed-jsonld'
+    | 'deployed-canonical'
+    | 'deployed-og-image'
     | 'deployed-robots-reachable'
     | 'deployed-robots-sitemap'
     | 'deployed-sitemap-reachable'
