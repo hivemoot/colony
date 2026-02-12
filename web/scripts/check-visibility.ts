@@ -15,6 +15,14 @@ const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 
+function resolveDeployedUrl(): string {
+  const configured = process.env.COLONY_DEPLOYED_URL?.trim();
+  if (configured) {
+    return configured.endsWith('/') ? configured.slice(0, -1) : configured;
+  }
+  return DEFAULT_DEPLOYED_BASE_URL;
+}
+
 interface CheckResult {
   label: string;
   ok: boolean;
@@ -89,7 +97,7 @@ function resolveDeployedBaseUrl(homepage?: string): {
   }
 
   return {
-    baseUrl: DEFAULT_DEPLOYED_BASE_URL,
+    baseUrl: resolveDeployedUrl(),
     usedFallback: true,
   };
 }
@@ -311,7 +319,7 @@ async function runChecks(): Promise<CheckResult[]> {
   const { baseUrl, usedFallback } = resolveDeployedBaseUrl(homepageUrl);
   if (usedFallback) {
     console.warn(
-      `Repository homepage missing/invalid. Using fallback deployed URL: ${DEFAULT_DEPLOYED_BASE_URL}`
+      `Repository homepage missing/invalid. Using fallback deployed URL: ${baseUrl}`
     );
   }
 

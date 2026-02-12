@@ -7,6 +7,7 @@ import {
   resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
   updateSitemapLastmod,
+  resolveDeployedUrl,
   mapCommits,
   mapIssues,
   mapPullRequests,
@@ -191,6 +192,46 @@ describe('resolveRequiredDiscoverabilityTopics', () => {
         COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' , , ',
       })
     ).toEqual(REQUIRED_DISCOVERABILITY_TOPICS);
+  });
+});
+
+describe('resolveDeployedUrl', () => {
+  it('returns default when COLONY_DEPLOYED_URL is not set', () => {
+    expect(resolveDeployedUrl({})).toBe('https://hivemoot.github.io/colony');
+  });
+
+  it('returns custom URL when COLONY_DEPLOYED_URL is set', () => {
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://example.com/dashboard',
+      })
+    ).toBe('https://example.com/dashboard');
+  });
+
+  it('strips trailing slash from custom URL', () => {
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://example.com/dashboard/',
+      })
+    ).toBe('https://example.com/dashboard');
+  });
+
+  it('trims whitespace from custom URL', () => {
+    expect(
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: '  https://example.com/app  ' })
+    ).toBe('https://example.com/app');
+  });
+
+  it('falls back to default when COLONY_DEPLOYED_URL is empty', () => {
+    expect(resolveDeployedUrl({ COLONY_DEPLOYED_URL: '' })).toBe(
+      'https://hivemoot.github.io/colony'
+    );
+  });
+
+  it('falls back to default when COLONY_DEPLOYED_URL is whitespace only', () => {
+    expect(resolveDeployedUrl({ COLONY_DEPLOYED_URL: '   ' })).toBe(
+      'https://hivemoot.github.io/colony'
+    );
   });
 });
 
