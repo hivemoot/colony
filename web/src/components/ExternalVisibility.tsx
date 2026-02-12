@@ -49,7 +49,7 @@ export function ExternalVisibility({
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 dark:border-neutral-600 px-3 py-1.5 bg-amber-50 dark:bg-neutral-900">
             <span
               aria-hidden="true"
-              className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass} ${meta.animate ? 'animate-pulse' : ''}`}
+              className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dotClass} ${meta.animate ? 'motion-safe:animate-pulse' : ''}`}
             />
             <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">
               {meta.label} ({data.score}/100)
