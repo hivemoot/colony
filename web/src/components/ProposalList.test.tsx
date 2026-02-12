@@ -408,6 +408,51 @@ describe('ProposalList', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('marks metadata/system comments in proposal discussion', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 7,
+        title: 'System message visibility',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 301,
+        issueOrPrNumber: 7,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'hivemoot',
+        body: '<!-- hivemoot-metadata: {"type":"welcome"} -->\n# Discussion Phase',
+        createdAt: '2026-02-05T09:30:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/7#issuecomment-301',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#7/i }));
+
+    expect(screen.getByText('System')).toBeInTheDocument();
+    expect(screen.getByText(/@hivemoot/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view on github/i })
+    ).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues/7#issuecomment-301'
+    );
+  });
+
   it('keeps proposal selection and panel ids unique across repos', () => {
     const proposals: Proposal[] = [
       {

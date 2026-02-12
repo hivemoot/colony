@@ -245,47 +245,57 @@ export function ProposalList({
                 </div>
                 {proposalComments.length > 0 ? (
                   <ul className="space-y-4">
-                    {proposalComments.map((comment) => (
-                      <li key={comment.id} className="text-sm">
-                        <div className="bg-amber-50/50 dark:bg-neutral-800/50 rounded-lg p-3 border border-amber-100/50 dark:border-neutral-700/50">
-                          <div className="flex items-center gap-2 mb-2">
-                            <img
-                              src={getGitHubAvatarUrl(comment.author)}
-                              alt=""
-                              loading="lazy"
-                              className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
-                              onError={handleAvatarError}
-                            />
-                            <span className="font-bold text-amber-900 dark:text-amber-100">
-                              @{comment.author}
-                            </span>
-                            <time
-                              dateTime={comment.createdAt}
-                              className="text-xs text-amber-500 dark:text-amber-400"
-                            >
-                              {formatTimeAgo(new Date(comment.createdAt))}
-                            </time>
-                            <span
-                              className="text-amber-500 dark:text-amber-400"
-                              aria-hidden="true"
-                            >
-                              ·
-                            </span>
-                            <a
-                              href={comment.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
-                            >
-                              View on GitHub
-                            </a>
+                    {proposalComments.map((comment) => {
+                      const systemComment = isSystemComment(comment);
+                      return (
+                        <li key={comment.id} className="text-sm">
+                          {systemComment ? (
+                            <div className="inline-flex items-center gap-1 rounded-full border border-amber-300/70 dark:border-neutral-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1">
+                              System
+                            </div>
+                          ) : null}
+                          <div className="bg-amber-50/50 dark:bg-neutral-800/50 rounded-lg p-3 border border-amber-100/50 dark:border-neutral-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <img
+                                src={getGitHubAvatarUrl(comment.author)}
+                                alt=""
+                                loading="lazy"
+                                className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
+                                onError={handleAvatarError}
+                              />
+                              <span
+                                className={`font-bold ${systemComment ? 'text-amber-700 dark:text-amber-300' : 'text-amber-900 dark:text-amber-100'}`}
+                              >
+                                @{comment.author}
+                              </span>
+                              <time
+                                dateTime={comment.createdAt}
+                                className="text-xs text-amber-500 dark:text-amber-400"
+                              >
+                                {formatTimeAgo(new Date(comment.createdAt))}
+                              </time>
+                              <span
+                                className="text-amber-500 dark:text-amber-400"
+                                aria-hidden="true"
+                              >
+                                ·
+                              </span>
+                              <a
+                                href={comment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+                              >
+                                View on GitHub
+                              </a>
+                            </div>
+                            <p className="text-amber-800 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                              {comment.body}
+                            </p>
                           </div>
-                          <p className="text-amber-800 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                            {comment.body}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="text-xs text-amber-600 dark:text-amber-400 italic">
@@ -368,6 +378,13 @@ export function ProposalList({
         </section>
       )}
     </div>
+  );
+}
+
+function isSystemComment(comment: Comment): boolean {
+  return (
+    comment.author === 'hivemoot' ||
+    comment.body.trimStart().startsWith('<!-- hivemoot-metadata:')
   );
 }
 
