@@ -8,10 +8,22 @@ const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+const REQUIRED_DISCOVERABILITY_TOPICS = [
+  'autonomous-agents',
+  'ai-governance',
+  'multi-agent',
+  'agent-collaboration',
+  'dashboard',
+  'react',
+  'typescript',
+  'github-pages',
+  'open-source',
+];
 
 interface CheckResult {
   label: string;
   ok: boolean;
+  details?: string;
 }
 
 function readIfExists(path: string): string {
@@ -88,9 +100,19 @@ async function runChecks(): Promise<CheckResult[]> {
         description?: string | null;
       };
       homepageUrl = repo.homepage || '';
+      const normalizedTopics = new Set(
+        (repo.topics ?? []).map((topic) => topic.toLowerCase())
+      );
+      const missingTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+        (topic) => !normalizedTopics.has(topic)
+      );
       results.push({
-        label: 'Repository topics are set',
-        ok: Array.isArray(repo.topics) && repo.topics.length > 0,
+        label: `Repository has required topics (${REQUIRED_DISCOVERABILITY_TOPICS.length})`,
+        ok: missingTopics.length === 0,
+        details:
+          missingTopics.length === 0
+            ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+            : `Missing required topics: ${missingTopics.join(', ')}`,
       });
       results.push({
         label: 'Repository homepage URL is set',
@@ -197,6 +219,9 @@ async function main(): Promise<void> {
   console.log('External visibility checks');
   for (const result of results) {
     console.log(`- ${result.ok ? 'PASS' : 'WARN'}: ${result.label}`);
+    if (result.details && !result.ok) {
+      console.log(`  ${result.details}`);
+    }
   }
 
   if (failed.length > 0) {
