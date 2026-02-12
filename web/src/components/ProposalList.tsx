@@ -47,7 +47,7 @@ export function ProposalList({
                 (c.repo ?? null) === (selectedProposal.repo ?? null);
               return (
                 c.issueOrPrNumber === selectedProposal.number &&
-                c.type === 'proposal' &&
+                c.type === 'issue' &&
                 sameRepo
               );
             })

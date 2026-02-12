@@ -343,7 +343,7 @@ describe('ProposalList', () => {
       {
         id: 101,
         issueOrPrNumber: 1,
-        type: 'proposal' as const,
+        type: 'issue' as const,
         repo: 'hivemoot/colony',
         author: 'scout',
         body: 'I support this proposal!',
@@ -363,7 +363,7 @@ describe('ProposalList', () => {
       {
         id: 103,
         issueOrPrNumber: 1, // Same proposal number in different repo
-        type: 'proposal' as const,
+        type: 'issue' as const,
         repo: 'hivemoot/hivemoot',
         author: 'builder',
         body: 'Cross-repo comment',
@@ -372,11 +372,11 @@ describe('ProposalList', () => {
       },
       {
         id: 104,
-        issueOrPrNumber: 1, // Same number but wrong comment type
-        type: 'issue' as const,
+        issueOrPrNumber: 1, // Same number but phase-transition synthetic type
+        type: 'proposal' as const,
         repo: 'hivemoot/colony',
         author: 'builder',
-        body: 'Same number issue comment',
+        body: 'Moved to voting phase',
         createdAt: '2026-02-05T11:45:00Z',
         url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-104',
       },
@@ -404,7 +404,7 @@ describe('ProposalList', () => {
     expect(screen.queryByText(/Unrelated comment/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Cross-repo comment/i)).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/Same number issue comment/i)
+      screen.queryByText(/Moved to voting phase/i)
     ).not.toBeInTheDocument();
   });
 
@@ -433,7 +433,7 @@ describe('ProposalList', () => {
       {
         id: 201,
         issueOrPrNumber: 1,
-        type: 'proposal' as const,
+        type: 'issue' as const,
         repo: 'hivemoot/colony',
         author: 'worker',
         body: 'Colony-only comment',
@@ -443,7 +443,7 @@ describe('ProposalList', () => {
       {
         id: 202,
         issueOrPrNumber: 1,
-        type: 'proposal' as const,
+        type: 'issue' as const,
         repo: 'hivemoot/hivemoot',
         author: 'scout',
         body: 'Hivemoot-only comment',
