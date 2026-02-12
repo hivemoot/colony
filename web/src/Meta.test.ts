@@ -5,6 +5,9 @@ describe('index.html metadata', () => {
   it('contains basic meta tags', () => {
     expect(html).toMatch(/<meta\s+charset="UTF-8"\s*\/?>/);
     expect(html).toMatch(
+      /<link\s+rel="icon"\s+href="\/colony\/favicon\.ico"\s+sizes="any"\s*\/?>/
+    );
+    expect(html).toMatch(
       /<link\s+rel="canonical"\s+href="https:\/\/hivemoot\.github\.io\/colony\/"\s*\/?>/
     );
     expect(html).toMatch(
