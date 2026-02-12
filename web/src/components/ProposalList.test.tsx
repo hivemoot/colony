@@ -326,4 +326,277 @@ describe('ProposalList', () => {
       'dark:focus-visible:ring-offset-neutral-800'
     );
   });
+
+  it('renders proposal comments in the discussion section when selected', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Proposal with comments',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 101,
+        issueOrPrNumber: 1,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'I support this proposal!',
+        createdAt: '2026-02-05T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-101',
+      },
+      {
+        id: 102,
+        issueOrPrNumber: 2, // Different proposal
+        type: 'proposal' as const,
+        repo: 'hivemoot/colony',
+        author: 'builder',
+        body: 'Unrelated comment',
+        createdAt: '2026-02-05T11:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/2#issuecomment-102',
+      },
+      {
+        id: 103,
+        issueOrPrNumber: 1, // Same proposal number in different repo
+        type: 'issue' as const,
+        repo: 'hivemoot/hivemoot',
+        author: 'builder',
+        body: 'Cross-repo comment',
+        createdAt: '2026-02-05T11:30:00Z',
+        url: 'https://github.com/hivemoot/hivemoot/issues/1#issuecomment-103',
+      },
+      {
+        id: 104,
+        issueOrPrNumber: 1, // Same number but phase-transition synthetic type
+        type: 'proposal' as const,
+        repo: 'hivemoot/colony',
+        author: 'builder',
+        body: 'Moved to voting phase',
+        createdAt: '2026-02-05T11:45:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-104',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#1/i }));
+
+    expect(screen.getByText('Discussion')).toBeInTheDocument();
+    expect(screen.getByText(/@scout/i)).toBeInTheDocument();
+    expect(screen.getByText(/I support this proposal!/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view on github/i })
+    ).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues/1#issuecomment-101'
+    );
+    expect(screen.queryByText(/Unrelated comment/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cross-repo comment/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Moved to voting phase/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it('marks metadata/system comments in proposal discussion', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 7,
+        title: 'System message visibility',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 301,
+        issueOrPrNumber: 7,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'hivemoot',
+        body: '<!-- hivemoot-metadata: {"type":"welcome"} -->\n# Discussion Phase',
+        createdAt: '2026-02-05T09:30:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/7#issuecomment-301',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#7/i }));
+
+    expect(screen.getByText('System')).toBeInTheDocument();
+    expect(screen.getByText(/@hivemoot/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view on github/i })
+    ).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues/7#issuecomment-301'
+    );
+  });
+
+  it('clamps long discussion comments and supports expand/collapse', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 8,
+        title: 'Clamp long comments',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const longBody = `Long comment: ${'lorem ipsum '.repeat(40)}`;
+    const comments = [
+      {
+        id: 401,
+        issueOrPrNumber: 8,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'builder',
+        body: longBody,
+        createdAt: '2026-02-05T09:30:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/8#issuecomment-401',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#8/i }));
+
+    const showMoreButton = screen.getByRole('button', { name: /show more/i });
+    expect(showMoreButton).toHaveAttribute('aria-expanded', 'false');
+    const clampedComment = screen.getByText((content) =>
+      content.startsWith('Long comment:')
+    );
+    expect(clampedComment.textContent?.endsWith('...')).toBe(true);
+
+    fireEvent.click(showMoreButton);
+    const expandedComment = screen.getByText((content) =>
+      content.startsWith('Long comment:')
+    );
+    expect(expandedComment.textContent).toBe(longBody);
+
+    const showLessButton = screen.getByRole('button', { name: /show less/i });
+    expect(showLessButton).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(showLessButton);
+    const reclampedComment = screen.getByText((content) =>
+      content.startsWith('Long comment:')
+    );
+    expect(reclampedComment.textContent?.endsWith('...')).toBe(true);
+    expect(
+      screen.getByRole('button', { name: /show more/i })
+    ).toBeInTheDocument();
+  });
+
+  it('keeps proposal selection and panel ids unique across repos', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Colony proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+      {
+        number: 1,
+        title: 'Hivemoot proposal',
+        phase: 'discussion',
+        author: 'scout',
+        createdAt: '2026-02-05T09:30:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/hivemoot',
+      },
+    ];
+    const comments = [
+      {
+        id: 201,
+        issueOrPrNumber: 1,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'worker',
+        body: 'Colony-only comment',
+        createdAt: '2026-02-05T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-201',
+      },
+      {
+        id: 202,
+        issueOrPrNumber: 1,
+        type: 'issue' as const,
+        repo: 'hivemoot/hivemoot',
+        author: 'scout',
+        body: 'Hivemoot-only comment',
+        createdAt: '2026-02-05T10:05:00Z',
+        url: 'https://github.com/hivemoot/hivemoot/issues/1#issuecomment-202',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    const proposalButtons = screen.getAllByRole('button', { name: /#1/i });
+    const controlsIds = proposalButtons.map((button) =>
+      button.getAttribute('aria-controls')
+    );
+    expect(controlsIds[0]).not.toEqual(controlsIds[1]);
+
+    const issueLinks = screen.getAllByRole('link', { name: /view issue/i });
+    expect(issueLinks[0]).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues/1'
+    );
+    expect(issueLinks[1]).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/hivemoot/issues/1'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /colony proposal/i }));
+    expect(screen.getByText(/Colony-only comment/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Hivemoot-only comment/i)
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view proposal thread/i })
+    ).toHaveAttribute('href', 'https://github.com/hivemoot/colony/issues/1');
+
+    fireEvent.click(screen.getByRole('button', { name: /hivemoot proposal/i }));
+    expect(screen.getByText(/Hivemoot-only comment/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Colony-only comment/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view proposal thread/i })
+    ).toHaveAttribute('href', 'https://github.com/hivemoot/hivemoot/issues/1');
+  });
 });
