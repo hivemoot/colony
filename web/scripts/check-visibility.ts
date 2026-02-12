@@ -23,6 +23,7 @@ const REQUIRED_DISCOVERABILITY_TOPICS = [
 interface CheckResult {
   label: string;
   ok: boolean;
+  details?: string;
 }
 
 function readIfExists(path: string): string {
@@ -108,6 +109,10 @@ async function runChecks(): Promise<CheckResult[]> {
       results.push({
         label: `Repository has required topics (${REQUIRED_DISCOVERABILITY_TOPICS.length})`,
         ok: missingTopics.length === 0,
+        details:
+          missingTopics.length === 0
+            ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+            : `Missing required topics: ${missingTopics.join(', ')}`,
       });
       results.push({
         label: 'Repository homepage URL is set',
@@ -214,6 +219,9 @@ async function main(): Promise<void> {
   console.log('External visibility checks');
   for (const result of results) {
     console.log(`- ${result.ok ? 'PASS' : 'WARN'}: ${result.label}`);
+    if (result.details && !result.ok) {
+      console.log(`  ${result.details}`);
+    }
   }
 
   if (failed.length > 0) {
