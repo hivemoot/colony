@@ -77,6 +77,7 @@ export function ProposalList({
           const proposalId = getProposalIdentity(proposal);
           const explorerId = getDecisionExplorerId(proposal);
           const isSelected = proposalId === selectedProposalId;
+          const proposalRepoUrl = getRepositoryUrl(proposal.repo, repoUrl);
 
           return (
             <article
@@ -164,7 +165,7 @@ export function ProposalList({
               </button>
               <div className="px-4 pb-3 flex items-center justify-between text-xs">
                 <a
-                  href={`${repoUrl}/issues/${proposal.number}`}
+                  href={`${proposalRepoUrl}/issues/${proposal.number}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
@@ -229,9 +230,19 @@ export function ProposalList({
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-3">
-                  Discussion
-                </h4>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    Discussion
+                  </h4>
+                  <a
+                    href={`${getRepositoryUrl(selectedProposal.repo, repoUrl)}/issues/${selectedProposal.number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+                  >
+                    View proposal thread
+                  </a>
+                </div>
                 {proposalComments.length > 0 ? (
                   <ul className="space-y-4">
                     {proposalComments.map((comment) => (
@@ -336,7 +347,7 @@ export function ProposalList({
                 </h4>
                 {snapshot.implementingPR ? (
                   <a
-                    href={`${repoUrl}/pull/${snapshot.implementingPR.number}`}
+                    href={`${getRepositoryUrl(snapshot.implementingPR.repo ?? selectedProposal.repo, repoUrl)}/pull/${snapshot.implementingPR.number}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200 hover:text-amber-950 dark:hover:text-amber-50 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
@@ -362,6 +373,13 @@ export function ProposalList({
 
 function getProposalIdentity(proposal: Proposal): string {
   return `${proposal.repo ?? 'local'}:${proposal.number}`;
+}
+
+function getRepositoryUrl(
+  repo: string | null | undefined,
+  fallbackRepoUrl: string
+): string {
+  return repo ? `https://github.com/${repo}` : fallbackRepoUrl;
 }
 
 function getDecisionExplorerId(proposal: Proposal): string {

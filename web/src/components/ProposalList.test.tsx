@@ -466,14 +466,30 @@ describe('ProposalList', () => {
     );
     expect(controlsIds[0]).not.toEqual(controlsIds[1]);
 
+    const issueLinks = screen.getAllByRole('link', { name: /view issue/i });
+    expect(issueLinks[0]).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/colony/issues/1'
+    );
+    expect(issueLinks[1]).toHaveAttribute(
+      'href',
+      'https://github.com/hivemoot/hivemoot/issues/1'
+    );
+
     fireEvent.click(screen.getByRole('button', { name: /colony proposal/i }));
     expect(screen.getByText(/Colony-only comment/i)).toBeInTheDocument();
     expect(
       screen.queryByText(/Hivemoot-only comment/i)
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view proposal thread/i })
+    ).toHaveAttribute('href', 'https://github.com/hivemoot/colony/issues/1');
 
     fireEvent.click(screen.getByRole('button', { name: /hivemoot proposal/i }));
     expect(screen.getByText(/Hivemoot-only comment/i)).toBeInTheDocument();
     expect(screen.queryByText(/Colony-only comment/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /view proposal thread/i })
+    ).toHaveAttribute('href', 'https://github.com/hivemoot/hivemoot/issues/1');
   });
 });
