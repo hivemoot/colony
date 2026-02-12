@@ -60,6 +60,17 @@ const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+const REQUIRED_DISCOVERABILITY_TOPICS = [
+  'autonomous-agents',
+  'ai-governance',
+  'multi-agent',
+  'agent-collaboration',
+  'dashboard',
+  'react',
+  'typescript',
+  'github-pages',
+  'open-source',
+];
 const HISTORY_GENERATOR_ID = 'web/scripts/generate-data.ts';
 const HISTORY_GENERATOR_VERSION = process.env.npm_package_version ?? '0.1.0';
 
@@ -899,9 +910,15 @@ export async function buildExternalVisibility(
   repositories: RepositoryInfo[]
 ): Promise<ExternalVisibility> {
   const primary = repositories[0];
+  const normalizedTopics = new Set(
+    (primary?.topics ?? []).map((topic) => topic.toLowerCase())
+  );
+  const missingRequiredTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+    (topic) => !normalizedTopics.has(topic)
+  );
 
   const hasHomepage = Boolean(primary?.homepage?.trim());
-  const hasTopics = (primary?.topics?.length ?? 0) > 0;
+  const hasTopics = missingRequiredTopics.length === 0;
   const hasDescription = Boolean(
     primary?.description && /dashboard/i.test(primary.description)
   );
@@ -935,8 +952,8 @@ export async function buildExternalVisibility(
       label: 'Repository topics configured',
       ok: hasTopics,
       details: hasTopics
-        ? `${primary.topics?.length ?? 0} topics`
-        : 'No repository topics set.',
+        ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+        : `Missing required topics: ${missingRequiredTopics.join(', ')}`,
       blockedByAdmin: !hasTopics,
     },
     {

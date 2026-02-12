@@ -8,6 +8,17 @@ const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+const REQUIRED_DISCOVERABILITY_TOPICS = [
+  'autonomous-agents',
+  'ai-governance',
+  'multi-agent',
+  'agent-collaboration',
+  'dashboard',
+  'react',
+  'typescript',
+  'github-pages',
+  'open-source',
+];
 
 interface CheckResult {
   label: string;
@@ -88,9 +99,15 @@ async function runChecks(): Promise<CheckResult[]> {
         description?: string | null;
       };
       homepageUrl = repo.homepage || '';
+      const normalizedTopics = new Set(
+        (repo.topics ?? []).map((topic) => topic.toLowerCase())
+      );
+      const missingTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+        (topic) => !normalizedTopics.has(topic)
+      );
       results.push({
-        label: 'Repository topics are set',
-        ok: Array.isArray(repo.topics) && repo.topics.length > 0,
+        label: `Repository has required topics (${REQUIRED_DISCOVERABILITY_TOPICS.length})`,
+        ok: missingTopics.length === 0,
       });
       results.push({
         label: 'Repository homepage URL is set',

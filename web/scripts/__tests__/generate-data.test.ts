@@ -30,6 +30,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const REQUIRED_DISCOVERABILITY_TOPICS = [
+  'autonomous-agents',
+  'ai-governance',
+  'multi-agent',
+  'agent-collaboration',
+  'dashboard',
+  'react',
+  'typescript',
+  'github-pages',
+  'open-source',
+];
+
 describe('resolveRepository', () => {
   it('should use default values if no env vars are present', () => {
     const result = resolveRepository({});
@@ -666,7 +678,7 @@ describe('buildExternalVisibility', () => {
         forks: 1,
         openIssues: 1,
         homepage: `${baseUrl}/`,
-        topics: ['autonomous-agents'],
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
         description: 'Open-source dashboard for autonomous agent governance',
       },
     ]);
@@ -735,7 +747,7 @@ describe('buildExternalVisibility', () => {
         forks: 1,
         openIssues: 1,
         homepage: `${baseUrl}/`,
-        topics: ['autonomous-agents'],
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
         description: 'Open-source dashboard for autonomous agent governance',
       },
     ]);
@@ -774,7 +786,7 @@ describe('buildExternalVisibility', () => {
         forks: 1,
         openIssues: 1,
         homepage: null,
-        topics: ['autonomous-agents'],
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
         description: 'Open-source dashboard for autonomous agent governance',
       },
     ]);
@@ -846,7 +858,7 @@ describe('buildExternalVisibility', () => {
         forks: 1,
         openIssues: 1,
         homepage: `${baseUrl}/`,
-        topics: ['autonomous-agents'],
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
         description: 'Open-source dashboard for autonomous agent governance',
       },
     ]);
@@ -858,5 +870,30 @@ describe('buildExternalVisibility', () => {
     expect(freshnessCheck?.details).toContain(
       'Invalid activity.json format on deployed site'
     );
+  });
+
+  it('fails topic check when required discoverability topics are missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('ok', { status: 200 });
+    });
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'https://hivemoot.github.io/colony/',
+        topics: ['autonomous-agents', 'dashboard'],
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const topicsCheck = visibility.checks.find((c) => c.id === 'has-topics');
+    expect(topicsCheck?.ok).toBe(false);
+    expect(topicsCheck?.details).toContain('Missing required topics:');
+    expect(topicsCheck?.details).toContain('ai-governance');
   });
 });
