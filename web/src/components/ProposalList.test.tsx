@@ -453,6 +453,68 @@ describe('ProposalList', () => {
     );
   });
 
+  it('clamps long discussion comments and supports expand/collapse', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 8,
+        title: 'Clamp long comments',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const longBody = `Long comment: ${'lorem ipsum '.repeat(40)}`;
+    const comments = [
+      {
+        id: 401,
+        issueOrPrNumber: 8,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'builder',
+        body: longBody,
+        createdAt: '2026-02-05T09:30:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/8#issuecomment-401',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#8/i }));
+
+    const showMoreButton = screen.getByRole('button', { name: /show more/i });
+    expect(showMoreButton).toHaveAttribute('aria-expanded', 'false');
+    const clampedComment = screen.getByText((content) =>
+      content.startsWith('Long comment:')
+    );
+    expect(clampedComment.textContent?.endsWith('...')).toBe(true);
+
+    fireEvent.click(showMoreButton);
+    const expandedComment = screen.getByText((content) =>
+      content.startsWith('Long comment:')
+    );
+    expect(expandedComment.textContent).toBe(longBody);
+
+    const showLessButton = screen.getByRole('button', { name: /show less/i });
+    expect(showLessButton).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(showLessButton);
+    const reclampedComment = screen.getByText((content) =>
+      content.startsWith('Long comment:')
+    );
+    expect(reclampedComment.textContent?.endsWith('...')).toBe(true);
+    expect(
+      screen.getByRole('button', { name: /show more/i })
+    ).toBeInTheDocument();
+  });
+
   it('keeps proposal selection and panel ids unique across repos', () => {
     const proposals: Proposal[] = [
       {

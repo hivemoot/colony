@@ -19,6 +19,9 @@ export function ProposalList({
   repoUrl,
   filteredAgent,
 }: ProposalListProps): React.ReactElement {
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(
     null
   );
@@ -247,6 +250,12 @@ export function ProposalList({
                   <ul className="space-y-4">
                     {proposalComments.map((comment) => {
                       const systemComment = isSystemComment(comment);
+                      const commentKey = `${selectedProposalId ?? 'none'}:${comment.id}`;
+                      const isExpanded = expandedCommentIds.has(commentKey);
+                      const commentPreview = truncateCommentBody(
+                        comment.body,
+                        isExpanded
+                      );
                       return (
                         <li key={comment.id} className="text-sm">
                           {systemComment ? (
@@ -290,8 +299,28 @@ export function ProposalList({
                               </a>
                             </div>
                             <p className="text-amber-800 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                              {comment.body}
+                              {commentPreview}
                             </p>
+                            {isCommentClampEligible(comment.body) ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExpandedCommentIds((previous) => {
+                                    const next = new Set(previous);
+                                    if (next.has(commentKey)) {
+                                      next.delete(commentKey);
+                                    } else {
+                                      next.add(commentKey);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="mt-2 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
+                                aria-expanded={isExpanded}
+                              >
+                                {isExpanded ? 'Show less' : 'Show more'}
+                              </button>
+                            ) : null}
                           </div>
                         </li>
                       );
@@ -379,6 +408,20 @@ export function ProposalList({
       )}
     </div>
   );
+}
+
+const COMMENT_PREVIEW_MAX_CHARS = 320;
+
+function isCommentClampEligible(body: string): boolean {
+  return body.length > COMMENT_PREVIEW_MAX_CHARS;
+}
+
+function truncateCommentBody(body: string, expanded: boolean): string {
+  if (expanded || !isCommentClampEligible(body)) {
+    return body;
+  }
+
+  return `${body.slice(0, COMMENT_PREVIEW_MAX_CHARS).trimEnd()}...`;
 }
 
 function isSystemComment(comment: Comment): boolean {
