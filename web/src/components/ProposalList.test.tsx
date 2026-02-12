@@ -336,6 +336,7 @@ describe('ProposalList', () => {
         author: 'worker',
         createdAt: '2026-02-05T09:00:00Z',
         commentCount: 1,
+        repo: 'hivemoot/colony',
       },
     ];
     const comments = [
@@ -343,6 +344,7 @@ describe('ProposalList', () => {
         id: 101,
         issueOrPrNumber: 1,
         type: 'proposal' as const,
+        repo: 'hivemoot/colony',
         author: 'scout',
         body: 'I support this proposal!',
         createdAt: '2026-02-05T10:00:00Z',
@@ -352,10 +354,31 @@ describe('ProposalList', () => {
         id: 102,
         issueOrPrNumber: 2, // Different proposal
         type: 'proposal' as const,
+        repo: 'hivemoot/colony',
         author: 'builder',
         body: 'Unrelated comment',
         createdAt: '2026-02-05T11:00:00Z',
         url: 'https://github.com/hivemoot/colony/issues/2#issuecomment-102',
+      },
+      {
+        id: 103,
+        issueOrPrNumber: 1, // Same proposal number in different repo
+        type: 'proposal' as const,
+        repo: 'hivemoot/hivemoot',
+        author: 'builder',
+        body: 'Cross-repo comment',
+        createdAt: '2026-02-05T11:30:00Z',
+        url: 'https://github.com/hivemoot/hivemoot/issues/1#issuecomment-103',
+      },
+      {
+        id: 104,
+        issueOrPrNumber: 1, // Same number but wrong comment type
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'builder',
+        body: 'Same number issue comment',
+        createdAt: '2026-02-05T11:45:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-104',
       },
     ];
 
@@ -373,5 +396,9 @@ describe('ProposalList', () => {
     expect(screen.getByText(/@scout/i)).toBeInTheDocument();
     expect(screen.getByText(/I support this proposal!/i)).toBeInTheDocument();
     expect(screen.queryByText(/Unrelated comment/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cross-repo comment/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Same number issue comment/i)
+    ).not.toBeInTheDocument();
   });
 });

@@ -40,7 +40,15 @@ export function ProposalList({
     () =>
       selectedProposal
         ? comments
-            .filter((c) => c.issueOrPrNumber === selectedProposal.number)
+            .filter((c) => {
+              const sameRepo =
+                (c.repo ?? null) === (selectedProposal.repo ?? null);
+              return (
+                c.issueOrPrNumber === selectedProposal.number &&
+                c.type === 'proposal' &&
+                sameRepo
+              );
+            })
             .sort(
               (a, b) =>
                 new Date(a.createdAt).getTime() -
