@@ -19,6 +19,7 @@ const REQUIRED_DISCOVERABILITY_TOPICS = [
   'github-pages',
   'open-source',
 ];
+const REQUIRED_APPLE_TOUCH_ICON_SIZE = '180x180';
 
 interface CheckResult {
   label: string;
@@ -304,21 +305,39 @@ async function runChecks(): Promise<CheckResult[]> {
     'apple-touch-icon',
     'href'
   );
+  const appleTouchIconSizesRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'sizes'
+  );
   const { url: appleTouchIconUrl, error: appleTouchIconError } =
     resolveMetadataUrl(appleTouchIconRaw, baseUrl);
+  const hasRequiredAppleTouchIconSize = appleTouchIconSizesRaw
+    .toLowerCase()
+    .split(/\s+/)
+    .includes(REQUIRED_APPLE_TOUCH_ICON_SIZE);
   const appleTouchIconRes = appleTouchIconUrl
     ? await fetchWithTimeout(appleTouchIconUrl)
     : null;
   results.push({
     label: 'Deployed apple-touch-icon reachable',
-    ok: Boolean(appleTouchIconUrl) && appleTouchIconRes?.status === 200,
+    ok:
+      Boolean(appleTouchIconUrl) &&
+      hasRequiredAppleTouchIconSize &&
+      appleTouchIconRes?.status === 200,
     details:
-      appleTouchIconRes?.status === 200 && appleTouchIconUrl
+      appleTouchIconRes?.status === 200 &&
+      appleTouchIconUrl &&
+      hasRequiredAppleTouchIconSize
         ? `GET ${appleTouchIconUrl} returned 200`
         : appleTouchIconUrl
-          ? `GET ${appleTouchIconUrl} returned ${
-              appleTouchIconRes?.status ?? 'no response'
-            }`
+          ? !hasRequiredAppleTouchIconSize
+            ? `apple-touch-icon metadata missing required sizes="${REQUIRED_APPLE_TOUCH_ICON_SIZE}"`
+            : `GET ${appleTouchIconUrl} returned ${
+                appleTouchIconRes?.status ?? 'no response'
+              }`
           : appleTouchIconError
             ? appleTouchIconError
             : 'Missing apple-touch-icon metadata on deployed homepage',

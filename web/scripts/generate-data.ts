@@ -71,6 +71,7 @@ const REQUIRED_DISCOVERABILITY_TOPICS = [
   'github-pages',
   'open-source',
 ];
+const REQUIRED_APPLE_TOUCH_ICON_SIZE = '180x180';
 const HISTORY_GENERATOR_ID = 'web/scripts/generate-data.ts';
 const HISTORY_GENERATOR_VERSION = process.env.npm_package_version ?? '0.1.0';
 
@@ -1176,25 +1177,50 @@ export async function buildExternalVisibility(
     'apple-touch-icon',
     'href'
   );
+  const appleTouchIconSizesRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'sizes'
+  );
   const { url: appleTouchIconUrl, error: appleTouchIconError } =
     resolveMetadataUrl(appleTouchIconRaw, baseUrl);
+  const hasRequiredAppleTouchIconSize = appleTouchIconSizesRaw
+    .toLowerCase()
+    .split(/\s+/)
+    .includes(REQUIRED_APPLE_TOUCH_ICON_SIZE);
   const appleTouchIconRes = appleTouchIconUrl
     ? await fetchWithTimeout(appleTouchIconUrl)
     : null;
   checks.push({
     id: 'deployed-apple-touch-icon',
     label: 'Deployed apple-touch-icon reachable',
-    ok: Boolean(appleTouchIconUrl) && appleTouchIconRes?.status === 200,
+    ok:
+      Boolean(appleTouchIconUrl) &&
+      hasRequiredAppleTouchIconSize &&
+      appleTouchIconRes?.status === 200,
     details:
-      appleTouchIconRes?.status === 200 && appleTouchIconUrl
+      appleTouchIconRes?.status === 200 &&
+      appleTouchIconUrl &&
+      hasRequiredAppleTouchIconSize
         ? `GET ${appleTouchIconUrl} returned 200`
         : appleTouchIconUrl
-          ? `GET ${appleTouchIconUrl} returned ${
-              appleTouchIconRes?.status ?? 'no response'
-            }`
+          ? !hasRequiredAppleTouchIconSize
+            ? `apple-touch-icon metadata missing required sizes="${REQUIRED_APPLE_TOUCH_ICON_SIZE}"`
+            : `GET ${appleTouchIconUrl} returned ${
+                appleTouchIconRes?.status ?? 'no response'
+              }`
           : appleTouchIconError
             ? appleTouchIconError
             : 'Missing apple-touch-icon metadata on deployed homepage',
+  });
+
+  checks.push({
+    id: 'deployed-robots-reachable',
+    label: 'Deployed robots.txt reachable',
+    ok: robotsRes?.status === 200,
+    details: robotsRes ? `Status ${robotsRes.status}` : 'Fetch failed',
   });
 
   // Robots check
@@ -1202,12 +1228,6 @@ export async function buildExternalVisibility(
   const hasDeployedRobotsSitemap = /Sitemap:\s*https?:\/\/\S+/i.test(
     robotsText
   );
-  checks.push({
-    id: 'deployed-robots-reachable',
-    label: 'Deployed robots.txt reachable',
-    ok: robotsRes?.status === 200,
-    details: robotsRes ? `Status ${robotsRes.status}` : 'Fetch failed',
-  });
   checks.push({
     id: 'deployed-robots-sitemap',
     label: 'Deployed robots.txt has sitemap',

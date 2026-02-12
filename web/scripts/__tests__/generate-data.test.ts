@@ -713,7 +713,7 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link rel="canonical" href="${baseUrl}/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
-                <link rel="apple-touch-icon" href="${baseUrl}/apple-touch-icon.png" />
+                <link rel="apple-touch-icon" sizes="180x180" href="${baseUrl}/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -846,7 +846,7 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link rel="canonical" href="https://example.com/wrong/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
-                <link rel="apple-touch-icon" href="${baseUrl}/apple-touch-icon.png" />
+                <link rel="apple-touch-icon" sizes="180x180" href="${baseUrl}/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -922,7 +922,7 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link href="${baseUrl}/" rel="canonical" />
                 <meta content="${baseUrl}/og-image.png" property="og:image" />
-                <link href="${baseUrl}/apple-touch-icon.png" rel="apple-touch-icon" />
+                <link href="${baseUrl}/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -1002,7 +1002,7 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link rel="canonical" href="${baseUrl}/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
-                <link rel="apple-touch-icon" href="${baseUrl}/apple-touch-icon.png" />
+                <link rel="apple-touch-icon" sizes="180x180" href="${baseUrl}/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -1132,6 +1132,84 @@ describe('buildExternalVisibility', () => {
     expect(appleTouchIconCheck?.ok).toBe(false);
     expect(appleTouchIconCheck?.details).toContain(
       'Missing apple-touch-icon metadata'
+    );
+  });
+
+  it('marks apple-touch-icon check as failed when required size metadata is missing', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <link rel="apple-touch-icon" href="${baseUrl}/apple-touch-icon.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
+          return new Response('icon-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const appleTouchIconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-apple-touch-icon'
+    );
+    expect(appleTouchIconCheck?.ok).toBe(false);
+    expect(appleTouchIconCheck?.details).toContain(
+      'missing required sizes="180x180"'
     );
   });
 
