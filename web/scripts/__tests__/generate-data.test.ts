@@ -1245,6 +1245,7 @@ describe('buildExternalVisibility', () => {
           return new Response(
             `<html>
               <head>
+                <link href="${baseUrl}/favicon.ico" sizes="any" rel="icon" />
                 <link href="${baseUrl}/" rel="canonical" />
                 <meta content="${baseUrl}/og-image.png" property="og:image" />
                 <meta content="${baseUrl}/twitter-image.png" name="twitter:image" />
@@ -1253,6 +1254,9 @@ describe('buildExternalVisibility', () => {
             </html>`,
             { status: 200 }
           );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('icon-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
           return new Response(
