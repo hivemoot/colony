@@ -439,18 +439,16 @@ Moving from an "interesting demo" to a "useful tool".
     const markdown = `
 ## 📈 Current Status (Feb 2026)
 
-The project has successfully delivered the majority of Horizon 2 features.
-Current work is focused on Horizon 3 kickoff.
+Horizon 2 is complete.
+Horizon 3 is now in foundation mode.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
 `;
 
     const parsed = parseRoadmap(markdown);
+    expect(parsed.currentStatus).toContain('Horizon 2 is complete.');
     expect(parsed.currentStatus).toContain(
-      'The project has successfully delivered the majority of Horizon 2 features.'
-    );
-    expect(parsed.currentStatus).toContain(
-      'Current work is focused on Horizon 3 kickoff.'
+      'Horizon 3 is now in foundation mode.'
     );
   });
 });
