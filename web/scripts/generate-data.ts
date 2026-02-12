@@ -73,6 +73,16 @@ export const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'github-pages',
   'open-source',
 ];
+
+export function resolveDeployedUrl(
+  env: Record<string, string | undefined> = process.env
+): string {
+  const configured = env.COLONY_DEPLOYED_URL?.trim();
+  if (configured) {
+    return configured.endsWith('/') ? configured.slice(0, -1) : configured;
+  }
+  return DEFAULT_DEPLOYED_BASE_URL;
+}
 const HISTORY_GENERATOR_ID = 'web/scripts/generate-data.ts';
 const HISTORY_GENERATOR_VERSION = process.env.npm_package_version ?? '0.1.0';
 
@@ -1022,7 +1032,7 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   }
 
   return {
-    baseUrl: DEFAULT_DEPLOYED_BASE_URL,
+    baseUrl: resolveDeployedUrl(),
     usedFallback: true,
   };
 }
@@ -1282,7 +1292,7 @@ export async function buildExternalVisibility(
   // Deployed site parity checks (Scout Intelligence)
   const { baseUrl, usedFallback } = resolveDeployedBaseUrl(normalizedHomepage);
   const deployedSourceDetails = usedFallback
-    ? `Fallback URL used: ${DEFAULT_DEPLOYED_BASE_URL} (repository homepage missing or invalid).`
+    ? `Fallback URL used: ${baseUrl} (repository homepage missing or invalid).`
     : `Source URL: ${baseUrl}`;
 
   const fetchWithTimeout = async (url: string): Promise<Response | null> => {
