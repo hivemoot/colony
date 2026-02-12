@@ -711,6 +711,7 @@ describe('buildExternalVisibility', () => {
           return new Response(
             `<html>
               <head>
+                <link rel="icon" href="${baseUrl}/favicon.ico" sizes="any" />
                 <link rel="canonical" href="${baseUrl}/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
@@ -719,6 +720,9 @@ describe('buildExternalVisibility', () => {
             </html>`,
             { status: 200 }
           );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('icon-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/og-image.png`) {
           return new Response('image-bytes', { status: 200 });
@@ -777,6 +781,9 @@ describe('buildExternalVisibility', () => {
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
     ).toBe(true);
+    expect(visibility.checks.find((c) => c.id === 'deployed-favicon')?.ok).toBe(
+      true
+    );
     expect(
       visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
     ).toBe(true);
@@ -844,6 +851,7 @@ describe('buildExternalVisibility', () => {
           return new Response(
             `<html>
               <head>
+                <link rel="icon" href="${baseUrl}/favicon.ico" sizes="any" />
                 <link rel="canonical" href="https://example.com/wrong/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
@@ -852,6 +860,9 @@ describe('buildExternalVisibility', () => {
             </html>`,
             { status: 200 }
           );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('icon-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
           return new Response(
@@ -920,13 +931,17 @@ describe('buildExternalVisibility', () => {
           return new Response(
             `<html>
               <head>
-                <link rel="canonical" href="${baseUrl}/" />
-                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <link href="${baseUrl}/favicon.ico" sizes="any" rel="icon" />
+                <link href="${baseUrl}/" rel="canonical" />
+                <meta content="${baseUrl}/og-image.png" property="og:image" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
             { status: 200 }
           );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('icon-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
           return new Response(
@@ -1293,6 +1308,154 @@ describe('buildExternalVisibility', () => {
     expect(
       visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
     ).toBe(true);
+    expect(visibility.checks.find((c) => c.id === 'deployed-favicon')?.ok).toBe(
+      true
+    );
+  });
+
+  it('flags deployed visibility when file-backed favicon metadata is missing', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="icon" href="data:image/svg+xml,%3Csvg%3E%3C/svg%3E" />
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const faviconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-favicon'
+    );
+    expect(faviconCheck?.ok).toBe(false);
+    expect(faviconCheck?.details).toContain(
+      'Missing file-backed favicon metadata'
+    );
+  });
+
+  it('flags deployed visibility when favicon URL is not reachable', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="icon" href="${baseUrl}/favicon.ico" sizes="any" />
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('not found', { status: 404 });
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const faviconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-favicon'
+    );
+    expect(faviconCheck?.ok).toBe(false);
+    expect(faviconCheck?.details).toContain('returned 404');
   });
 
   it('marks freshness check as failed when deployed activity JSON is invalid', async () => {
