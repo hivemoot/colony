@@ -712,6 +712,7 @@ describe('buildExternalVisibility', () => {
             `<html>
               <head>
                 <link rel="canonical" href="${baseUrl}/" />
+                <link rel="apple-touch-icon" href="/colony/apple-touch-icon.png" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
                 <script type="application/ld+json">{}</script>
@@ -724,6 +725,9 @@ describe('buildExternalVisibility', () => {
           return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
           return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
@@ -779,6 +783,9 @@ describe('buildExternalVisibility', () => {
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-apple-touch-icon')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-robots-sitemap')?.ok
@@ -976,6 +983,84 @@ describe('buildExternalVisibility', () => {
     expect(twitterImageCheck?.ok).toBe(false);
     expect(twitterImageCheck?.details).toContain(
       'Missing twitter:image metadata on deployed homepage'
+    );
+  });
+
+  it('flags missing apple-touch-icon metadata on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const appleTouchIconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-apple-touch-icon'
+    );
+    expect(appleTouchIconCheck?.ok).toBe(false);
+    expect(appleTouchIconCheck?.details).toContain(
+      'Missing apple-touch-icon metadata on deployed homepage'
     );
   });
 

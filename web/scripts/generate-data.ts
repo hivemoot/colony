@@ -919,6 +919,21 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
   }
 }
 
+function resolveMetadataUrl(
+  rawValue: string,
+  baseUrl: string
+): { url: string; error?: string } {
+  if (!rawValue) {
+    return { url: '' };
+  }
+
+  try {
+    return { url: new URL(rawValue, `${baseUrl}/`).toString() };
+  } catch {
+    return { url: '', error: `Invalid metadata URL: ${rawValue}` };
+  }
+}
+
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -1195,6 +1210,34 @@ export async function buildExternalVisibility(
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const appleTouchIconRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'href'
+  );
+  const { url: appleTouchIconUrl, error: appleTouchIconError } =
+    resolveMetadataUrl(appleTouchIconRaw, baseUrl);
+  const appleTouchIconRes = appleTouchIconUrl
+    ? await fetchWithTimeout(appleTouchIconUrl)
+    : null;
+  checks.push({
+    id: 'deployed-apple-touch-icon',
+    label: 'Deployed apple-touch-icon reachable',
+    ok: Boolean(appleTouchIconUrl) && appleTouchIconRes?.status === 200,
+    details:
+      appleTouchIconRes?.status === 200 && appleTouchIconUrl
+        ? `GET ${appleTouchIconUrl} returned 200`
+        : appleTouchIconUrl
+          ? `GET ${appleTouchIconUrl} returned ${
+              appleTouchIconRes?.status ?? 'no response'
+            }`
+          : appleTouchIconError
+            ? appleTouchIconError
+            : 'Missing apple-touch-icon metadata on deployed homepage',
   });
 
   // Robots check
