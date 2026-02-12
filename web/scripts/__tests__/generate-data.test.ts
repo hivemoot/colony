@@ -233,6 +233,26 @@ describe('resolveDeployedUrl', () => {
       'https://hivemoot.github.io/colony'
     );
   });
+
+  it('falls back to default when COLONY_DEPLOYED_URL is an invalid URL', () => {
+    expect(resolveDeployedUrl({ COLONY_DEPLOYED_URL: ':::bad:::' })).toBe(
+      'https://hivemoot.github.io/colony'
+    );
+  });
+
+  it('falls back to default when COLONY_DEPLOYED_URL has no scheme', () => {
+    expect(
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'myorg.github.io/colony' })
+    ).toBe('https://hivemoot.github.io/colony');
+  });
+
+  it('falls back to default when COLONY_DEPLOYED_URL uses a non-http protocol', () => {
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'ftp://files.example.com/data',
+      })
+    ).toBe('https://hivemoot.github.io/colony');
+  });
 });
 
 describe('mapCommits', () => {

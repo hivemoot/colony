@@ -18,7 +18,16 @@ const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 function resolveDeployedUrl(): string {
   const configured = process.env.COLONY_DEPLOYED_URL?.trim();
   if (configured) {
-    return configured.endsWith('/') ? configured.slice(0, -1) : configured;
+    try {
+      const parsed = new URL(configured);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return DEFAULT_DEPLOYED_BASE_URL;
+      }
+      const normalized = parsed.origin + parsed.pathname;
+      return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
+    } catch {
+      return DEFAULT_DEPLOYED_BASE_URL;
+    }
   }
   return DEFAULT_DEPLOYED_BASE_URL;
 }
