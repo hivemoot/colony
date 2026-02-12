@@ -1158,6 +1158,38 @@ export async function buildExternalVisibility(
           : 'Missing og:image metadata on deployed homepage',
   });
 
+  const twitterImageRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image',
+    'content'
+  );
+  let twitterImageUrl = '';
+  if (twitterImageRaw) {
+    try {
+      twitterImageUrl = new URL(twitterImageRaw, `${baseUrl}/`).toString();
+    } catch {
+      twitterImageUrl = '';
+    }
+  }
+  const twitterImageRes = twitterImageUrl
+    ? await fetchWithTimeout(twitterImageUrl)
+    : null;
+  const hasDeployedTwitterImage = twitterImageRes?.status === 200;
+  checks.push({
+    id: 'deployed-twitter-image',
+    label: 'Deployed Twitter image reachable',
+    ok: hasDeployedTwitterImage,
+    details: hasDeployedTwitterImage
+      ? `GET ${twitterImageUrl} returned 200`
+      : twitterImageUrl
+        ? `GET ${twitterImageUrl} returned ${twitterImageRes?.status ?? 'no response'}`
+        : twitterImageRaw
+          ? `Invalid twitter:image URL: ${twitterImageRaw}`
+          : 'Missing twitter:image metadata on deployed homepage',
+  });
+
   // Robots check
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
   const hasDeployedRobotsSitemap = /Sitemap:\s*https?:\/\/\S+/i.test(

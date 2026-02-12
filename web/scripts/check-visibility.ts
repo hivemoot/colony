@@ -286,6 +286,37 @@ async function runChecks(): Promise<CheckResult[]> {
           : 'Missing og:image metadata on deployed homepage',
   });
 
+  const twitterImageRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image',
+    'content'
+  );
+  let twitterImageUrl = '';
+  if (twitterImageRaw) {
+    try {
+      twitterImageUrl = new URL(twitterImageRaw, `${baseUrl}/`).toString();
+    } catch {
+      twitterImageUrl = '';
+    }
+  }
+  const twitterImageRes = twitterImageUrl
+    ? await fetchWithTimeout(twitterImageUrl)
+    : null;
+  const hasDeployedTwitterImage = twitterImageRes?.status === 200;
+  results.push({
+    label: 'Deployed Twitter image reachable',
+    ok: hasDeployedTwitterImage,
+    details: hasDeployedTwitterImage
+      ? `GET ${twitterImageUrl} returned 200`
+      : twitterImageUrl
+        ? `GET ${twitterImageUrl} returned ${twitterImageRes?.status ?? 'no response'}`
+        : twitterImageRaw
+          ? `Invalid twitter:image URL: ${twitterImageRaw}`
+          : 'Missing twitter:image metadata on deployed homepage',
+  });
+
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
   results.push({
     label: 'Deployed robots.txt has sitemap',
