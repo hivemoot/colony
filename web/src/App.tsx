@@ -227,11 +227,12 @@ function App(): React.ReactElement {
         >
           View on GitHub
         </a>
-        {((): React.ReactElement => {
+        {((): React.ReactElement | null => {
           const repos = data?.repositories ?? [];
           const governanceRepo = repos.find(
             (r) => r.url !== data?.repository.url
           );
+          if (data && !governanceRepo) return null;
           const href =
             governanceRepo?.url ?? 'https://github.com/hivemoot/hivemoot';
           const label = governanceRepo

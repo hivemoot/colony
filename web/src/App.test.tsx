@@ -400,6 +400,56 @@ describe('App', () => {
     expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
+  it('hides governance footer link when data is loaded with single repo only', async () => {
+    mockHookReturn({
+      data: mockData,
+      events: mockEvents,
+      lastUpdated: new Date(),
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: /view on github/i })
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole('link', { name: /governance framework/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows governance footer link when data has multiple repos', async () => {
+    const multiRepoData: ActivityData = {
+      ...mockData,
+      repositories: [
+        ...(mockData.repositories ?? []),
+        {
+          owner: 'hivemoot',
+          name: 'hivemoot',
+          url: 'https://github.com/hivemoot/hivemoot',
+          stars: 10,
+          forks: 2,
+          openIssues: 3,
+        },
+      ],
+    };
+    mockHookReturn({
+      data: multiRepoData,
+      events: mockEvents,
+      lastUpdated: new Date(),
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: /about hivemoot/i })
+      ).toBeInTheDocument();
+    });
+  });
+
   it('renders external visibility section when visibility data is present', async () => {
     mockHookReturn({ data: mockData, events: mockEvents });
 
