@@ -713,6 +713,7 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link rel="canonical" href="${baseUrl}/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -720,6 +721,9 @@ describe('buildExternalVisibility', () => {
           );
         }
         if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
           return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
@@ -772,6 +776,9 @@ describe('buildExternalVisibility', () => {
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-robots-sitemap')?.ok
@@ -839,6 +846,7 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link rel="canonical" href="https://example.com/wrong/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -866,6 +874,9 @@ describe('buildExternalVisibility', () => {
           );
         }
         if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
           return new Response('image-bytes', { status: 200 });
         }
 
@@ -894,7 +905,7 @@ describe('buildExternalVisibility', () => {
     expect(canonicalCheck?.details).toContain('Canonical mismatch');
   });
 
-  it('accepts reversed attribute order for canonical and og:image metadata', async () => {
+  it('flags missing twitter:image on deployed homepage', async () => {
     const baseUrl = 'https://hivemoot.github.io/colony';
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       async (input: RequestInfo | URL): Promise<Response> => {
@@ -909,8 +920,8 @@ describe('buildExternalVisibility', () => {
           return new Response(
             `<html>
               <head>
-                <link href="${baseUrl}/" rel="canonical" />
-                <meta content="${baseUrl}/og-image.png" property="og:image" />
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -959,11 +970,328 @@ describe('buildExternalVisibility', () => {
       },
     ]);
 
+    const twitterImageCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-twitter-image'
+    );
+    expect(twitterImageCheck?.ok).toBe(false);
+    expect(twitterImageCheck?.details).toContain(
+      'Missing twitter:image metadata on deployed homepage'
+    );
+  });
+
+  it('flags relative social image metadata values as invalid', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="/og-image.png" />
+                <meta name="twitter:image" content="/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const ogImageCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-og-image'
+    );
+    expect(ogImageCheck?.ok).toBe(false);
+    expect(ogImageCheck?.details).toContain(
+      'og:image must be an absolute https URL'
+    );
+
+    const twitterImageCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-twitter-image'
+    );
+    expect(twitterImageCheck?.ok).toBe(false);
+    expect(twitterImageCheck?.details).toContain(
+      'twitter:image must be an absolute https URL'
+    );
+  });
+
+  it('flags non-https social image metadata values as invalid', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="http://cdn.example.com/og-image.png" />
+                <meta name="twitter:image" content="http://cdn.example.com/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const ogImageCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-og-image'
+    );
+    expect(ogImageCheck?.ok).toBe(false);
+    expect(ogImageCheck?.details).toContain(
+      'og:image must be an absolute https URL'
+    );
+
+    const twitterImageCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-twitter-image'
+    );
+    expect(twitterImageCheck?.ok).toBe(false);
+    expect(twitterImageCheck?.details).toContain(
+      'twitter:image must be an absolute https URL'
+    );
+  });
+
+  it('uses twitter:image:src when twitter:image is missing', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta name="twitter:image:src" content="${baseUrl}/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const twitterImageCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-twitter-image'
+    );
+    expect(twitterImageCheck?.ok).toBe(true);
+    expect(twitterImageCheck?.details).toContain('/twitter-image.png');
+  });
+
+  it('accepts reversed attribute order for canonical and social image metadata', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link href="${baseUrl}/" rel="canonical" />
+                <meta content="${baseUrl}/og-image.png" property="og:image" />
+                <meta content="${baseUrl}/twitter-image.png" name="twitter:image" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
     expect(
       visibility.checks.find((c) => c.id === 'deployed-canonical')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
     ).toBe(true);
   });
 

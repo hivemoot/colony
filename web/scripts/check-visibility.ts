@@ -57,6 +57,15 @@ function normalizeUrlForMatch(value: string): string {
   return value.replace(/\/+$/, '').toLowerCase();
 }
 
+function getAbsoluteHttpsUrl(rawValue: string): string {
+  try {
+    const parsed = new URL(rawValue);
+    return parsed.protocol === 'https:' ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -264,14 +273,7 @@ async function runChecks(): Promise<CheckResult[]> {
     'og:image',
     'content'
   );
-  let ogImageUrl = '';
-  if (ogImageRaw) {
-    try {
-      ogImageUrl = new URL(ogImageRaw, `${baseUrl}/`).toString();
-    } catch {
-      ogImageUrl = '';
-    }
-  }
+  const ogImageUrl = ogImageRaw ? getAbsoluteHttpsUrl(ogImageRaw) : '';
   const ogImageRes = ogImageUrl ? await fetchWithTimeout(ogImageUrl) : null;
   const hasDeployedOgImage = ogImageRes?.status === 200;
   results.push({
@@ -282,8 +284,44 @@ async function runChecks(): Promise<CheckResult[]> {
       : ogImageUrl
         ? `GET ${ogImageUrl} returned ${ogImageRes?.status ?? 'no response'}`
         : ogImageRaw
-          ? `Invalid og:image URL: ${ogImageRaw}`
+          ? `og:image must be an absolute https URL (found: ${ogImageRaw})`
           : 'Missing og:image metadata on deployed homepage',
+  });
+
+  const twitterImageRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image',
+    'content'
+  );
+  const twitterImageSrcRaw = twitterImageRaw
+    ? ''
+    : extractTagAttributeValue(
+        deployedRootHtml,
+        'meta',
+        'name',
+        'twitter:image:src',
+        'content'
+      );
+  const resolvedTwitterImageRaw = twitterImageRaw || twitterImageSrcRaw;
+  const twitterImageUrl = resolvedTwitterImageRaw
+    ? getAbsoluteHttpsUrl(resolvedTwitterImageRaw)
+    : '';
+  const twitterImageRes = twitterImageUrl
+    ? await fetchWithTimeout(twitterImageUrl)
+    : null;
+  const hasDeployedTwitterImage = twitterImageRes?.status === 200;
+  results.push({
+    label: 'Deployed Twitter image reachable',
+    ok: hasDeployedTwitterImage,
+    details: hasDeployedTwitterImage
+      ? `GET ${twitterImageUrl} returned 200`
+      : twitterImageUrl
+        ? `GET ${twitterImageUrl} returned ${twitterImageRes?.status ?? 'no response'}`
+        : resolvedTwitterImageRaw
+          ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
+          : 'Missing twitter:image metadata on deployed homepage',
   });
 
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
