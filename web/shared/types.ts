@@ -117,6 +117,7 @@ export interface VisibilityCheck {
     | 'deployed-jsonld'
     | 'deployed-canonical'
     | 'deployed-og-image'
+    | 'deployed-apple-touch-icon'
     | 'deployed-robots-reachable'
     | 'deployed-robots-sitemap'
     | 'deployed-sitemap-reachable'
