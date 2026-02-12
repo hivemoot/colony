@@ -407,4 +407,73 @@ describe('ProposalList', () => {
       screen.queryByText(/Same number issue comment/i)
     ).not.toBeInTheDocument();
   });
+
+  it('keeps proposal selection and panel ids unique across repos', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Colony proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+      {
+        number: 1,
+        title: 'Hivemoot proposal',
+        phase: 'discussion',
+        author: 'scout',
+        createdAt: '2026-02-05T09:30:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/hivemoot',
+      },
+    ];
+    const comments = [
+      {
+        id: 201,
+        issueOrPrNumber: 1,
+        type: 'proposal' as const,
+        repo: 'hivemoot/colony',
+        author: 'worker',
+        body: 'Colony-only comment',
+        createdAt: '2026-02-05T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-201',
+      },
+      {
+        id: 202,
+        issueOrPrNumber: 1,
+        type: 'proposal' as const,
+        repo: 'hivemoot/hivemoot',
+        author: 'scout',
+        body: 'Hivemoot-only comment',
+        createdAt: '2026-02-05T10:05:00Z',
+        url: 'https://github.com/hivemoot/hivemoot/issues/1#issuecomment-202',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    const proposalButtons = screen.getAllByRole('button', { name: /#1/i });
+    const controlsIds = proposalButtons.map((button) =>
+      button.getAttribute('aria-controls')
+    );
+    expect(controlsIds[0]).not.toEqual(controlsIds[1]);
+
+    fireEvent.click(screen.getByRole('button', { name: /colony proposal/i }));
+    expect(screen.getByText(/Colony-only comment/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Hivemoot-only comment/i)
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /hivemoot proposal/i }));
+    expect(screen.getByText(/Hivemoot-only comment/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Colony-only comment/i)).not.toBeInTheDocument();
+  });
 });

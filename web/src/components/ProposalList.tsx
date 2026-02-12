@@ -19,13 +19,15 @@ export function ProposalList({
   repoUrl,
   filteredAgent,
 }: ProposalListProps): React.ReactElement {
-  const [selectedProposalNumber, setSelectedProposalNumber] = useState<
-    number | null
-  >(null);
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(
+    null
+  );
 
   const selectedProposal = useMemo(
-    () => proposals.find((p) => p.number === selectedProposalNumber) ?? null,
-    [proposals, selectedProposalNumber]
+    () =>
+      proposals.find((p) => getProposalIdentity(p) === selectedProposalId) ??
+      null,
+    [proposals, selectedProposalId]
   );
 
   const snapshot = useMemo(
@@ -72,11 +74,13 @@ export function ProposalList({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         {proposals.map((proposal) => {
-          const isSelected = proposal.number === selectedProposalNumber;
+          const proposalId = getProposalIdentity(proposal);
+          const explorerId = getDecisionExplorerId(proposal);
+          const isSelected = proposalId === selectedProposalId;
 
           return (
             <article
-              key={proposal.number}
+              key={proposalId}
               className={`bg-white/40 dark:bg-neutral-800/40 border rounded-lg motion-safe:transition-colors ${
                 isSelected
                   ? 'border-amber-400 dark:border-amber-500'
@@ -86,10 +90,10 @@ export function ProposalList({
               <button
                 type="button"
                 onClick={() =>
-                  setSelectedProposalNumber(isSelected ? null : proposal.number)
+                  setSelectedProposalId(isSelected ? null : proposalId)
                 }
                 aria-expanded={isSelected}
-                aria-controls={`decision-explorer-${proposal.number}`}
+                aria-controls={explorerId}
                 className="w-full text-left p-4 hover:bg-white/60 dark:hover:bg-neutral-800/60 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
               >
                 <div className="flex justify-between items-start mb-2">
@@ -180,7 +184,7 @@ export function ProposalList({
 
       {selectedProposal && snapshot && (
         <section
-          id={`decision-explorer-${selectedProposal.number}`}
+          id={getDecisionExplorerId(selectedProposal)}
           aria-label={`Decision explorer for proposal #${selectedProposal.number}`}
           className="bg-white/40 dark:bg-neutral-800/40 border border-amber-300 dark:border-neutral-600 rounded-lg p-4"
         >
@@ -354,6 +358,14 @@ export function ProposalList({
       )}
     </div>
   );
+}
+
+function getProposalIdentity(proposal: Proposal): string {
+  return `${proposal.repo ?? 'local'}:${proposal.number}`;
+}
+
+function getDecisionExplorerId(proposal: Proposal): string {
+  return `decision-explorer-${getProposalIdentity(proposal).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 }
 
 function LifecycleDuration({
