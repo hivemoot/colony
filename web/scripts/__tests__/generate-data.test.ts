@@ -194,6 +194,58 @@ describe('resolveRequiredDiscoverabilityTopics', () => {
   });
 });
 
+describe('resolveGovernanceBotLogin', () => {
+  it('returns default when GOVERNANCE_BOT_LOGIN is unset', () => {
+    expect(resolveGovernanceBotLogin({})).toBe('hivemoot');
+  });
+
+  it('uses configured GOVERNANCE_BOT_LOGIN', () => {
+    expect(resolveGovernanceBotLogin({ GOVERNANCE_BOT_LOGIN: 'mybot' })).toBe(
+      'mybot'
+    );
+  });
+
+  it('trims configured GOVERNANCE_BOT_LOGIN', () => {
+    expect(
+      resolveGovernanceBotLogin({ GOVERNANCE_BOT_LOGIN: '  mybot  ' })
+    ).toBe('mybot');
+  });
+
+  it('falls back to default when GOVERNANCE_BOT_LOGIN is blank', () => {
+    expect(resolveGovernanceBotLogin({ GOVERNANCE_BOT_LOGIN: '' })).toBe(
+      'hivemoot'
+    );
+  });
+});
+
+describe('resolveGovernanceMetadataMarker', () => {
+  it('returns default when GOVERNANCE_METADATA_MARKER is unset', () => {
+    expect(resolveGovernanceMetadataMarker({})).toBe('hivemoot-metadata');
+  });
+
+  it('uses configured GOVERNANCE_METADATA_MARKER', () => {
+    expect(
+      resolveGovernanceMetadataMarker({
+        GOVERNANCE_METADATA_MARKER: 'custom-metadata',
+      })
+    ).toBe('custom-metadata');
+  });
+
+  it('trims configured GOVERNANCE_METADATA_MARKER', () => {
+    expect(
+      resolveGovernanceMetadataMarker({
+        GOVERNANCE_METADATA_MARKER: '  custom-metadata  ',
+      })
+    ).toBe('custom-metadata');
+  });
+
+  it('falls back to default when GOVERNANCE_METADATA_MARKER is blank', () => {
+    expect(
+      resolveGovernanceMetadataMarker({ GOVERNANCE_METADATA_MARKER: '' })
+    ).toBe('hivemoot-metadata');
+  });
+});
+
 describe('mapCommits', () => {
   const raw: GitHubCommit[] = [
     {
