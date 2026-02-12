@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -25,6 +25,13 @@ interface CheckResult {
   label: string;
   ok: boolean;
   details?: string;
+}
+
+export function resolveVisibilityUserAgent(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const configured = env.VISIBILITY_USER_AGENT?.trim();
+  return configured || DEFAULT_VISIBILITY_USER_AGENT;
 }
 
 function readIfExists(path: string): string {
@@ -138,8 +145,7 @@ async function runChecks(): Promise<CheckResult[]> {
   // Repository metadata checks via GitHub API
   try {
     const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-    const userAgent =
-      process.env.VISIBILITY_USER_AGENT || DEFAULT_VISIBILITY_USER_AGENT;
+    const userAgent = resolveVisibilityUserAgent();
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': userAgent,
@@ -348,4 +354,14 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main();
+function isDirectExecution(): boolean {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  return resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+}
+
+if (isDirectExecution()) {
+  void main();
+}
