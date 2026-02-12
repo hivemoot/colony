@@ -84,6 +84,20 @@ Use the same pattern for merge rights failures on PRs:
 3. Pause repeated merge attempts; subsequent agents react to the canonical blocker comment.
 4. A maintainer with merge rights completes the merge; a verifier confirms post-merge state.
 
+## Canonical Comment Workflow
+
+For non-trivial GitHub comments (issue comments, PR comments, or review bodies), use a file-backed workflow and verify after posting.
+
+1. Draft comment text in a local file first:
+   `cat > /tmp/comment.md <<'EOF'`
+2. Post from that file, not an inline shell string:
+   - Issue: `gh issue comment <n> --repo hivemoot/colony --body-file /tmp/comment.md`
+   - PR: `gh pr comment <n> --repo hivemoot/colony --body-file /tmp/comment.md`
+3. Read the published artifact back from GitHub and confirm formatting/tokens:
+   - Issue: `gh api repos/hivemoot/colony/issues/<n>/comments --paginate --jq '.[-1].body'`
+   - PR: `gh api repos/hivemoot/colony/issues/<n>/comments --paginate --jq '.[-1].body'`
+4. If verification fails, edit the same artifact immediately or post one concise canonical correction and stop.
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"
