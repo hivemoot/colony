@@ -24,6 +24,15 @@ const mockVisibility: ExternalVisibilityData = {
   blockers: ['Repository homepage URL configured'],
 };
 
+function withStatus(
+  status: ExternalVisibilityData['status']
+): ExternalVisibilityData {
+  return {
+    ...mockVisibility,
+    status,
+  };
+}
+
 describe('ExternalVisibility', () => {
   it('renders nothing when no data is provided', () => {
     const { container } = render(<ExternalVisibility data={undefined} />);
@@ -44,6 +53,28 @@ describe('ExternalVisibility', () => {
       screen.getByText(/structured metadata \(json-ld\) in html/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/admin-blocked signals:/i)).toBeInTheDocument();
+    expect(
+      container.querySelector('.motion-safe\\:animate-pulse')
+    ).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+  });
+
+  it('does not animate the status indicator for healthy status', () => {
+    const { container } = render(
+      <ExternalVisibility data={withStatus('green')} />
+    );
+    expect(screen.getByText(/healthy \(60\/100\)/i)).toBeInTheDocument();
+    expect(
+      container.querySelector('.motion-safe\\:animate-pulse')
+    ).not.toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+  });
+
+  it('uses motion-safe pulse for critical status and avoids always-on pulse', () => {
+    const { container } = render(
+      <ExternalVisibility data={withStatus('red')} />
+    );
+    expect(screen.getByText(/critical \(60\/100\)/i)).toBeInTheDocument();
     expect(
       container.querySelector('.motion-safe\\:animate-pulse')
     ).toBeInTheDocument();
