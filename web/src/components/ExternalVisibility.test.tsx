@@ -31,7 +31,7 @@ describe('ExternalVisibility', () => {
   });
 
   it('renders status, checks, and blockers', () => {
-    render(<ExternalVisibility data={mockVisibility} />);
+    const { container } = render(<ExternalVisibility data={mockVisibility} />);
 
     expect(
       screen.getByRole('heading', { name: /external visibility/i })
@@ -44,5 +44,9 @@ describe('ExternalVisibility', () => {
       screen.getByText(/structured metadata \(json-ld\) in html/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/admin-blocked signals:/i)).toBeInTheDocument();
+    expect(
+      container.querySelector('.motion-safe\\:animate-pulse')
+    ).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
   });
 });
