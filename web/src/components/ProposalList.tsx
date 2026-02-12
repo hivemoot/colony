@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Proposal, PullRequest } from '../types/activity';
+import type { Proposal, PullRequest, Comment } from '../types/activity';
 import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 import { formatDuration, formatTimeAgo } from '../utils/time';
 import { buildDecisionSnapshot } from '../utils/decision-explorer';
@@ -7,6 +7,7 @@ import { buildDecisionSnapshot } from '../utils/decision-explorer';
 interface ProposalListProps {
   proposals: Proposal[];
   pullRequests?: PullRequest[];
+  comments?: Comment[];
   repoUrl: string;
   filteredAgent?: string | null;
 }
@@ -14,6 +15,7 @@ interface ProposalListProps {
 export function ProposalList({
   proposals,
   pullRequests = [],
+  comments = [],
   repoUrl,
   filteredAgent,
 }: ProposalListProps): React.ReactElement {
@@ -32,6 +34,20 @@ export function ProposalList({
         ? buildDecisionSnapshot(selectedProposal, pullRequests)
         : null,
     [selectedProposal, pullRequests]
+  );
+
+  const proposalComments = useMemo(
+    () =>
+      selectedProposal
+        ? comments
+            .filter((c) => c.issueOrPrNumber === selectedProposal.number)
+            .sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            )
+        : [],
+    [selectedProposal, comments]
   );
 
   if (proposals.length === 0) {
@@ -168,35 +184,78 @@ export function ProposalList({
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
-                Timeline
-              </h4>
-              <ol className="space-y-2">
-                {snapshot.timeline.map((item, index) => (
-                  <li
-                    key={`${item.phase}-${item.enteredAt}-${index}`}
-                    className="text-sm border-l-2 border-amber-300 dark:border-neutral-500 pl-3"
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-amber-900 dark:text-amber-100 capitalize">
-                        {item.phase.replace(/-/g, ' ')}
-                      </span>
-                      <time
-                        dateTime={item.enteredAt}
-                        className="text-xs text-amber-600 dark:text-amber-400"
-                      >
-                        {formatTimeAgo(new Date(item.enteredAt))}
-                      </time>
-                      {item.durationToNext && (
-                        <span className="text-xs font-mono text-amber-700 dark:text-amber-300">
-                          ({item.durationToNext})
+            <div className="lg:col-span-2 space-y-6">
+              <div>
+                <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                  Timeline
+                </h4>
+                <ol className="space-y-2">
+                  {snapshot.timeline.map((item, index) => (
+                    <li
+                      key={`${item.phase}-${item.enteredAt}-${index}`}
+                      className="text-sm border-l-2 border-amber-300 dark:border-neutral-500 pl-3"
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-amber-900 dark:text-amber-100 capitalize">
+                          {item.phase.replace(/-/g, ' ')}
                         </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                        <time
+                          dateTime={item.enteredAt}
+                          className="text-xs text-amber-600 dark:text-amber-400"
+                        >
+                          {formatTimeAgo(new Date(item.enteredAt))}
+                        </time>
+                        {item.durationToNext && (
+                          <span className="text-xs font-mono text-amber-700 dark:text-amber-300">
+                            ({item.durationToNext})
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-3">
+                  Discussion
+                </h4>
+                {proposalComments.length > 0 ? (
+                  <ul className="space-y-4">
+                    {proposalComments.map((comment) => (
+                      <li key={comment.id} className="text-sm">
+                        <div className="bg-amber-50/50 dark:bg-neutral-800/50 rounded-lg p-3 border border-amber-100/50 dark:border-neutral-700/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <img
+                              src={getGitHubAvatarUrl(comment.author)}
+                              alt=""
+                              loading="lazy"
+                              className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
+                              onError={handleAvatarError}
+                            />
+                            <span className="font-bold text-amber-900 dark:text-amber-100">
+                              @{comment.author}
+                            </span>
+                            <time
+                              dateTime={comment.createdAt}
+                              className="text-xs text-amber-500 dark:text-amber-400"
+                            >
+                              {formatTimeAgo(new Date(comment.createdAt))}
+                            </time>
+                          </div>
+                          <p className="text-amber-800 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                            {comment.body}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 italic">
+                    No discussion recorded for this proposal yet.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -205,14 +264,33 @@ export function ProposalList({
                   Vote Breakdown
                 </h4>
                 {snapshot.votes.total > 0 ? (
-                  <div className="text-sm space-y-1">
-                    <p className="text-green-700 dark:text-green-400">
-                      👍 {snapshot.votes.thumbsUp}
-                    </p>
-                    <p className="text-red-700 dark:text-red-400">
-                      👎 {snapshot.votes.thumbsDown}
-                    </p>
-                    <p className="text-amber-700 dark:text-amber-300 text-xs">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="text-green-700 dark:text-green-400 flex items-center gap-1">
+                        👍 {snapshot.votes.thumbsUp}
+                      </span>
+                      <span className="text-red-700 dark:text-red-400 flex items-center gap-1">
+                        👎 {snapshot.votes.thumbsDown}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-amber-100 dark:bg-neutral-700 rounded-full overflow-hidden flex">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500"
+                        style={{
+                          width: `${snapshot.votes.supportPct !== null ? Math.round(snapshot.votes.supportPct * 100) : 0}%`,
+                        }}
+                        role="progressbar"
+                        aria-valuenow={
+                          snapshot.votes.supportPct !== null
+                            ? Math.round(snapshot.votes.supportPct * 100)
+                            : 0
+                        }
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label="Support percentage"
+                      />
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
                       Support:{' '}
                       {snapshot.votes.supportPct !== null
                         ? `${Math.round(snapshot.votes.supportPct * 100)}%`

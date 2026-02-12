@@ -255,6 +255,7 @@ export function ActivityFeed({
               <ProposalList
                 proposals={filteredProposals}
                 pullRequests={data.pullRequests}
+                comments={data.comments}
                 repoUrl={data.repository.url}
                 filteredAgent={selectedAgent}
               />

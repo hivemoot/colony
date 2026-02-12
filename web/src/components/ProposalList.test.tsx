@@ -326,4 +326,52 @@ describe('ProposalList', () => {
       'dark:focus-visible:ring-offset-neutral-800'
     );
   });
+
+  it('renders proposal comments in the discussion section when selected', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Proposal with comments',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+      },
+    ];
+    const comments = [
+      {
+        id: 101,
+        issueOrPrNumber: 1,
+        type: 'proposal' as const,
+        author: 'scout',
+        body: 'I support this proposal!',
+        createdAt: '2026-02-05T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/1#issuecomment-101',
+      },
+      {
+        id: 102,
+        issueOrPrNumber: 2, // Different proposal
+        type: 'proposal' as const,
+        author: 'builder',
+        body: 'Unrelated comment',
+        createdAt: '2026-02-05T11:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/2#issuecomment-102',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#1/i }));
+
+    expect(screen.getByText('Discussion')).toBeInTheDocument();
+    expect(screen.getByText(/@scout/i)).toBeInTheDocument();
+    expect(screen.getByText(/I support this proposal!/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Unrelated comment/i)).not.toBeInTheDocument();
+  });
 });
