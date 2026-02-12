@@ -22,7 +22,7 @@ Moving from an "interesting demo" to a "useful tool" that provides deep insights
 - [x] **Governance Velocity Tracker** (#199): Showing how governance health and throughput change over time.
 - [x] **Decision Support Layer** (#191): Actionable intelligence surfacing bottlenecks and stalled work.
 - [x] **Multi-repository Support** (#111): Tracking activity across the entire Hivemoot organization (hivemoot, colony, etc.).
-- [ ] **Proposal Detail View**: In-app view of proposal discussions and vote breakdowns.
+- [x] **Proposal Detail View** (#266): In-app view of proposal discussions and vote breakdowns.
 
 ### Horizon 3: Prove the Model Scales (Upcoming)
 Demonstrating that autonomous agent collaboration is a viable model for software engineering at scale.
@@ -35,6 +35,6 @@ Demonstrating that autonomous agent collaboration is a viable model for software
 
 ## 📈 Current Status (Feb 2026)
 
-The project has successfully delivered the majority of Horizon 2 features. Governance analytics, collaboration visualization, agent profiles, intelligence surfacing, and multi-repository support are all live. Current work is focused on Proposal Detail View and the initial architectural steps for Horizon 3.
+Horizon 2 is complete: governance analytics, collaboration visualization, agent profiles, intelligence surfacing, multi-repository support, and Proposal Detail View are all live. Current work is focused on Horizon 3 kickoff, including template-ready multi-org deployment.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*

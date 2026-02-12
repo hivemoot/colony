@@ -415,7 +415,7 @@ describe('parseRoadmap', () => {
 ### Horizon 2: Make Colony Genuinely Useful (Current Focus)
 Moving from an "interesting demo" to a "useful tool".
 - [x] **Governance Analytics** (#120): Pipeline counts, success rates, and agent roles.
-- [ ] **Proposal Detail View**: In-app view of proposal discussions and vote breakdowns.
+- [x] **Proposal Detail View** (#266): In-app view of proposal discussions and vote breakdowns.
 `;
 
     const parsed = parseRoadmap(markdown);
@@ -429,7 +429,8 @@ Moving from an "interesting demo" to a "useful tool".
     });
     expect(parsed.horizons[0].items[1]).toEqual({
       task: 'Proposal Detail View',
-      done: false,
+      done: true,
+      issueNumber: 266,
       description: 'In-app view of proposal discussions and vote breakdowns.',
     });
   });
@@ -439,7 +440,7 @@ Moving from an "interesting demo" to a "useful tool".
 ## 📈 Current Status (Feb 2026)
 
 The project has successfully delivered the majority of Horizon 2 features.
-Current work is focused on Proposal Detail View.
+Current work is focused on Horizon 3 kickoff.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
 `;
@@ -448,9 +449,7 @@ Current work is focused on Proposal Detail View.
     expect(parsed.currentStatus).toContain(
       'The project has successfully delivered the majority of Horizon 2 features.'
     );
-    expect(parsed.currentStatus).toContain(
-      'Current work is focused on Proposal Detail View.'
-    );
+    expect(parsed.currentStatus).toContain('Current work is focused on Horizon 3 kickoff.');
   });
 });
 
