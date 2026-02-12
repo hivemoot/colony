@@ -8,6 +8,7 @@ const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
@@ -137,9 +138,11 @@ async function runChecks(): Promise<CheckResult[]> {
   // Repository metadata checks via GitHub API
   try {
     const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    const userAgent =
+      process.env.VISIBILITY_USER_AGENT || DEFAULT_VISIBILITY_USER_AGENT;
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'hivemoot-scout-visibility-check',
+      'User-Agent': userAgent,
     };
     if (token) {
       headers.Authorization = `token ${token}`;
