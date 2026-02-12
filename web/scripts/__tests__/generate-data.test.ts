@@ -449,7 +449,9 @@ Current work is focused on Horizon 3 kickoff.
     expect(parsed.currentStatus).toContain(
       'The project has successfully delivered the majority of Horizon 2 features.'
     );
-    expect(parsed.currentStatus).toContain('Current work is focused on Horizon 3 kickoff.');
+    expect(parsed.currentStatus).toContain(
+      'Current work is focused on Horizon 3 kickoff.'
+    );
   });
 });
 
