@@ -11,6 +11,9 @@ describe('index.html metadata', () => {
       /<link\s+rel="manifest"\s+href="\/colony\/manifest\.webmanifest"\s*\/?>/
     );
     expect(html).toMatch(
+      /<link\s+rel="apple-touch-icon"\s+href="\/colony\/apple-touch-icon\.png"\s*\/?>/
+    );
+    expect(html).toMatch(
       /<meta\s+name="viewport"\s+content="width=device-width,\s*initial-scale=1\.0"\s*\/?>/
     );
     expect(html).toMatch(

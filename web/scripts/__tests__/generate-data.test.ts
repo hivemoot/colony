@@ -722,6 +722,9 @@ describe('buildExternalVisibility', () => {
         if (url === `${baseUrl}/og-image.png`) {
           return new Response('image-bytes', { status: 200 });
         }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
+          return new Response('icon-bytes', { status: 200 });
+        }
         if (url === `${baseUrl}/robots.txt`) {
           return new Response(
             `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
@@ -772,6 +775,9 @@ describe('buildExternalVisibility', () => {
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-apple-touch-icon')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-robots-sitemap')?.ok
@@ -868,6 +874,9 @@ describe('buildExternalVisibility', () => {
         if (url === `${baseUrl}/og-image.png`) {
           return new Response('image-bytes', { status: 200 });
         }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
+          return new Response('icon-bytes', { status: 200 });
+        }
 
         return new Response('not found', { status: 404 });
       }
@@ -940,6 +949,9 @@ describe('buildExternalVisibility', () => {
         if (url === `${baseUrl}/og-image.png`) {
           return new Response('image-bytes', { status: 200 });
         }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
+          return new Response('icon-bytes', { status: 200 });
+        }
 
         return new Response('not found', { status: 404 });
       }
@@ -965,6 +977,84 @@ describe('buildExternalVisibility', () => {
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
     ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-apple-touch-icon')?.ok
+    ).toBe(true);
+  });
+
+  it('marks apple-touch-icon check as failed when deployed icon is missing', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
+          return new Response('missing', { status: 404 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const appleTouchIconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-apple-touch-icon'
+    );
+    expect(appleTouchIconCheck?.ok).toBe(false);
+    expect(appleTouchIconCheck?.details).toContain('returned 404');
   });
 
   it('marks freshness check as failed when deployed activity JSON is invalid', async () => {
