@@ -20,6 +20,12 @@ const mockVisibility: ExternalVisibilityData = {
       ok: true,
       details: 'application/ld+json found',
     },
+    {
+      id: 'deployed-activity-freshness',
+      label: 'Deployed data freshness (<= 18h)',
+      ok: false,
+      details: 'activity.json is stale',
+    },
   ],
   blockers: ['Repository homepage URL configured'],
 };
@@ -52,6 +58,9 @@ describe('ExternalVisibility', () => {
     expect(
       screen.getByText(/structured metadata \(json-ld\) in html/i)
     ).toBeInTheDocument();
+    expect(screen.getByText(/^blocked$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^fail$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^pass$/i)).toBeInTheDocument();
     expect(screen.getByText(/admin-blocked signals:/i)).toBeInTheDocument();
     expect(
       container.querySelector('.motion-safe\\:animate-pulse')

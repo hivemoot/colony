@@ -4,6 +4,33 @@ interface ExternalVisibilityProps {
   data?: ExternalVisibilityData;
 }
 
+function checkMeta(check: ExternalVisibilityData['checks'][number]): {
+  label: string;
+  className: string;
+} {
+  if (check.ok) {
+    return {
+      label: 'pass',
+      className:
+        'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    };
+  }
+
+  if (check.blockedByAdmin) {
+    return {
+      label: 'blocked',
+      className:
+        'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    };
+  }
+
+  return {
+    label: 'fail',
+    className:
+      'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+  };
+}
+
 function statusMeta(status: ExternalVisibilityData['status']): {
   label: string;
   dotClass: string;
@@ -58,32 +85,31 @@ export function ExternalVisibility({
         </div>
 
         <ul className="space-y-2">
-          {data.checks.map((check) => (
-            <li
-              key={check.id}
-              className="flex items-start justify-between gap-4 rounded-md border border-amber-100 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/40 p-3"
-            >
-              <div>
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                  {check.label}
-                </p>
-                {check.details && (
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                    {check.details}
-                  </p>
-                )}
-              </div>
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                  check.ok
-                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
-                }`}
+          {data.checks.map((check) => {
+            const meta = checkMeta(check);
+            return (
+              <li
+                key={check.id}
+                className="flex items-start justify-between gap-4 rounded-md border border-amber-100 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/40 p-3"
               >
-                {check.ok ? 'pass' : 'fail'}
-              </span>
-            </li>
-          ))}
+                <div>
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    {check.label}
+                  </p>
+                  {check.details && (
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                      {check.details}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${meta.className}`}
+                >
+                  {meta.label}
+                </span>
+              </li>
+            );
+          })}
         </ul>
 
         {data.blockers.length > 0 && (
