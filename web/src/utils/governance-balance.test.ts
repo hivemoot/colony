@@ -271,6 +271,73 @@ describe('computeResponsiveness', () => {
     const result = computeResponsiveness(proposals, comments);
     expect(result.bucket).toBe('concerning');
   });
+
+  it('excludes hivemoot system automation comments from first response', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        author: 'hivemoot-builder',
+        createdAt: '2026-02-01T10:00:00Z',
+      }),
+    ];
+    const comments = [
+      makeComment({
+        author: 'hivemoot', // system automation (Queen bot)
+        issueOrPrNumber: 1,
+        createdAt: '2026-02-01T10:01:00Z',
+        body: 'queen workflow comment',
+      }),
+    ];
+    const result = computeResponsiveness(proposals, comments);
+    expect(result.bucket).toBe('no-data');
+    expect(result.proposalsWithResponses).toBe(0);
+  });
+
+  it('excludes hivemoot[bot] system automation comments from first response', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        author: 'hivemoot-builder',
+        createdAt: '2026-02-01T10:00:00Z',
+      }),
+    ];
+    const comments = [
+      makeComment({
+        author: 'hivemoot[bot]', // system automation (app bot)
+        issueOrPrNumber: 1,
+        createdAt: '2026-02-01T10:01:00Z',
+      }),
+    ];
+    const result = computeResponsiveness(proposals, comments);
+    expect(result.bucket).toBe('no-data');
+    expect(result.proposalsWithResponses).toBe(0);
+  });
+
+  it('uses first real agent response when system automation comment comes first', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        author: 'hivemoot-builder',
+        createdAt: '2026-02-01T10:00:00Z',
+      }),
+    ];
+    const comments = [
+      makeComment({
+        author: 'hivemoot', // system automation — should be ignored
+        issueOrPrNumber: 1,
+        createdAt: '2026-02-01T10:01:00Z',
+      }),
+      makeComment({
+        author: 'hivemoot-worker', // real agent response at +4 hours
+        issueOrPrNumber: 1,
+        createdAt: '2026-02-01T14:00:00Z',
+      }),
+    ];
+    const result = computeResponsiveness(proposals, comments);
+    expect(result.bucket).toBe('responsive');
+    expect(result.medianHours).toBe(4);
+    expect(result.proposalsWithResponses).toBe(1);
+  });
 });
 
 // --- computeGovernanceBalance ---

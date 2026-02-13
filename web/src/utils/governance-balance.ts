@@ -92,6 +92,9 @@ const ROLE_PREFIXES: Array<{ prefix: string; role: RoleName }> = [
 
 const KNOWN_ROLES: RoleName[] = ['builder', 'worker', 'scout', 'polisher'];
 
+// System automation accounts whose comments should not count as peer responses
+const SYSTEM_AUTOMATION_LOGINS = new Set(['hivemoot', 'hivemoot[bot]']);
+
 // --- Main entry ---
 
 export function computeGovernanceBalance(
@@ -328,12 +331,13 @@ export function computeResponsiveness(
     const entries = proposalComments.get(proposal.number) ?? [];
     const proposalCreated = new Date(proposal.createdAt).getTime();
 
-    // Find first non-author, non-bot comment
+    // Find first non-author, non-bot, non-system-automation comment
     let firstResponseTime: number | null = null;
     for (const entry of entries) {
       const [author, createdAt] = entry.split('|');
       if (author === proposal.author) continue;
       if (author.endsWith('[bot]')) continue;
+      if (SYSTEM_AUTOMATION_LOGINS.has(author)) continue;
       const commentTime = new Date(createdAt).getTime();
       if (firstResponseTime === null || commentTime < firstResponseTime) {
         firstResponseTime = commentTime;
