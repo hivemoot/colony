@@ -120,6 +120,8 @@ export interface VisibilityCheck {
     | 'deployed-twitter-image'
     | 'deployed-pwa-manifest'
     | 'deployed-pwa-icons'
+    | 'deployed-favicon'
+    | 'deployed-apple-touch-icon'
     | 'deployed-robots-reachable'
     | 'deployed-robots-sitemap'
     | 'deployed-sitemap-reachable'
