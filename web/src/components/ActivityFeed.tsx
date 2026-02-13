@@ -15,6 +15,7 @@ import { GovernanceAnalytics } from './GovernanceAnalytics';
 import { GovernanceHealth } from './GovernanceHealth';
 import { GovernanceTrend } from './GovernanceTrend';
 import { GovernanceOps } from './GovernanceOps';
+import { GovernanceBalance } from './GovernanceBalance';
 import { CollaborationNetwork } from './CollaborationNetwork';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
@@ -298,6 +299,25 @@ export function ActivityFeed({
               </h2>
               <GovernanceHealth data={data} />
               <GovernanceTrend history={governanceHistory} />
+            </section>
+          )}
+
+          {data && data.agentStats.length >= 2 && data.proposals.length > 0 && (
+            <section
+              id="balance"
+              aria-labelledby="section-balance"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2
+                id="section-balance"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
+                <span role="img" aria-label="balance">
+                  &#x2696;&#xFE0F;
+                </span>
+                Governance Balance
+              </h2>
+              <GovernanceBalance data={data} />
             </section>
           )}
 
