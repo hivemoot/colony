@@ -1,10 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ProposalList } from './ProposalList';
+import { getProposalHash } from '../utils/decision-explorer';
 import type { Proposal, PullRequest } from '../types/activity';
 
 describe('ProposalList', () => {
   const repoUrl = 'https://github.com/hivemoot/colony';
+
+  beforeEach(() => {
+    window.location.hash = '';
+  });
 
   it('renders "No active proposals" when proposals array is empty', () => {
     render(<ProposalList proposals={[]} repoUrl={repoUrl} />);
@@ -73,7 +78,7 @@ describe('ProposalList', () => {
     );
   });
 
-  it('opens a decision explorer panel when a proposal is selected', () => {
+  it('opens a detail panel when a proposal is selected', () => {
     const proposals: Proposal[] = [
       {
         number: 192,
@@ -113,7 +118,7 @@ describe('ProposalList', () => {
 
     expect(
       screen.getByRole('region', {
-        name: /decision explorer for proposal #192/i,
+        name: /proposal detail for #192/i,
       })
     ).toBeInTheDocument();
     expect(screen.getByText('Timeline')).toBeInTheDocument();
@@ -392,8 +397,8 @@ describe('ProposalList', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /#1/i }));
 
-    expect(screen.getByText('Discussion')).toBeInTheDocument();
-    expect(screen.getByText(/@scout/i)).toBeInTheDocument();
+    expect(screen.getByText('Discussion (1)')).toBeInTheDocument();
+    expect(screen.getAllByText(/@scout/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/I support this proposal!/i)).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /view on github/i })
@@ -598,5 +603,295 @@ describe('ProposalList', () => {
     expect(
       screen.getByRole('link', { name: /view proposal thread/i })
     ).toHaveAttribute('href', 'https://github.com/hivemoot/hivemoot/issues/1');
+  });
+
+  it('shows proposal title in the detail panel header', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 50,
+        title: 'My important proposal',
+        phase: 'voting',
+        author: 'builder',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 3,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /#50/i }));
+
+    // Title appears in both the card and the detail panel header
+    expect(screen.getAllByText('My important proposal').length).toBe(2);
+    expect(
+      screen.getByRole('button', { name: /close detail view/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /copy link to proposal/i })
+    ).toBeInTheDocument();
+  });
+
+  it('closes detail panel with the close button', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 60,
+        title: 'Closeable proposal',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /#60/i }));
+
+    expect(
+      screen.getByRole('region', { name: /proposal detail for #60/i })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /close detail view/i }));
+    expect(
+      screen.queryByRole('region', { name: /proposal detail for #60/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows participants in the detail panel sidebar', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 70,
+        title: 'Proposal with participants',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 3,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 501,
+        issueOrPrNumber: 70,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'First comment',
+        createdAt: '2026-02-10T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/70#issuecomment-501',
+      },
+      {
+        id: 502,
+        issueOrPrNumber: 70,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'builder',
+        body: 'Second comment',
+        createdAt: '2026-02-10T11:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/70#issuecomment-502',
+      },
+      {
+        id: 503,
+        issueOrPrNumber: 70,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'Third comment',
+        createdAt: '2026-02-10T12:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/70#issuecomment-503',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /#70/i }));
+
+    expect(screen.getByText('Participants (2)')).toBeInTheDocument();
+    expect(screen.getByText('2 comments')).toBeInTheDocument();
+    expect(screen.getByText('1 comment')).toBeInTheDocument();
+  });
+
+  it('excludes system comments from participants', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 71,
+        title: 'System excluded from participants',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 2,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 601,
+        issueOrPrNumber: 71,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'hivemoot',
+        body: '<!-- hivemoot-metadata: {"type":"welcome"} -->\nWelcome!',
+        createdAt: '2026-02-10T09:05:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/71#issuecomment-601',
+      },
+      {
+        id: 602,
+        issueOrPrNumber: 71,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'Real feedback',
+        createdAt: '2026-02-10T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/71#issuecomment-602',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /#71/i }));
+
+    expect(screen.getByText('Participants (1)')).toBeInTheDocument();
+  });
+
+  it('updates URL hash when selecting a proposal', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 42,
+        title: 'Hash test',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /#42/i }));
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '#proposal-42');
+
+    replaceStateSpy.mockRestore();
+  });
+
+  it('clears URL hash when deselecting a proposal', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 43,
+        title: 'Deselect hash test',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /#43/i }));
+    fireEvent.click(screen.getByRole('button', { name: /close detail view/i }));
+
+    const lastCall =
+      replaceStateSpy.mock.calls[replaceStateSpy.mock.calls.length - 1];
+    expect(lastCall[2]).not.toContain('#proposal-');
+
+    replaceStateSpy.mockRestore();
+  });
+
+  it('resolves proposal from URL hash on mount', () => {
+    window.location.hash = '#proposal-99';
+
+    const proposals: Proposal[] = [
+      {
+        number: 99,
+        title: 'Auto-opened proposal',
+        phase: 'voting',
+        author: 'builder',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 1,
+        votesSummary: { thumbsUp: 3, thumbsDown: 0 },
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.getByRole('region', { name: /proposal detail for #99/i })
+    ).toBeInTheDocument();
+  });
+
+  it('resolves multi-repo proposal hash', () => {
+    window.location.hash = '#proposal-hivemoot-hivemoot-5';
+
+    const proposals: Proposal[] = [
+      {
+        number: 5,
+        title: 'Cross-repo hash test',
+        phase: 'discussion',
+        author: 'scout',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 0,
+        repo: 'hivemoot/hivemoot',
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(
+      screen.getByRole('region', { name: /proposal detail for #5/i })
+    ).toBeInTheDocument();
+  });
+
+  it('sets id attribute on proposal card for hash navigation', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 10,
+        title: 'ID test',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    expect(document.getElementById('proposal-10')).toBeInTheDocument();
+  });
+
+  it('generates correct hash for local and repo proposals', () => {
+    expect(
+      getProposalHash({
+        number: 42,
+        title: 't',
+        phase: 'discussion',
+        author: 'a',
+        createdAt: '',
+        commentCount: 0,
+      })
+    ).toBe('proposal-42');
+
+    expect(
+      getProposalHash({
+        number: 3,
+        title: 't',
+        phase: 'voting',
+        author: 'b',
+        createdAt: '',
+        commentCount: 0,
+        repo: 'hivemoot/hivemoot',
+      })
+    ).toBe('proposal-hivemoot-hivemoot-3');
   });
 });
