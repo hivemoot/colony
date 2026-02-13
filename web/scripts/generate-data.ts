@@ -1509,6 +1509,17 @@ export async function buildExternalVisibility(
   };
 }
 
+export function updateSitemapLastmod(
+  sitemapXml: string,
+  generatedAt: string
+): string {
+  const dateISO = new Date(generatedAt).toISOString().slice(0, 10);
+  return sitemapXml.replace(
+    /<lastmod>[^<]+<\/lastmod>/i,
+    `<lastmod>${dateISO}</lastmod>`
+  );
+}
+
 export function deduplicateAgents(agentSources: Agent[]): Agent[] {
   const agentMap = new Map<string, Agent>();
   agentSources.forEach((agent) => {
@@ -1859,6 +1870,18 @@ async function main(): Promise<void> {
     console.log(
       `Governance snapshot appended (${updatedSnapshots.length} entries, score: ${snapshot.healthScore}, schema: v${updatedHistory.schemaVersion}, completeness: ${updatedHistory.completeness.status})`
     );
+
+    // Update sitemap <lastmod> to match this data generation date
+    if (existsSync(SITEMAP_PATH)) {
+      const sitemapContent = readFileSync(SITEMAP_PATH, 'utf-8');
+      const updatedSitemap = updateSitemapLastmod(
+        sitemapContent,
+        data.generatedAt
+      );
+      writeFileSync(SITEMAP_PATH, updatedSitemap);
+      const todayISO = new Date(data.generatedAt).toISOString().slice(0, 10);
+      console.log(`Sitemap lastmod updated to ${todayISO}`);
+    }
   } catch (error) {
     console.error('Failed to generate activity data:', error);
     process.exit(1);

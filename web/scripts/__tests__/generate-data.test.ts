@@ -13,6 +13,7 @@ import {
   extractGovernanceIncidents,
   deduplicateAgents,
   extractPhaseTransitions,
+  updateSitemapLastmod,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -1772,5 +1773,43 @@ describe('buildExternalVisibility', () => {
     expect(topicsCheck?.ok).toBe(false);
     expect(topicsCheck?.details).toContain('Missing required topics:');
     expect(topicsCheck?.details).toContain('ai-governance');
+  });
+});
+
+describe('updateSitemapLastmod', () => {
+  const SAMPLE_SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://hivemoot.github.io/colony/</loc>
+    <lastmod>2026-02-11</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+
+  it('replaces lastmod with the date from generatedAt', () => {
+    const result = updateSitemapLastmod(
+      SAMPLE_SITEMAP,
+      '2026-02-13T14:30:00.000Z'
+    );
+    expect(result).toContain('<lastmod>2026-02-13</lastmod>');
+    expect(result).not.toContain('2026-02-11');
+  });
+
+  it('preserves the rest of the sitemap XML', () => {
+    const result = updateSitemapLastmod(
+      SAMPLE_SITEMAP,
+      '2026-02-13T14:30:00.000Z'
+    );
+    expect(result).toContain('<changefreq>hourly</changefreq>');
+    expect(result).toContain('<priority>1.0</priority>');
+    expect(result).toContain('<loc>https://hivemoot.github.io/colony/</loc>');
+  });
+
+  it('returns the original XML unchanged when no lastmod tag exists', () => {
+    const noLastmod =
+      '<urlset><url><loc>https://example.com</loc></url></urlset>';
+    const result = updateSitemapLastmod(noLastmod, '2026-02-13T00:00:00Z');
+    expect(result).toBe(noLastmod);
   });
 });
