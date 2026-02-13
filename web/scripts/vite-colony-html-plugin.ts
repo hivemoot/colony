@@ -78,29 +78,47 @@ export function transformHtml(html: string, config: ColonyConfig): string {
 /**
  * Vite plugin that templates index.html and generates manifest.webmanifest
  * from Colony site configuration environment variables.
+ *
+ * Uses enforce:'post' so placeholder replacement runs after Vite's own URL
+ * transforms, preventing the base-path from being re-prefixed onto absolute
+ * URLs (canonical, og:image, twitter:image, etc.).
  */
 export function colonyHtmlPlugin(): Plugin {
   const config = resolveColonyConfig();
   let resolvedConfig: ResolvedConfig;
+  const manifestJson = buildManifest(config);
 
   return {
     name: 'colony-html',
+    enforce: 'post',
 
     configResolved(c): void {
       resolvedConfig = c;
     },
 
-    transformIndexHtml(html): string {
-      return transformHtml(html, config);
+    transformIndexHtml: {
+      order: 'post',
+      handler(html): string {
+        return transformHtml(html, config);
+      },
+    },
+
+    configureServer(server): void {
+      const manifestPath = `${config.basePath}manifest.webmanifest`;
+      server.middlewares.use((req, res, next) => {
+        if (req.url === manifestPath) {
+          res.setHeader('Content-Type', 'application/manifest+json');
+          res.end(manifestJson);
+          return;
+        }
+        next();
+      });
     },
 
     writeBundle(): void {
       const outDir = resolvedConfig.build.outDir;
       mkdirSync(outDir, { recursive: true });
-      writeFileSync(
-        join(outDir, 'manifest.webmanifest'),
-        buildManifest(config)
-      );
+      writeFileSync(join(outDir, 'manifest.webmanifest'), manifestJson);
     },
   };
 }

@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { transformHtml, buildManifest } from '../vite-colony-html-plugin';
+import { describe, it, expect, vi } from 'vitest';
+import {
+  transformHtml,
+  buildManifest,
+  colonyHtmlPlugin,
+} from '../vite-colony-html-plugin';
 import type { ColonyConfig } from '../colony-config';
 
 const defaultConfig: ColonyConfig = {
@@ -139,5 +143,61 @@ describe('buildManifest', () => {
     expect(manifest).toHaveProperty('background_color');
     expect(manifest).toHaveProperty('theme_color');
     expect(manifest).toHaveProperty('icons');
+  });
+});
+
+describe('colonyHtmlPlugin', () => {
+  it('uses enforce:post and order:post to prevent Vite base-path double-prefixing', () => {
+    const plugin = colonyHtmlPlugin() as Record<string, unknown>;
+
+    expect(plugin.enforce).toBe('post');
+
+    const hook = plugin.transformIndexHtml as {
+      order: string;
+      handler: (html: string) => string;
+    };
+    expect(hook.order).toBe('post');
+  });
+
+  it('configureServer middleware serves manifest JSON at basePath', () => {
+    const plugin = colonyHtmlPlugin() as Record<string, unknown>;
+
+    const middlewares: Array<
+      (req: unknown, res: unknown, next: unknown) => void
+    > = [];
+    const mockServer = {
+      middlewares: {
+        use(fn: (req: unknown, res: unknown, next: unknown) => void): void {
+          middlewares.push(fn);
+        },
+      },
+    };
+
+    (plugin.configureServer as (s: typeof mockServer) => void)(mockServer);
+    expect(middlewares).toHaveLength(1);
+
+    // Request matching manifest path should return manifest JSON
+    const headers: Record<string, string> = {};
+    let body = '';
+    const res = {
+      setHeader(k: string, v: string): void {
+        headers[k] = v;
+      },
+      end(data: string): void {
+        body = data;
+      },
+    };
+    const next = vi.fn();
+
+    middlewares[0]({ url: '/colony/manifest.webmanifest' }, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(headers['Content-Type']).toBe('application/manifest+json');
+    const manifest = JSON.parse(body);
+    expect(manifest.short_name).toBe('Colony');
+
+    // Non-matching requests should pass through
+    const next2 = vi.fn();
+    middlewares[0]({ url: '/colony/other' }, res, next2);
+    expect(next2).toHaveBeenCalled();
   });
 });
