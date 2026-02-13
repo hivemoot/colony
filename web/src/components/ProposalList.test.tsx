@@ -762,6 +762,54 @@ describe('ProposalList', () => {
     expect(screen.getByText('Participants (1)')).toBeInTheDocument();
   });
 
+  it('includes an author when they have any non-system comment', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 72,
+        title: 'Mixed system and non-system comments',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-10T09:00:00Z',
+        commentCount: 2,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 701,
+        issueOrPrNumber: 72,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: '<!-- hivemoot-metadata: {"type":"welcome"} -->\nWelcome!',
+        createdAt: '2026-02-10T09:05:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/72#issuecomment-701',
+      },
+      {
+        id: 702,
+        issueOrPrNumber: 72,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'Real feedback from scout',
+        createdAt: '2026-02-10T10:00:00Z',
+        url: 'https://github.com/hivemoot/colony/issues/72#issuecomment-702',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /#72/i }));
+
+    expect(screen.getByText('Participants (1)')).toBeInTheDocument();
+    expect(screen.getByText('1 comment')).toBeInTheDocument();
+  });
+
   it('updates URL hash when selecting a proposal', () => {
     const proposals: Proposal[] = [
       {
