@@ -79,9 +79,11 @@ export function transformHtml(html: string, config: ColonyConfig): string {
  * Vite plugin that templates index.html and generates manifest.webmanifest
  * from Colony site configuration environment variables.
  *
- * Uses enforce:'post' so placeholder replacement runs after Vite's own URL
- * transforms, preventing the base-path from being re-prefixed onto absolute
- * URLs (canonical, og:image, twitter:image, etc.).
+ * Uses enforce:'pre' + order:'pre' so placeholder replacement runs before
+ * Vite's own HTML transforms. This prevents the dev server from treating
+ * placeholder tokens as relative paths and prepending the base path to them
+ * (which would produce broken URLs like /colony/https://example.com/).
+ * Once replaced, Vite sees the final absolute URLs and leaves them alone.
  */
 export function colonyHtmlPlugin(): Plugin {
   const config = resolveColonyConfig();
@@ -90,14 +92,14 @@ export function colonyHtmlPlugin(): Plugin {
 
   return {
     name: 'colony-html',
-    enforce: 'post',
+    enforce: 'pre',
 
     configResolved(c): void {
       resolvedConfig = c;
     },
 
     transformIndexHtml: {
-      order: 'post',
+      order: 'pre',
       handler(html): string {
         return transformHtml(html, config);
       },

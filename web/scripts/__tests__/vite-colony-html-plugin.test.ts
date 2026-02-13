@@ -104,6 +104,27 @@ describe('transformHtml', () => {
     const result = transformHtml(templateHtml, defaultConfig);
     expect(result).not.toMatch(/__COLONY_[A-Z_]+__/);
   });
+
+  it('produces absolute URLs that Vite will not base-prefix', () => {
+    // Regression guard: when the plugin runs with order:'pre', Vite sees the
+    // final resolved URLs. Absolute URLs (https://) must not be relative paths
+    // that Vite would rewrite. This test verifies canonical, OG, and Twitter
+    // URLs are absolute so Vite leaves them alone after our transform.
+    const result = transformHtml(templateHtml, defaultConfig);
+
+    // Canonical, og:image, twitter:image must be absolute URLs
+    expect(result).toMatch(/href="https:\/\/hivemoot\.github\.io\/colony\/"/);
+    expect(result).toMatch(
+      /content="https:\/\/hivemoot\.github\.io\/colony\/og-image\.png"/
+    );
+
+    // Manifest href should be base-relative (starts with /)
+    expect(result).toMatch(/href="\/colony\/manifest\.webmanifest"/);
+
+    // No broken double-prefix patterns should exist
+    expect(result).not.toContain('/colony/https://');
+    expect(result).not.toContain('/colony//colony/');
+  });
 });
 
 describe('buildManifest', () => {
@@ -147,16 +168,16 @@ describe('buildManifest', () => {
 });
 
 describe('colonyHtmlPlugin', () => {
-  it('uses enforce:post and order:post to prevent Vite base-path double-prefixing', () => {
+  it('uses enforce:pre and order:pre so placeholders resolve before Vite URL rewrites', () => {
     const plugin = colonyHtmlPlugin() as Record<string, unknown>;
 
-    expect(plugin.enforce).toBe('post');
+    expect(plugin.enforce).toBe('pre');
 
     const hook = plugin.transformIndexHtml as {
       order: string;
       handler: (html: string) => string;
     };
-    expect(hook.order).toBe('post');
+    expect(hook.order).toBe('pre');
   });
 
   it('configureServer middleware serves manifest JSON at basePath', () => {
