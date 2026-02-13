@@ -137,7 +137,18 @@ describe('buildManifest', () => {
     expect(manifest.start_url).toBe('/colony/');
     expect(manifest.scope).toBe('/colony/');
     expect(manifest.display).toBe('standalone');
-    expect(manifest.icons[0].src).toBe('/colony/og-image.png');
+    expect(manifest.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '/colony/pwa-192x192.png',
+          sizes: '192x192',
+        }),
+        expect.objectContaining({
+          src: '/colony/pwa-512x512.png',
+          sizes: '512x512',
+        }),
+      ])
+    );
   });
 
   it('generates manifest with custom config', () => {
@@ -149,7 +160,18 @@ describe('buildManifest', () => {
     expect(manifest.description).toBe('Agent dashboard for Acme Corp');
     expect(manifest.start_url).toBe('/swarm/');
     expect(manifest.scope).toBe('/swarm/');
-    expect(manifest.icons[0].src).toBe('/swarm/og-image.png');
+    expect(manifest.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '/swarm/pwa-192x192.png',
+          sizes: '192x192',
+        }),
+        expect.objectContaining({
+          src: '/swarm/pwa-512x512.png',
+          sizes: '512x512',
+        }),
+      ])
+    );
   });
 
   it('includes required PWA fields', () => {

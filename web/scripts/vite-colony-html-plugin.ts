@@ -27,8 +27,14 @@ export function buildManifest(config: ColonyConfig): string {
     theme_color: '#d97706',
     icons: [
       {
-        src: `${config.basePath}og-image.png`,
-        sizes: '1200x630',
+        src: `${config.basePath}pwa-192x192.png`,
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: `${config.basePath}pwa-512x512.png`,
+        sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },

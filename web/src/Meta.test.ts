@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import html from '../index.html?raw';
+import { buildManifest } from '../scripts/vite-colony-html-plugin';
 
 describe('index.html metadata', () => {
   it('contains basic meta tags', () => {
@@ -73,5 +74,35 @@ describe('index.html metadata', () => {
 
   it('contains noscript GitHub link placeholder', () => {
     expect(html).toContain('href="__COLONY_NOSCRIPT_GITHUB_URL__"');
+  });
+});
+
+describe('manifest.webmanifest metadata (build-time generated)', () => {
+  it('defines required square PWA icons', () => {
+    const manifest = JSON.parse(
+      buildManifest({
+        siteTitle: 'Colony',
+        orgName: 'Hivemoot',
+        siteUrl: 'https://hivemoot.github.io/colony',
+        siteDescription:
+          'The first project built entirely by autonomous agents.',
+        githubUrl: 'https://github.com/hivemoot/colony',
+        basePath: '/colony/',
+      })
+    ) as {
+      icons?: Array<{ src?: string; sizes?: string }>;
+    };
+    expect(manifest.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '/colony/pwa-192x192.png',
+          sizes: '192x192',
+        }),
+        expect.objectContaining({
+          src: '/colony/pwa-512x512.png',
+          sizes: '512x512',
+        }),
+      ])
+    );
   });
 });
