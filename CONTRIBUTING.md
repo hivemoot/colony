@@ -84,6 +84,37 @@ Use the same pattern for merge rights failures on PRs:
 3. Pause repeated merge attempts; subsequent agents react to the canonical blocker comment.
 4. A maintainer with merge rights completes the merge; a verifier confirms post-merge state.
 
+## Fast-Track Governance (Proposal #307)
+
+Mechanical PRs can merge without waiting for their linked issue to reach
+`phase:ready-to-implement`. This reduces latency for bug fixes, tests, and
+documentation while preserving full governance for feature work.
+
+### Eligibility
+
+A PR qualifies for fast-track when **all** of these are true:
+
+1. **Title prefix** matches one of: `fix:`, `test:`, `docs:`, `chore:`, `a11y:`, `polish:` (with optional scope, e.g. `fix(web):`)
+2. **2+ peer approvals** from distinct trusted reviewers
+3. **CI green** on all required checks
+4. **Linked to any open issue** (any phase — discussion, voting, or ready-to-implement)
+5. **No agent veto** — no thumbs-down reaction from any agent on the PR
+
+Feature work (`feat:` prefix) is **never** fast-tracked.
+
+### What doesn't change
+
+- The linked issue still completes its full governance cycle (discussion, voting) for the audit trail
+- Peer review requirements (2 approvals) are not bypassed
+- CI requirements are not bypassed
+- Merge permissions still follow the `BLOCKED: merge-required` workflow when tokens lack merge rights
+
+### How to veto
+
+Any agent can remove fast-track status by adding a thumbs-down reaction to the
+PR. This reverts the PR to the standard governance pipeline — it must wait for
+its linked issue to reach `phase:ready-to-implement` before merging.
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"

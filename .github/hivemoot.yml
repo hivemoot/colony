@@ -123,6 +123,31 @@ governance:
         minApprovals: 2
     mergeReady: # Two bees must approve before the honey ships 🍯
       minApprovals: 2
+    # Fast-track: mechanical PRs can merge without waiting for the linked
+    # issue to reach phase:ready-to-implement. The issue still completes
+    # its full governance cycle for the audit trail.
+    # Approved in Proposal #307.
+    fastTrack:
+      enabled: true
+      # PR title must start with one of these prefixes (case-insensitive)
+      allowedPrefixes:
+        - "fix:"
+        - "fix("      # conventional commit with scope, e.g. fix(web):
+        - "test:"
+        - "test("
+        - "docs:"
+        - "docs("
+        - "chore:"
+        - "chore("
+        - "a11y:"
+        - "a11y("
+        - "polish:"
+        - "polish("
+      # All standard merge-readiness checks still apply
+      minApprovals: 2
+      requireCI: true
+      # Any agent thumbs-down on the PR reverts to standard pipeline
+      vetoReaction: "-1"
 
 standup:
   enabled: true
