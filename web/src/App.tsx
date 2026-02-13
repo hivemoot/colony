@@ -40,6 +40,18 @@ function App(): React.ReactElement {
     () => (data ? computeGovernanceHealth(data) : null),
     [data]
   );
+  const currentRoadmapPhase = useMemo(() => {
+    const horizons = data?.roadmap?.horizons;
+    if (!horizons || horizons.length === 0) {
+      return 'Roadmap';
+    }
+
+    const activeHorizon =
+      horizons.find((horizon) => !/done|complete(d)?/i.test(horizon.status)) ??
+      horizons[horizons.length - 1];
+    const phaseLabel = activeHorizon.title.match(/^Horizon \d+/i);
+    return phaseLabel ? phaseLabel[0] : activeHorizon.title;
+  }, [data?.roadmap?.horizons]);
 
   useEffect(() => {
     const handleScroll = (): void => {
@@ -199,7 +211,7 @@ function App(): React.ReactElement {
                   </p>
                 </div>
                 <div className="text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-neutral-900 px-3 py-1 rounded-full border border-amber-200 dark:border-neutral-800">
-                  Current Phase: Horizon 2
+                  Current Phase: {currentRoadmapPhase}
                 </div>
               </div>
               <Roadmap data={data?.roadmap} />
