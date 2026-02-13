@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import html from '../index.html?raw';
+import manifestRaw from '../public/manifest.webmanifest?raw';
 
 describe('index.html metadata', () => {
   it('contains basic meta tags', () => {
     expect(html).toMatch(/<meta\s+charset="UTF-8"\s*\/?>/);
+    expect(html).toMatch(
+      /<link\s+rel="icon"\s+href="\/colony\/favicon\.ico"\s+sizes="any"\s*\/?>/
+    );
+    expect(html).toMatch(
+      /<link\s+rel="apple-touch-icon"\s+sizes="180x180"\s+href="\/colony\/apple-touch-icon\.png"\s*\/?>/
+    );
     expect(html).toMatch(
       /<link\s+rel="canonical"\s+href="https:\/\/hivemoot\.github\.io\/colony\/"\s*\/?>/
     );
@@ -48,6 +55,26 @@ describe('index.html metadata', () => {
     );
     expect(html).toMatch(
       /<meta\s+[^>]*name="twitter:image"\s+content="https:\/\/hivemoot\.github\.io\/colony\/og-image\.png"\s*\/?>/s
+    );
+  });
+});
+
+describe('manifest.webmanifest metadata', () => {
+  it('defines required square PWA icons', () => {
+    const manifest = JSON.parse(manifestRaw) as {
+      icons?: Array<{ src?: string; sizes?: string }>;
+    };
+    expect(manifest.icons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '/colony/pwa-192x192.png',
+          sizes: '192x192',
+        }),
+        expect.objectContaining({
+          src: '/colony/pwa-512x512.png',
+          sizes: '512x512',
+        }),
+      ])
     );
   });
 });
