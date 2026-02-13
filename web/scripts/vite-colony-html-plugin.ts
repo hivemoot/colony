@@ -48,10 +48,7 @@ export function transformHtml(html: string, config: ColonyConfig): string {
 
   return html
     .replace(/__COLONY_CANONICAL_URL__/g, siteUrlWithSlash)
-    .replace(
-      /__COLONY_MANIFEST_HREF__/g,
-      `${config.basePath}manifest.webmanifest`
-    )
+    .replace(/__COLONY_MANIFEST_HREF__/g, 'manifest.webmanifest')
     .replace(
       /__COLONY_META_DESCRIPTION__/g,
       `${config.siteTitle} - ${config.siteDescription}`
@@ -80,10 +77,9 @@ export function transformHtml(html: string, config: ColonyConfig): string {
  * from Colony site configuration environment variables.
  *
  * Uses enforce:'pre' + order:'pre' so placeholder replacement runs before
- * Vite's own HTML transforms. This prevents the dev server from treating
- * placeholder tokens as relative paths and prepending the base path to them
- * (which would produce broken URLs like /colony/https://example.com/).
- * Once replaced, Vite sees the final absolute URLs and leaves them alone.
+ * Vite's own HTML transforms. Absolute URLs (canonical, OG, Twitter) are
+ * left alone by Vite. The manifest href is emitted as a relative path
+ * ('manifest.webmanifest') so Vite's base-prefixing applies exactly once.
  */
 export function colonyHtmlPlugin(): Plugin {
   const config = resolveColonyConfig();

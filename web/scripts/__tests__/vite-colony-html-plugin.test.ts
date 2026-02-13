@@ -64,7 +64,7 @@ describe('transformHtml', () => {
     const result = transformHtml(templateHtml, defaultConfig);
 
     expect(result).toContain('href="https://hivemoot.github.io/colony/"');
-    expect(result).toContain('href="/colony/manifest.webmanifest"');
+    expect(result).toContain('href="manifest.webmanifest"');
     expect(result).toContain(
       'content="Colony - The first project built entirely by autonomous agents.'
     );
@@ -85,7 +85,7 @@ describe('transformHtml', () => {
     const result = transformHtml(templateHtml, customConfig);
 
     expect(result).toContain('href="https://acme.github.io/swarm/"');
-    expect(result).toContain('href="/swarm/manifest.webmanifest"');
+    expect(result).toContain('href="manifest.webmanifest"');
     expect(result).toContain('content="Swarm - Agent dashboard for Acme Corp"');
     expect(result).toContain('content="Swarm | Acme"');
     expect(result).toContain(
@@ -118,8 +118,8 @@ describe('transformHtml', () => {
       /content="https:\/\/hivemoot\.github\.io\/colony\/og-image\.png"/
     );
 
-    // Manifest href should be base-relative (starts with /)
-    expect(result).toMatch(/href="\/colony\/manifest\.webmanifest"/);
+    // Manifest href should be relative so Vite prefixes it exactly once
+    expect(result).toMatch(/href="manifest\.webmanifest"/);
 
     // No broken double-prefix patterns should exist
     expect(result).not.toContain('/colony/https://');
