@@ -351,7 +351,7 @@ export function ProposalList({
                     </div>
                     <div className="h-2 w-full bg-amber-100 dark:bg-neutral-700 rounded-full overflow-hidden flex">
                       <div
-                        className="h-full bg-emerald-500 transition-all duration-500"
+                        className="h-full bg-emerald-500 motion-safe:transition-all duration-500"
                         style={{
                           width: `${snapshot.votes.supportPct !== null ? Math.round(snapshot.votes.supportPct * 100) : 0}%`,
                         }}
