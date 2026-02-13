@@ -118,6 +118,7 @@ export interface VisibilityCheck {
     | 'deployed-canonical'
     | 'deployed-og-image'
     | 'deployed-twitter-image'
+    | 'deployed-favicon'
     | 'deployed-apple-touch-icon'
     | 'deployed-robots-reachable'
     | 'deployed-robots-sitemap'
