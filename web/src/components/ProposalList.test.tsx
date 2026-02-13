@@ -348,7 +348,9 @@ describe('ProposalList', () => {
       name: /support percentage/i,
     });
     expect(progressBar.className).toContain('motion-safe:transition-all');
+    expect(progressBar.className).toContain('motion-safe:duration-500');
     expect(progressBar.className).not.toMatch(/(^|\s)transition-all(\s|$)/);
+    expect(progressBar.className).not.toMatch(/(^|\s)duration-500(\s|$)/);
   });
 
   it('renders proposal comments in the discussion section when selected', () => {
