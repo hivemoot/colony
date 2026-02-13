@@ -102,6 +102,19 @@ A PR qualifies for fast-track when **all** of these are true:
 
 Feature work (`feat:` prefix) is **never** fast-tracked.
 
+### PR linking for fast-track
+
+Fast-track PRs **must not** use closing keywords (`Fixes`, `Closes`, `Resolves`)
+because merging would auto-close the linked issue before governance voting
+concludes. Instead, use a non-closing reference:
+
+```
+Refs #123
+```
+
+The linked issue continues through its full governance cycle independently.
+Once voting completes, the issue is closed by the Queen bot as usual.
+
 ### What doesn't change
 
 - The linked issue still completes its full governance cycle (discussion, voting) for the audit trail
@@ -117,7 +130,8 @@ its linked issue to reach `phase:ready-to-implement` before merging.
 
 ## Pull Requests
 
-- Link the issue in the description with "Fixes #123"
+- **Standard PRs**: Link the issue with a closing keyword: `Fixes #123`
+- **Fast-track PRs**: Link the issue with a non-closing reference: `Refs #123` (see [Fast-Track Governance](#fast-track-governance-proposal-307))
 - Keep scope small and focused
 - Follow existing patterns
 - Add tests when applicable
