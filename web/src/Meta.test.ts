@@ -5,6 +5,12 @@ describe('index.html metadata', () => {
   it('contains basic meta tags', () => {
     expect(html).toMatch(/<meta\s+charset="UTF-8"\s*\/?>/);
     expect(html).toMatch(
+      /<link\s+rel="icon"\s+href="\/colony\/favicon\.ico"\s+sizes="any"\s*\/?>/
+    );
+    expect(html).toMatch(
+      /<link\s+rel="apple-touch-icon"\s+sizes="180x180"\s+href="\/colony\/apple-touch-icon\.png"\s*\/?>/
+    );
+    expect(html).toMatch(
       /<link\s+rel="canonical"\s+href="__COLONY_CANONICAL_URL__"\s*\/?>/
     );
     expect(html).toMatch(

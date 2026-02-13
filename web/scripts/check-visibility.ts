@@ -66,6 +66,15 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
   }
 }
 
+function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
+  try {
+    const parsed = new URL(rawValue, `${baseUrl}/`);
+    return parsed.protocol === 'https:' ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -116,6 +125,43 @@ function extractTagAttributeValue(
     if (targetAttrValue) {
       return targetAttrValue;
     }
+  }
+
+  return '';
+}
+
+function extractFileBackedFaviconHref(html: string): string {
+  const tagPattern = /<link\b[^>]*>/gi;
+  const attrPattern = (attribute: string): RegExp =>
+    new RegExp(
+      `\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      'i'
+    );
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tag = match[0];
+    const relMatch = tag.match(attrPattern('rel'));
+    const relValue = (
+      relMatch?.[1] ??
+      relMatch?.[2] ??
+      relMatch?.[3] ??
+      ''
+    ).trim();
+    if (!relValue.toLowerCase().split(/\s+/).includes('icon')) {
+      continue;
+    }
+
+    const hrefMatch = tag.match(attrPattern('href'));
+    const hrefValue = (
+      hrefMatch?.[1] ??
+      hrefMatch?.[2] ??
+      hrefMatch?.[3] ??
+      ''
+    ).trim();
+    if (!hrefValue || hrefValue.toLowerCase().startsWith('data:')) {
+      continue;
+    }
+    return hrefValue;
   }
 
   return '';
@@ -322,6 +368,55 @@ async function runChecks(): Promise<CheckResult[]> {
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const faviconRaw = extractFileBackedFaviconHref(deployedRootHtml);
+  let faviconUrl = '';
+  if (faviconRaw) {
+    try {
+      faviconUrl = new URL(faviconRaw, `${baseUrl}/`).toString();
+    } catch {
+      faviconUrl = '';
+    }
+  }
+  const faviconRes = faviconUrl ? await fetchWithTimeout(faviconUrl) : null;
+  const hasDeployedFavicon = faviconRes?.status === 200;
+  results.push({
+    label: 'Deployed favicon reachable',
+    ok: hasDeployedFavicon,
+    details: hasDeployedFavicon
+      ? `GET ${faviconUrl} returned 200`
+      : faviconUrl
+        ? `GET ${faviconUrl} returned ${faviconRes?.status ?? 'no response'}`
+        : faviconRaw
+          ? `Invalid favicon URL: ${faviconRaw}`
+          : 'Missing file-backed favicon metadata on deployed homepage',
+  });
+
+  const appleTouchIconRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'href'
+  );
+  const appleTouchIconUrl = appleTouchIconRaw
+    ? resolveHttpsUrl(appleTouchIconRaw, baseUrl)
+    : '';
+  const appleTouchIconRes = appleTouchIconUrl
+    ? await fetchWithTimeout(appleTouchIconUrl)
+    : null;
+  const hasDeployedAppleTouchIcon = appleTouchIconRes?.status === 200;
+  results.push({
+    label: 'Deployed Apple touch icon reachable',
+    ok: hasDeployedAppleTouchIcon,
+    details: hasDeployedAppleTouchIcon
+      ? `GET ${appleTouchIconUrl} returned 200`
+      : appleTouchIconUrl
+        ? `GET ${appleTouchIconUrl} returned ${appleTouchIconRes?.status ?? 'no response'}`
+        : appleTouchIconRaw
+          ? `apple-touch-icon href must resolve to an https URL (found: ${appleTouchIconRaw})`
+          : 'Missing apple-touch-icon link tag on deployed homepage',
   });
 
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
