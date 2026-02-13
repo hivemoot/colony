@@ -127,19 +127,17 @@ export function ProposalList({
   );
 
   const participants = useMemo(() => {
-    const unique = new Map<string, { count: number; isSystem: boolean }>();
+    const unique = new Map<string, { count: number }>();
     for (const c of proposalComments) {
+      if (isSystemComment(c)) continue;
       const existing = unique.get(c.author);
-      const sys = isSystemComment(c);
       if (existing) {
         existing.count++;
       } else {
-        unique.set(c.author, { count: 1, isSystem: sys });
+        unique.set(c.author, { count: 1 });
       }
     }
-    return [...unique.entries()]
-      .filter(([, v]) => !v.isSystem)
-      .sort((a, b) => b[1].count - a[1].count);
+    return [...unique.entries()].sort((a, b) => b[1].count - a[1].count);
   }, [proposalComments]);
 
   if (proposals.length === 0) {
