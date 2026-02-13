@@ -35,20 +35,22 @@ export function ProposalList({
     () => new Set()
   );
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(
-    null
+    () => {
+      const match = findProposalByHash(window.location.hash, []);
+      return match ? getProposalIdentity(match) : null;
+    }
   );
   const detailRef = useRef<HTMLElement>(null);
 
-  // Derive initial selection from hash (runs once proposals are available)
+  // Resolve hash-based deep link once proposals are available
   const resolvedHashId = useMemo(() => {
     const match = findProposalByHash(window.location.hash, proposals);
     return match ? getProposalIdentity(match) : null;
   }, [proposals]);
 
-  // Apply hash-derived selection if no selection is active yet
-  if (resolvedHashId && !selectedProposalId) {
-    setSelectedProposalId(resolvedHashId);
-  }
+  // Effective selected ID: explicit user selection takes priority; fall back
+  // to the hash-resolved ID so deep links work without a render-phase setState.
+  const effectiveSelectedId = selectedProposalId ?? resolvedHashId;
 
   // Sync hash → selection on hash change (back/forward navigation)
   useEffect(() => {
@@ -79,19 +81,19 @@ export function ProposalList({
 
   // Scroll detail panel into view when selection changes
   useEffect(() => {
-    if (selectedProposalId && detailRef.current) {
+    if (effectiveSelectedId && detailRef.current) {
       detailRef.current.scrollIntoView?.({
         behavior: 'smooth',
         block: 'nearest',
       });
     }
-  }, [selectedProposalId]);
+  }, [effectiveSelectedId]);
 
   const selectedProposal = useMemo(
     () =>
-      proposals.find((p) => getProposalIdentity(p) === selectedProposalId) ??
+      proposals.find((p) => getProposalIdentity(p) === effectiveSelectedId) ??
       null,
-    [proposals, selectedProposalId]
+    [proposals, effectiveSelectedId]
   );
 
   const snapshot = useMemo(
@@ -156,7 +158,7 @@ export function ProposalList({
         {proposals.map((proposal) => {
           const proposalId = getProposalIdentity(proposal);
           const explorerId = getDecisionExplorerId(proposal);
-          const isSelected = proposalId === selectedProposalId;
+          const isSelected = proposalId === effectiveSelectedId;
           const proposalRepoUrl = getRepositoryUrl(proposal.repo, repoUrl);
 
           return (
@@ -343,7 +345,7 @@ export function ProposalList({
                   <ul className="space-y-4">
                     {proposalComments.map((comment) => {
                       const systemComment = isSystemComment(comment);
-                      const commentKey = `${selectedProposalId ?? 'none'}:${comment.id}`;
+                      const commentKey = `${effectiveSelectedId ?? 'none'}:${comment.id}`;
                       const isExpanded = expandedCommentIds.has(commentKey);
                       const commentPreview = truncateCommentBody(
                         comment.body,
@@ -576,17 +578,16 @@ function CopyLinkButton({
 }): React.ReactElement {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = (): void => {
+  const handleCopy = async (): Promise<void> => {
+    if (!navigator.clipboard?.writeText) return;
     const url = `${window.location.origin}${window.location.pathname}#${getProposalHash(proposal)}`;
-    navigator.clipboard.writeText(url).then(
-      () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      },
-      () => {
-        // Clipboard API unavailable — ignore silently
-      }
-    );
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard write failed — ignore silently
+    }
   };
 
   return (
