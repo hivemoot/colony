@@ -61,6 +61,10 @@ describe('ExternalVisibility', () => {
     expect(screen.getByText(/^blocked$/i)).toBeInTheDocument();
     expect(screen.getByText(/^fail$/i)).toBeInTheDocument();
     expect(screen.getByText(/^pass$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^blocked$/i)).toHaveAttribute(
+      'title',
+      expect.stringContaining('Requires repository admin action')
+    );
     expect(screen.getByText(/admin-blocked signals:/i)).toBeInTheDocument();
     expect(
       container.querySelector('.motion-safe\\:animate-pulse')

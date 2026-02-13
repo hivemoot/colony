@@ -4,9 +4,13 @@ interface ExternalVisibilityProps {
   data?: ExternalVisibilityData;
 }
 
+const BLOCKED_HELP_TEXT =
+  'Requires repository admin action. See CONTRIBUTING.md: Admin-Blocked and Merge-Blocked Protocol.';
+
 function checkMeta(check: ExternalVisibilityData['checks'][number]): {
   label: string;
   className: string;
+  title?: string;
 } {
   if (check.ok) {
     return {
@@ -21,6 +25,7 @@ function checkMeta(check: ExternalVisibilityData['checks'][number]): {
       label: 'blocked',
       className:
         'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      title: BLOCKED_HELP_TEXT,
     };
   }
 
@@ -103,7 +108,11 @@ export function ExternalVisibility({
                   )}
                 </div>
                 <span
+                  aria-label={
+                    meta.title ? `${meta.label}: ${meta.title}` : undefined
+                  }
                   className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${meta.className}`}
+                  title={meta.title}
                 >
                   {meta.label}
                 </span>
