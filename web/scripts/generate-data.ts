@@ -920,14 +920,28 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
 }
 
 function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
+  const trimmed = rawValue.trim();
+  if (!trimmed || trimmed.startsWith('data:')) {
+    return '';
+  }
+
   try {
-    const parsed = new URL(rawValue, `${baseUrl}/`);
+    const parsed = new URL(trimmed, `${baseUrl}/`);
     return parsed.protocol === 'https:' ? parsed.toString() : '';
   } catch {
     return '';
   }
 }
 
+function iconHasRequiredSize(
+  icon: { sizes?: unknown },
+  expectedSize: string
+): boolean {
+  return (
+    typeof icon.sizes === 'string' &&
+    icon.sizes.toLowerCase().split(/\s+/).includes(expectedSize.toLowerCase())
+  );
+}
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -1241,6 +1255,118 @@ export async function buildExternalVisibility(
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const manifestRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'manifest',
+    'href'
+  );
+  const manifestUrl = manifestRaw ? resolveHttpsUrl(manifestRaw, baseUrl) : '';
+  const manifestRes = manifestUrl ? await fetchWithTimeout(manifestUrl) : null;
+
+  const requiredManifestSizes = ['192x192', '512x512'] as const;
+  const manifestIconUrls: Partial<
+    Record<(typeof requiredManifestSizes)[number], string>
+  > = {};
+  let manifestIconDetails = '';
+
+  if (!manifestRaw) {
+    manifestIconDetails = 'Missing manifest link metadata on deployed homepage';
+  } else if (!manifestUrl) {
+    manifestIconDetails = `Manifest URL must resolve to absolute https URL (found: ${manifestRaw})`;
+  } else if (manifestRes?.status !== 200) {
+    manifestIconDetails = `GET ${manifestUrl} returned ${manifestRes?.status ?? 'no response'}`;
+  } else {
+    try {
+      const manifest = (await manifestRes.json()) as {
+        icons?: Array<{ src?: unknown; sizes?: unknown }>;
+      };
+
+      if (!Array.isArray(manifest.icons)) {
+        manifestIconDetails = 'Manifest is missing icons[] entries';
+      } else {
+        const missingSizes: string[] = [];
+        const invalidIconUrls: string[] = [];
+        for (const size of requiredManifestSizes) {
+          const icon = manifest.icons.find((entry) =>
+            iconHasRequiredSize(entry, size)
+          );
+          if (!icon || typeof icon.src !== 'string' || !icon.src.trim()) {
+            missingSizes.push(size);
+            continue;
+          }
+
+          const iconUrl = resolveHttpsUrl(icon.src, manifestUrl);
+          if (!iconUrl) {
+            invalidIconUrls.push(`${size} (${icon.src})`);
+            continue;
+          }
+          manifestIconUrls[size] = iconUrl;
+        }
+
+        if (missingSizes.length > 0 || invalidIconUrls.length > 0) {
+          const parts: string[] = [];
+          if (missingSizes.length > 0) {
+            parts.push(
+              `Missing required icon sizes: ${missingSizes.join(', ')}`
+            );
+          }
+          if (invalidIconUrls.length > 0) {
+            parts.push(
+              `Icon URLs must resolve to absolute https URLs: ${invalidIconUrls.join(', ')}`
+            );
+          }
+          manifestIconDetails = parts.join('. ');
+        } else {
+          manifestIconDetails = `Manifest contains ${requiredManifestSizes.join(' and ')} icons`;
+        }
+      }
+    } catch {
+      manifestIconDetails = `Manifest at ${manifestUrl} is not valid JSON`;
+    }
+  }
+
+  checks.push({
+    id: 'deployed-pwa-manifest',
+    label: 'Deployed PWA manifest has required square icons',
+    ok:
+      manifestIconDetails ===
+      `Manifest contains ${requiredManifestSizes.join(' and ')} icons`,
+    details: manifestIconDetails,
+  });
+
+  const manifestIconFetches = await Promise.all(
+    requiredManifestSizes.map(async (size) => {
+      const url = manifestIconUrls[size];
+      if (!url) {
+        return { size, status: null as number | null, url: '' };
+      }
+      const response = await fetchWithTimeout(url);
+      return { size, status: response?.status ?? null, url };
+    })
+  );
+  const allManifestIconsReachable = manifestIconFetches.every(
+    ({ status }) => status === 200
+  );
+  const manifestFetchDetails = allManifestIconsReachable
+    ? manifestIconFetches
+        .map(({ size, url }) => `${size}: GET ${url} returned 200`)
+        .join('; ')
+    : manifestIconFetches
+        .map(({ size, status, url }) =>
+          url
+            ? `${size}: GET ${url} returned ${status ?? 'no response'}`
+            : `${size}: missing manifest icon URL`
+        )
+        .join('; ');
+  checks.push({
+    id: 'deployed-pwa-icons',
+    label: 'Deployed PWA icon assets are reachable',
+    ok: allManifestIconsReachable,
+    details: manifestFetchDetails,
   });
 
   const faviconRaw = extractFileBackedFaviconHref(deployedRootHtml);
