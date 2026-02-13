@@ -124,7 +124,8 @@ export interface VisibilityCheck {
     | 'deployed-robots-sitemap'
     | 'deployed-sitemap-reachable'
     | 'deployed-sitemap-lastmod'
-    | 'deployed-activity-freshness';
+    | 'deployed-activity-freshness'
+    | 'deployed-spa-deep-link';
   label: string;
   ok: boolean;
   details?: string;

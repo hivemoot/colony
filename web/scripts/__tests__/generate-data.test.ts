@@ -754,6 +754,12 @@ describe('buildExternalVisibility', () => {
             { status: 200, headers: { 'content-type': 'application/json' } }
           );
         }
+        if (url === `${baseUrl}/health-check`) {
+          return new Response(
+            '<html><body><div id="root"></div></body></html>',
+            { status: 200 }
+          );
+        }
 
         return new Response('not found', { status: 404 });
       }
@@ -802,6 +808,9 @@ describe('buildExternalVisibility', () => {
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-activity-freshness')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-spa-deep-link')?.ok
     ).toBe(true);
   });
 
@@ -1557,5 +1566,128 @@ describe('buildExternalVisibility', () => {
     expect(topicsCheck?.ok).toBe(false);
     expect(topicsCheck?.details).toContain('Missing required topics:');
     expect(topicsCheck?.details).toContain('ai-governance');
+  });
+
+  it('passes SPA deep-link check when non-root path returns SPA shell', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/health-check`) {
+          return new Response(
+            '<html><body><div id="root"></div></body></html>',
+            { status: 200 }
+          );
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const check = visibility.checks.find(
+      (c) => c.id === 'deployed-spa-deep-link'
+    );
+    expect(check?.ok).toBe(true);
+    expect(check?.details).toContain('returned SPA shell');
+  });
+
+  it('fails SPA deep-link check when non-root path returns 404', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/health-check`) {
+          return new Response('Not Found', { status: 404 });
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const check = visibility.checks.find(
+      (c) => c.id === 'deployed-spa-deep-link'
+    );
+    expect(check?.ok).toBe(false);
+    expect(check?.details).toContain('returned 404 without SPA shell');
+  });
+
+  it('fails SPA deep-link check when response has 200 but no SPA root div', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/health-check`) {
+          return new Response(
+            '<html><body><p>GitHub Pages 404</p></body></html>',
+            { status: 200 }
+          );
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const check = visibility.checks.find(
+      (c) => c.id === 'deployed-spa-deep-link'
+    );
+    expect(check?.ok).toBe(false);
+    expect(check?.details).toContain('without SPA shell');
   });
 });

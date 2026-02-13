@@ -1366,6 +1366,25 @@ export async function buildExternalVisibility(
     details: freshnessDetails,
   });
 
+  // SPA deep link check: verify that a non-root path returns the SPA shell
+  // instead of a GitHub Pages 404. This confirms 404.html fallback is in place.
+  const deepLinkPath = `${baseUrl}/health-check`;
+  const deepLinkRes = await fetchWithTimeout(deepLinkPath);
+  const deepLinkHtml =
+    deepLinkRes?.status === 200 ? await deepLinkRes.text() : '';
+  const hasSpaShell =
+    deepLinkRes?.status === 200 && /<div\s+id=["']root["']/.test(deepLinkHtml);
+  checks.push({
+    id: 'deployed-spa-deep-link',
+    label: 'SPA deep links resolve (404.html fallback)',
+    ok: hasSpaShell,
+    details: hasSpaShell
+      ? `GET ${deepLinkPath} returned SPA shell`
+      : deepLinkRes
+        ? `GET ${deepLinkPath} returned ${deepLinkRes.status} without SPA shell`
+        : `GET ${deepLinkPath} failed or timed out`,
+  });
+
   const passCount = checks.filter((check) => check.ok).length;
   const score = Math.round((passCount / checks.length) * 100);
   const failingCount = checks.length - passCount;
