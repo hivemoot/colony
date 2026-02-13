@@ -207,9 +207,7 @@ describe('GovernanceTrend sub-metrics', () => {
 
     // The sub-metric grid should contain trend arrow elements
     // Participation improves from 5 to 20 — should show an improving arrow
-    const arrows = screen.getAllByLabelText(
-      /governance trend:.*improving/i
-    );
+    const arrows = screen.getAllByLabelText(/governance trend:.*improving/i);
     // At least one improving trend (participation has delta of 15, which > 2)
     expect(arrows.length).toBeGreaterThanOrEqual(1);
   });
