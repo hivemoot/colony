@@ -60,7 +60,7 @@ const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-const REQUIRED_DISCOVERABILITY_TOPICS = [
+const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
   'multi-agent',
@@ -221,6 +221,31 @@ export function resolveRepository(env = process.env): {
   }
 
   return { owner, repo };
+}
+
+export function resolveRequiredDiscoverabilityTopics(
+  env = process.env
+): string[] {
+  const configuredTopics = env.COLONY_REQUIRED_DISCOVERABILITY_TOPICS;
+
+  if (!configuredTopics) {
+    return [...DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS];
+  }
+
+  const topics = Array.from(
+    new Set(
+      configuredTopics
+        .split(',')
+        .map((topic) => topic.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+
+  if (topics.length === 0) {
+    return [...DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS];
+  }
+
+  return topics;
 }
 
 /**
@@ -984,13 +1009,16 @@ function extractTagAttributeValue(
 }
 
 export async function buildExternalVisibility(
-  repositories: RepositoryInfo[]
+  repositories: RepositoryInfo[],
+  env = process.env
 ): Promise<ExternalVisibility> {
+  const requiredDiscoverabilityTopics =
+    resolveRequiredDiscoverabilityTopics(env);
   const primary = repositories[0];
   const normalizedTopics = new Set(
     (primary?.topics ?? []).map((topic) => topic.toLowerCase())
   );
-  const missingRequiredTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+  const missingRequiredTopics = requiredDiscoverabilityTopics.filter(
     (topic) => !normalizedTopics.has(topic)
   );
 
@@ -1029,7 +1057,7 @@ export async function buildExternalVisibility(
       label: 'Repository topics configured',
       ok: hasTopics,
       details: hasTopics
-        ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+        ? `${requiredDiscoverabilityTopics.length}/${requiredDiscoverabilityTopics.length} required topics present`
         : `Missing required topics: ${missingRequiredTopics.join(', ')}`,
       blockedByAdmin: !hasTopics,
     },

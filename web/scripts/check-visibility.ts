@@ -7,8 +7,10 @@ const ROOT_DIR = join(SCRIPT_DIR, '..');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
+const DEFAULT_OWNER = 'hivemoot';
+const DEFAULT_REPO = 'colony';
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-const REQUIRED_DISCOVERABILITY_TOPICS = [
+const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
   'multi-agent',
@@ -24,6 +26,45 @@ interface CheckResult {
   label: string;
   ok: boolean;
   details?: string;
+}
+
+function resolveRepository(env = process.env): { owner: string; repo: string } {
+  const repository = env.COLONY_REPOSITORY ?? env.GITHUB_REPOSITORY;
+  if (!repository) {
+    return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
+  }
+
+  const [owner, repo] = repository.split('/');
+  if (!owner || !repo) {
+    throw new Error(
+      `Invalid repository "${repository}". Expected format "owner/repo".`
+    );
+  }
+
+  return { owner, repo };
+}
+
+function resolveRequiredDiscoverabilityTopics(env = process.env): string[] {
+  const configuredTopics = env.COLONY_REQUIRED_DISCOVERABILITY_TOPICS;
+
+  if (!configuredTopics) {
+    return [...DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS];
+  }
+
+  const topics = Array.from(
+    new Set(
+      configuredTopics
+        .split(',')
+        .map((topic) => topic.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+
+  if (topics.length === 0) {
+    return [...DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS];
+  }
+
+  return topics;
 }
 
 function readIfExists(path: string): string {
@@ -131,6 +172,8 @@ function extractTagAttributeValue(
 }
 
 async function runChecks(): Promise<CheckResult[]> {
+  const { owner, repo: repoName } = resolveRepository();
+  const requiredDiscoverabilityTopics = resolveRequiredDiscoverabilityTopics();
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
   const robotsTxt = readIfExists(ROBOTS_PATH);
@@ -164,7 +207,7 @@ async function runChecks(): Promise<CheckResult[]> {
     }
 
     const response = await fetch(
-      'https://api.github.com/repos/hivemoot/colony',
+      `https://api.github.com/repos/${owner}/${repoName}`,
       {
         headers,
       }
@@ -180,15 +223,15 @@ async function runChecks(): Promise<CheckResult[]> {
       const normalizedTopics = new Set(
         (repo.topics ?? []).map((topic) => topic.toLowerCase())
       );
-      const missingTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+      const missingTopics = requiredDiscoverabilityTopics.filter(
         (topic) => !normalizedTopics.has(topic)
       );
       results.push({
-        label: `Repository has required topics (${REQUIRED_DISCOVERABILITY_TOPICS.length})`,
+        label: `Repository has required topics (${requiredDiscoverabilityTopics.length})`,
         ok: missingTopics.length === 0,
         details:
           missingTopics.length === 0
-            ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+            ? `${requiredDiscoverabilityTopics.length}/${requiredDiscoverabilityTopics.length} required topics present`
             : `Missing required topics: ${missingTopics.join(', ')}`,
       });
       results.push({

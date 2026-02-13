@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   resolveRepository,
   resolveRepositories,
+  resolveRequiredDiscoverabilityTopics,
   mapCommits,
   mapIssues,
   mapPullRequests,
@@ -135,6 +136,38 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('resolveRequiredDiscoverabilityTopics', () => {
+  it('returns default topic set when env var is unset', () => {
+    expect(resolveRequiredDiscoverabilityTopics({})).toEqual(
+      REQUIRED_DISCOVERABILITY_TOPICS
+    );
+  });
+
+  it('parses custom topics from comma-separated env value', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: 'alpha,beta,gamma',
+      })
+    ).toEqual(['alpha', 'beta', 'gamma']);
+  });
+
+  it('normalizes casing, trims whitespace, and deduplicates entries', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' Alpha, beta,ALPHA, gamma  ,',
+      })
+    ).toEqual(['alpha', 'beta', 'gamma']);
+  });
+
+  it('falls back to defaults when configured value contains only empty entries', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' , , ',
+      })
+    ).toEqual(REQUIRED_DISCOVERABILITY_TOPICS);
   });
 });
 
@@ -1390,5 +1423,34 @@ describe('buildExternalVisibility', () => {
     expect(topicsCheck?.ok).toBe(false);
     expect(topicsCheck?.details).toContain('Missing required topics:');
     expect(topicsCheck?.details).toContain('ai-governance');
+  });
+
+  it('applies custom required discoverability topics from env', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('ok', { status: 200 });
+    });
+
+    const visibility = await buildExternalVisibility(
+      [
+        {
+          owner: 'hivemoot',
+          name: 'colony',
+          url: 'https://github.com/hivemoot/colony',
+          stars: 1,
+          forks: 1,
+          openIssues: 1,
+          homepage: 'https://hivemoot.github.io/colony/',
+          topics: ['alpha'],
+          description: 'Open-source dashboard for autonomous agent governance',
+        },
+      ],
+      {
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: 'alpha,beta',
+      }
+    );
+
+    const topicsCheck = visibility.checks.find((c) => c.id === 'has-topics');
+    expect(topicsCheck?.ok).toBe(false);
+    expect(topicsCheck?.details).toBe('Missing required topics: beta');
   });
 });
