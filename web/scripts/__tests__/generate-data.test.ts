@@ -715,6 +715,7 @@ describe('buildExternalVisibility', () => {
                 <link rel="canonical" href="${baseUrl}/" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <link rel="apple-touch-icon" sizes="180x180" href="/colony/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
               </head>
             </html>`,
@@ -728,6 +729,9 @@ describe('buildExternalVisibility', () => {
           return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/apple-touch-icon.png`) {
           return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
@@ -786,6 +790,9 @@ describe('buildExternalVisibility', () => {
     );
     expect(
       visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-apple-touch-icon')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-robots-sitemap')?.ok

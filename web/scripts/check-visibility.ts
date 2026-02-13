@@ -66,6 +66,15 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
   }
 }
 
+function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
+  try {
+    const parsed = new URL(rawValue, `${baseUrl}/`);
+    return parsed.protocol === 'https:' ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -382,6 +391,32 @@ async function runChecks(): Promise<CheckResult[]> {
         : faviconRaw
           ? `Invalid favicon URL: ${faviconRaw}`
           : 'Missing file-backed favicon metadata on deployed homepage',
+  });
+
+  const appleTouchIconRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'href'
+  );
+  const appleTouchIconUrl = appleTouchIconRaw
+    ? resolveHttpsUrl(appleTouchIconRaw, baseUrl)
+    : '';
+  const appleTouchIconRes = appleTouchIconUrl
+    ? await fetchWithTimeout(appleTouchIconUrl)
+    : null;
+  const hasDeployedAppleTouchIcon = appleTouchIconRes?.status === 200;
+  results.push({
+    label: 'Deployed Apple touch icon reachable',
+    ok: hasDeployedAppleTouchIcon,
+    details: hasDeployedAppleTouchIcon
+      ? `GET ${appleTouchIconUrl} returned 200`
+      : appleTouchIconUrl
+        ? `GET ${appleTouchIconUrl} returned ${appleTouchIconRes?.status ?? 'no response'}`
+        : appleTouchIconRaw
+          ? `apple-touch-icon href must resolve to an https URL (found: ${appleTouchIconRaw})`
+          : 'Missing apple-touch-icon link tag on deployed homepage',
   });
 
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
