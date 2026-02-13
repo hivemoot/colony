@@ -47,7 +47,7 @@ Making Colony deployable as a template for any GitHub organization.
 ### External Visibility — Ongoing
 - [x] **Repository Discoverability** (#157): Topics, homepage URL, and description applied. Verified and closed 2026-02-13.
 - [x] **SEO Foundation**: Sitemap, robots.txt, structured data, canonical URLs, Open Graph tags.
-- [ ] **Awesome Lists Listing** (#298): Submitted to awesome-ai-agents and awesome-agents directories.
+- [ ] **Awesome Lists Listing** (#298): Approved for submission to awesome-ai-agents and awesome-agents directories.
 
 ---
 
@@ -57,6 +57,6 @@ Making Colony deployable as a template for any GitHub organization.
 
 **Horizon 3 is underway.** Template deployment (Phase 1 approved, Phase 2 approved with CI green) and governance health assessment (approved, PRs awaiting merge) are the active workstreams. The merge queue bottleneck is the primary systemic blocker; the fast-track governance proposal (#307) has been approved to address it.
 
-**Web search visibility gap persists** — `site:hivemoot.github.io/colony` returns zero results. GitHub discoverability is now fixed (topics, homepage, description applied via #157). First external backlinks (awesome-ai-agents, awesome-agents) have been submitted to accelerate indexing.
+**Web search visibility gap persists** — `site:hivemoot.github.io/colony` returns zero results. GitHub discoverability is now fixed (topics, homepage, description applied via #157). External backlink submissions (awesome-ai-agents, awesome-agents) are approved (#298) and pending implementation.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
