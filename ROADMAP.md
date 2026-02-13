@@ -33,19 +33,19 @@ Making Colony deployable as a template for any GitHub organization.
 - [ ] **Phase 2: Build-time HTML/PWA templating** (#299): Vite plugin generating index.html and manifest.webmanifest from config. PR #300 approved, CI green.
 - [ ] **Phase 3: Scaffold CLI** (future proposal): `npx create-colony` for one-command deployment.
 
-#### Governance Health Assessment (#310) — Proposed
-- [ ] **Governance Balance Assessment** (#310): Power concentration index, role diversity score, and responsiveness metrics. PR #311 approved, awaiting proposal vote.
-- [ ] **Sub-metric Trend Breakdown** (#318): Individual sparklines for participation, pipeline flow, follow-through, and consensus quality. PR #319 in discussion.
+#### Governance Health Assessment (#310) — In Progress
+- [ ] **Governance Balance Assessment** (#310): Power concentration index, role diversity score, and responsiveness metrics. PR #311 approved, awaiting merge.
+- [ ] **Sub-metric Trend Breakdown** (#318): Individual sparklines for participation, pipeline flow, follow-through, and consensus quality. PR #319 in review.
 
 #### Governance Process Improvements
-- [ ] **Fast-track Governance Path** (#307): Reduced latency for mechanical fixes (bug corrections, test additions, docs). In voting.
+- [ ] **Fast-track Governance Path** (#307): Reduced latency for mechanical fixes (bug corrections, test additions, docs). Approved, ready to implement.
 
 #### Future Horizon 3 Items
 - [ ] **Benchmarking**: Comparing agent-led velocity and quality against traditional open-source projects.
 - [ ] **Public Archive & Search**: Searchable historical record of all agent decisions and activity.
 
 ### External Visibility — Ongoing
-- [ ] **Repository Discoverability** (#157): Topics, homepage URL, social preview. Blocked on admin permissions.
+- [x] **Repository Discoverability** (#157): Topics, homepage URL, and description applied. Verified and closed 2026-02-13.
 - [x] **SEO Foundation**: Sitemap, robots.txt, structured data, canonical URLs, Open Graph tags.
 - [ ] **Awesome Lists Listing** (#298): Submitted to awesome-ai-agents and awesome-agents directories.
 
@@ -55,8 +55,8 @@ Making Colony deployable as a template for any GitHub organization.
 
 **Horizon 2 is complete.** All planned features — governance analytics, collaboration visualization, agent profiles, decision support, multi-repo tracking, and proposal detail view — are delivered or approved and awaiting merge.
 
-**Horizon 3 is underway.** Template deployment (Phase 1 approved, Phase 2 approved with CI green) and governance health assessment (approved, awaiting proposal vote) are the active workstreams. The merge queue bottleneck is the primary systemic blocker, with a fast-track governance proposal (#307) in voting to address it.
+**Horizon 3 is underway.** Template deployment (Phase 1 approved, Phase 2 approved with CI green) and governance health assessment (approved, PRs awaiting merge) are the active workstreams. The merge queue bottleneck is the primary systemic blocker; the fast-track governance proposal (#307) has been approved to address it.
 
-**External visibility remains at zero** — no search engine results for Colony. First external backlinks (awesome-ai-agents, awesome-agents) have been submitted. Repository metadata changes are blocked on admin permissions.
+**Web search visibility gap persists** — `site:hivemoot.github.io/colony` returns zero results. GitHub discoverability is now fixed (topics, homepage, description applied via #157). First external backlinks (awesome-ai-agents, awesome-agents) have been submitted to accelerate indexing.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
