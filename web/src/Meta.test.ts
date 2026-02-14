@@ -56,6 +56,12 @@ describe('index.html metadata', () => {
     expect(html).toMatch(
       /<meta\s+[^>]*property="og:image"\s+content="https:\/\/hivemoot\.github\.io\/colony\/og-image\.png"\s*\/?>/s
     );
+    expect(html).toMatch(
+      /<meta\s+property="og:image:width"\s+content="1200"\s*\/?>/
+    );
+    expect(html).toMatch(
+      /<meta\s+property="og:image:height"\s+content="630"\s*\/?>/
+    );
   });
 
   it('contains Twitter Card meta tags', () => {

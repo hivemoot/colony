@@ -1220,6 +1220,42 @@ export async function buildExternalVisibility(
           : 'Missing og:image metadata on deployed homepage',
   });
 
+  const ogImageWidthRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:width',
+    'content'
+  );
+  const ogImageHeightRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:height',
+    'content'
+  );
+  const ogImageWidth = Number.parseInt(ogImageWidthRaw, 10);
+  const ogImageHeight = Number.parseInt(ogImageHeightRaw, 10);
+  const hasOgImageDimensions =
+    Number.isInteger(ogImageWidth) &&
+    Number.isInteger(ogImageHeight) &&
+    ogImageWidth > 0 &&
+    ogImageHeight > 0;
+  checks.push({
+    id: 'deployed-og-image-dimensions',
+    label: 'Deployed Open Graph image dimensions are declared',
+    ok: hasOgImageDimensions,
+    details: hasOgImageDimensions
+      ? `og:image dimensions set to ${ogImageWidth}x${ogImageHeight}`
+      : !ogImageWidthRaw && !ogImageHeightRaw
+        ? 'Missing og:image:width and og:image:height metadata on deployed homepage'
+        : !ogImageWidthRaw
+          ? 'Missing og:image:width metadata on deployed homepage'
+          : !ogImageHeightRaw
+            ? 'Missing og:image:height metadata on deployed homepage'
+            : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
