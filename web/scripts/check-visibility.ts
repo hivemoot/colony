@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -8,6 +8,7 @@ const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
@@ -24,6 +25,13 @@ interface CheckResult {
   label: string;
   ok: boolean;
   details?: string;
+}
+
+export function resolveVisibilityUserAgent(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const configured = env.VISIBILITY_USER_AGENT?.trim();
+  return configured || DEFAULT_VISIBILITY_USER_AGENT;
 }
 
 function readIfExists(path: string): string {
@@ -206,9 +214,10 @@ async function runChecks(): Promise<CheckResult[]> {
   // Repository metadata checks via GitHub API
   try {
     const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    const userAgent = resolveVisibilityUserAgent();
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'hivemoot-scout-visibility-check',
+      'User-Agent': userAgent,
     };
     if (token) {
       headers.Authorization = `token ${token}`;
@@ -601,4 +610,14 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main();
+function isDirectExecution(): boolean {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  return resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+}
+
+if (isDirectExecution()) {
+  void main();
+}

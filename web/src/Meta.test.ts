@@ -45,6 +45,12 @@ describe('index.html metadata', () => {
       /<meta\s+[^>]*property="og:image"\s+content="__COLONY_OG_IMAGE__"\s*\/?>/s
     );
     expect(html).toMatch(
+      /<meta\s+property="og:image:width"\s+content="1200"\s*\/?>/
+    );
+    expect(html).toMatch(
+      /<meta\s+property="og:image:height"\s+content="630"\s*\/?>/
+    );
+    expect(html).toMatch(
       /<meta\s+property="og:site_name"\s+content="__COLONY_OG_SITE_NAME__"\s*\/?>/
     );
   });
