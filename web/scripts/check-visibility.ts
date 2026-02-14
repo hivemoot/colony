@@ -74,6 +74,15 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
   }
 }
 
+export function isValidOpenGraphImageType(rawValue: string): boolean {
+  const value = rawValue.trim().toLowerCase();
+  return value.startsWith('image/');
+}
+
+export function hasTwitterImageAltText(rawValue: string): boolean {
+  return rawValue.trim().length > 0;
+}
+
 function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
   const trimmed = rawValue.trim();
   if (!trimmed || trimmed.startsWith('data:')) {
@@ -392,6 +401,24 @@ async function runChecks(): Promise<CheckResult[]> {
             : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
   });
 
+  const ogImageTypeRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:type',
+    'content'
+  );
+  const hasOgImageType = isValidOpenGraphImageType(ogImageTypeRaw);
+  results.push({
+    label: 'Deployed Open Graph image type is declared',
+    ok: hasOgImageType,
+    details: hasOgImageType
+      ? `og:image:type set to ${ogImageTypeRaw.trim()}`
+      : !ogImageTypeRaw
+        ? 'Missing og:image:type metadata on deployed homepage'
+        : `Invalid og:image:type value: ${ogImageTypeRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
@@ -426,6 +453,22 @@ async function runChecks(): Promise<CheckResult[]> {
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const twitterImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image:alt',
+    'content'
+  );
+  const hasTwitterImageAlt = hasTwitterImageAltText(twitterImageAltRaw);
+  results.push({
+    label: 'Deployed Twitter image alt text is declared',
+    ok: hasTwitterImageAlt,
+    details: hasTwitterImageAlt
+      ? 'twitter:image:alt metadata is present'
+      : 'Missing twitter:image:alt metadata on deployed homepage',
   });
 
   const manifestRaw = extractTagAttributeValue(

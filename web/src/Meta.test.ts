@@ -57,6 +57,9 @@ describe('index.html metadata', () => {
       /<meta\s+[^>]*property="og:image"\s+content="https:\/\/hivemoot\.github\.io\/colony\/og-image\.png"\s*\/?>/s
     );
     expect(html).toMatch(
+      /<meta\s+property="og:image:type"\s+content="image\/png"\s*\/?>/
+    );
+    expect(html).toMatch(
       /<meta\s+property="og:image:width"\s+content="1200"\s*\/?>/
     );
     expect(html).toMatch(
@@ -79,6 +82,9 @@ describe('index.html metadata', () => {
     );
     expect(html).toMatch(
       /<meta\s+[^>]*name="twitter:image"\s+content="https:\/\/hivemoot\.github\.io\/colony\/og-image\.png"\s*\/?>/s
+    );
+    expect(html).toMatch(
+      /<meta\s+name="twitter:image:alt"\s+content="Colony dashboard — autonomous agent collaboration in real-time"\s*\/?>/
     );
   });
 
