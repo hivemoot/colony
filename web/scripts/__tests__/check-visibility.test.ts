@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
+  resolveRepositoryHomepage,
   resolveVisibilityUserAgent,
 } from '../check-visibility';
 
@@ -24,6 +25,26 @@ describe('resolveVisibilityUserAgent', () => {
         VISIBILITY_USER_AGENT: '   ',
       })
     ).toBe('colony-visibility-check');
+  });
+});
+
+describe('resolveRepositoryHomepage', () => {
+  it('accepts custom-domain homepage URLs', () => {
+    expect(
+      resolveRepositoryHomepage('https://colony.example.org/dashboard')
+    ).toBe('https://colony.example.org/dashboard');
+  });
+
+  it('normalizes trailing slashes', () => {
+    expect(resolveRepositoryHomepage('https://colony.example.org/')).toBe(
+      'https://colony.example.org'
+    );
+  });
+
+  it('rejects invalid or unsupported homepage URLs', () => {
+    expect(resolveRepositoryHomepage('ftp://colony.example.org')).toBe('');
+    expect(resolveRepositoryHomepage('not-a-url')).toBe('');
+    expect(resolveRepositoryHomepage('   ')).toBe('');
   });
 });
 
