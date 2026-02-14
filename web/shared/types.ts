@@ -117,6 +117,7 @@ export interface VisibilityCheck {
     | 'deployed-jsonld'
     | 'deployed-canonical'
     | 'deployed-og-image'
+    | 'deployed-og-image-dimensions'
     | 'deployed-twitter-image'
     | 'deployed-pwa-manifest'
     | 'deployed-pwa-icons'
