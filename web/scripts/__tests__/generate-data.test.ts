@@ -715,6 +715,8 @@ describe('buildExternalVisibility', () => {
                 <link rel="canonical" href="${baseUrl}/" />
                 <link rel="manifest" href="${baseUrl}/manifest.webmanifest" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/colony/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
@@ -802,6 +804,9 @@ describe('buildExternalVisibility', () => {
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-og-image-dimensions')?.ok
     ).toBe(true);
     expect(visibility.checks.find((c) => c.id === 'deployed-favicon')?.ok).toBe(
       true
@@ -1022,6 +1027,88 @@ describe('buildExternalVisibility', () => {
     expect(twitterImageCheck?.ok).toBe(false);
     expect(twitterImageCheck?.details).toContain(
       'Missing twitter:image metadata on deployed homepage'
+    );
+  });
+
+  it('flags missing og:image dimensions on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link href="${baseUrl}/favicon.ico" sizes="any" rel="icon" />
+                <link href="${baseUrl}/" rel="canonical" />
+                <meta content="${baseUrl}/og-image.png" property="og:image" />
+                <meta content="${baseUrl}/twitter-image.png" name="twitter:image" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('icon-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const ogImageDimensionsCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-og-image-dimensions'
+    );
+    expect(ogImageDimensionsCheck?.ok).toBe(false);
+    expect(ogImageDimensionsCheck?.details).toContain(
+      'Missing og:image:width and og:image:height metadata on deployed homepage'
     );
   });
 

@@ -53,6 +53,12 @@ describe('index.html metadata', () => {
     expect(html).toMatch(
       /<meta\s+property="og:site_name"\s+content="__COLONY_OG_SITE_NAME__"\s*\/?>/
     );
+    expect(html).toMatch(
+      /<meta\s+property="og:image:width"\s+content="1200"\s*\/?>/
+    );
+    expect(html).toMatch(
+      /<meta\s+property="og:image:height"\s+content="630"\s*\/?>/
+    );
   });
 
   it('contains Twitter Card placeholder tokens', () => {
