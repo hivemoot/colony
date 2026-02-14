@@ -43,6 +43,14 @@ describe('validateOpenGraphDimensions', () => {
     });
   });
 
+  it('fails when dimensions include non-numeric suffixes', () => {
+    expect(validateOpenGraphDimensions('1200px', '630;')).toEqual({
+      ok: false,
+      details:
+        'Invalid og:image dimension values: width=1200px, height=630;. Add og:image:width and og:image:height meta tags (at least 1200x630) to the deployed homepage.',
+    });
+  });
+
   it('fails when dimensions are below the minimum size', () => {
     expect(validateOpenGraphDimensions('800', '418')).toEqual({
       ok: false,

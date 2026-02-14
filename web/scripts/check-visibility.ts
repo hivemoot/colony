@@ -42,28 +42,32 @@ export function validateOpenGraphDimensions(
   widthRaw: string,
   heightRaw: string
 ): { ok: boolean; details: string } {
-  const width = Number.parseInt(widthRaw, 10);
-  const height = Number.parseInt(heightRaw, 10);
+  const widthValue = widthRaw.trim();
+  const heightValue = heightRaw.trim();
+  const width = Number.parseInt(widthValue, 10);
+  const height = Number.parseInt(heightValue, 10);
+  const isStrictPositiveInteger = (value: string): boolean =>
+    /^\d+$/.test(value) && Number.parseInt(value, 10) > 0;
   const hasDeclaredDimensions =
+    isStrictPositiveInteger(widthValue) &&
+    isStrictPositiveInteger(heightValue) &&
     Number.isInteger(width) &&
-    Number.isInteger(height) &&
-    width > 0 &&
-    height > 0;
+    Number.isInteger(height);
 
   if (!hasDeclaredDimensions) {
-    if (!widthRaw && !heightRaw) {
+    if (!widthValue && !heightValue) {
       return {
         ok: false,
         details: `Missing og:image:width and og:image:height metadata on deployed homepage. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
       };
     }
-    if (!widthRaw) {
+    if (!widthValue) {
       return {
         ok: false,
         details: `Missing og:image:width metadata on deployed homepage. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
       };
     }
-    if (!heightRaw) {
+    if (!heightValue) {
       return {
         ok: false,
         details: `Missing og:image:height metadata on deployed homepage. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
