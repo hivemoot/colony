@@ -9,6 +9,8 @@ const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
+const MIN_OPEN_GRAPH_IMAGE_WIDTH = 1200;
+const MIN_OPEN_GRAPH_IMAGE_HEIGHT = 630;
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
@@ -32,6 +34,60 @@ export function resolveVisibilityUserAgent(
 ): string {
   const configured = env.VISIBILITY_USER_AGENT?.trim();
   return configured || DEFAULT_VISIBILITY_USER_AGENT;
+}
+
+export function validateOpenGraphDimensions(
+  widthRaw: string,
+  heightRaw: string
+): { ok: boolean; details: string } {
+  const width = Number.parseInt(widthRaw, 10);
+  const height = Number.parseInt(heightRaw, 10);
+  const hasDeclaredDimensions =
+    Number.isInteger(width) &&
+    Number.isInteger(height) &&
+    width > 0 &&
+    height > 0;
+
+  if (!hasDeclaredDimensions) {
+    if (!widthRaw && !heightRaw) {
+      return {
+        ok: false,
+        details:
+          'Missing og:image:width and og:image:height metadata on deployed homepage',
+      };
+    }
+    if (!widthRaw) {
+      return {
+        ok: false,
+        details: 'Missing og:image:width metadata on deployed homepage',
+      };
+    }
+    if (!heightRaw) {
+      return {
+        ok: false,
+        details: 'Missing og:image:height metadata on deployed homepage',
+      };
+    }
+    return {
+      ok: false,
+      details: `Invalid og:image dimension values: width=${widthRaw}, height=${heightRaw}`,
+    };
+  }
+
+  if (
+    width < MIN_OPEN_GRAPH_IMAGE_WIDTH ||
+    height < MIN_OPEN_GRAPH_IMAGE_HEIGHT
+  ) {
+    return {
+      ok: false,
+      details: `og:image dimensions too small: ${width}x${height} (minimum ${MIN_OPEN_GRAPH_IMAGE_WIDTH}x${MIN_OPEN_GRAPH_IMAGE_HEIGHT})`,
+    };
+  }
+
+  return {
+    ok: true,
+    details: `og:image dimensions set to ${width}x${height}`,
+  };
 }
 
 function readIfExists(path: string): string {
@@ -371,25 +427,14 @@ async function runChecks(): Promise<CheckResult[]> {
     'og:image:height',
     'content'
   );
-  const ogImageWidth = Number.parseInt(ogImageWidthRaw, 10);
-  const ogImageHeight = Number.parseInt(ogImageHeightRaw, 10);
-  const hasOgImageDimensions =
-    Number.isInteger(ogImageWidth) &&
-    Number.isInteger(ogImageHeight) &&
-    ogImageWidth > 0 &&
-    ogImageHeight > 0;
+  const ogImageDimensions = validateOpenGraphDimensions(
+    ogImageWidthRaw,
+    ogImageHeightRaw
+  );
   results.push({
-    label: 'Deployed Open Graph image dimensions are declared',
-    ok: hasOgImageDimensions,
-    details: hasOgImageDimensions
-      ? `og:image dimensions set to ${ogImageWidth}x${ogImageHeight}`
-      : !ogImageWidthRaw && !ogImageHeightRaw
-        ? 'Missing og:image:width and og:image:height metadata on deployed homepage'
-        : !ogImageWidthRaw
-          ? 'Missing og:image:width metadata on deployed homepage'
-          : !ogImageHeightRaw
-            ? 'Missing og:image:height metadata on deployed homepage'
-            : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
+    label: 'Deployed Open Graph image dimensions meet minimum size',
+    ok: ogImageDimensions.ok,
+    details: ogImageDimensions.details,
   });
 
   const twitterImageRaw = extractTagAttributeValue(
