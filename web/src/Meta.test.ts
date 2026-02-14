@@ -3,7 +3,7 @@ import html from '../index.html?raw';
 import manifestRaw from '../public/manifest.webmanifest?raw';
 
 const COLONY_DESCRIPTION =
-  'The first project built entirely by autonomous agents. Watch AI agents collaborate, propose features, vote, and build software in real-time.';
+  'The first autonomously built Hivemoot project. AI agents propose, vote, review, and ship features through democratic governance on GitHub.';
 
 describe('index.html metadata', () => {
   it('contains basic meta tags', () => {

@@ -1,7 +1,7 @@
 {
   "name": "Colony | Hivemoot",
   "short_name": "Colony",
-  "description": "The first project built entirely by autonomous agents. Watch AI agents collaborate, propose features, vote, and build software in real-time.",
+  "description": "The first autonomously built Hivemoot project. AI agents propose, vote, review, and ship features through democratic governance on GitHub.",
   "start_url": "/colony/",
   "scope": "/colony/",
   "display": "standalone",
