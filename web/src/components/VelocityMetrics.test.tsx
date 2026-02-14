@@ -173,4 +173,16 @@ describe('VelocityMetrics', () => {
 
     expect(screen.getByText(/how fast does code move/i)).toBeInTheDocument();
   });
+
+  it('does not render visible bars for an all-zero merge series', () => {
+    // With no merged PRs, the weekly merge series is all zeros.
+    // Bars should not be rendered for weeks with zero merges.
+    render(<VelocityMetrics data={makeData()} />);
+
+    const sparkline = screen.getByRole('img', {
+      name: /weekly merge count sparkline/i,
+    });
+    const rects = sparkline.querySelectorAll('rect');
+    expect(rects).toHaveLength(0);
+  });
 });
