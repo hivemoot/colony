@@ -31,21 +31,23 @@ describe('validateOpenGraphDimensions', () => {
     expect(validateOpenGraphDimensions('', '')).toEqual({
       ok: false,
       details:
-        'Missing og:image:width and og:image:height metadata on deployed homepage',
+        'Missing og:image:width and og:image:height metadata on deployed homepage. Add og:image:width and og:image:height meta tags (at least 1200x630) to the deployed homepage.',
     });
   });
 
   it('fails when dimensions are not valid integers', () => {
     expect(validateOpenGraphDimensions('wide', 'tall')).toEqual({
       ok: false,
-      details: 'Invalid og:image dimension values: width=wide, height=tall',
+      details:
+        'Invalid og:image dimension values: width=wide, height=tall. Add og:image:width and og:image:height meta tags (at least 1200x630) to the deployed homepage.',
     });
   });
 
   it('fails when dimensions are below the minimum size', () => {
     expect(validateOpenGraphDimensions('800', '418')).toEqual({
       ok: false,
-      details: 'og:image dimensions too small: 800x418 (minimum 1200x630)',
+      details:
+        'og:image dimensions too small: 800x418 (minimum 1200x630). Use an image at least 1200x630 and keep og:image:width/og:image:height in sync.',
     });
   });
 

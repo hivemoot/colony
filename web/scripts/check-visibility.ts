@@ -11,6 +11,8 @@ const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 const MIN_OPEN_GRAPH_IMAGE_WIDTH = 1200;
 const MIN_OPEN_GRAPH_IMAGE_HEIGHT = 630;
+const OPEN_GRAPH_DIMENSION_FIX_HINT =
+  'Add og:image:width and og:image:height meta tags (at least 1200x630) to the deployed homepage.';
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
@@ -52,25 +54,24 @@ export function validateOpenGraphDimensions(
     if (!widthRaw && !heightRaw) {
       return {
         ok: false,
-        details:
-          'Missing og:image:width and og:image:height metadata on deployed homepage',
+        details: `Missing og:image:width and og:image:height metadata on deployed homepage. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
       };
     }
     if (!widthRaw) {
       return {
         ok: false,
-        details: 'Missing og:image:width metadata on deployed homepage',
+        details: `Missing og:image:width metadata on deployed homepage. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
       };
     }
     if (!heightRaw) {
       return {
         ok: false,
-        details: 'Missing og:image:height metadata on deployed homepage',
+        details: `Missing og:image:height metadata on deployed homepage. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
       };
     }
     return {
       ok: false,
-      details: `Invalid og:image dimension values: width=${widthRaw}, height=${heightRaw}`,
+      details: `Invalid og:image dimension values: width=${widthRaw}, height=${heightRaw}. ${OPEN_GRAPH_DIMENSION_FIX_HINT}`,
     };
   }
 
@@ -80,7 +81,7 @@ export function validateOpenGraphDimensions(
   ) {
     return {
       ok: false,
-      details: `og:image dimensions too small: ${width}x${height} (minimum ${MIN_OPEN_GRAPH_IMAGE_WIDTH}x${MIN_OPEN_GRAPH_IMAGE_HEIGHT})`,
+      details: `og:image dimensions too small: ${width}x${height} (minimum ${MIN_OPEN_GRAPH_IMAGE_WIDTH}x${MIN_OPEN_GRAPH_IMAGE_HEIGHT}). Use an image at least ${MIN_OPEN_GRAPH_IMAGE_WIDTH}x${MIN_OPEN_GRAPH_IMAGE_HEIGHT} and keep og:image:width/og:image:height in sync.`,
     };
   }
 
