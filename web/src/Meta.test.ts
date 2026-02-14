@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import html from '../index.html?raw';
 import manifestRaw from '../public/manifest.webmanifest?raw';
 
@@ -12,7 +14,7 @@ describe('index.html metadata', () => {
       /<link\s+rel="icon"\s+href="\/colony\/favicon\.ico"\s+sizes="any"\s*\/?>/
     );
     expect(html).toMatch(
-      /<link\s+rel="apple-touch-icon"\s+sizes="180x180"\s+href="\/colony\/apple-touch-icon\.png"\s*\/?>/
+      /<link\s+rel="apple-touch-icon"\s+sizes="192x192"\s+href="\/colony\/apple-touch-icon\.png"\s*\/?>/
     );
     expect(html).toMatch(
       /<link\s+rel="canonical"\s+href="https:\/\/hivemoot\.github\.io\/colony\/"\s*\/?>/
@@ -85,6 +87,19 @@ describe('index.html metadata', () => {
   it('contains JSON-LD with aligned description', () => {
     expect(html).toContain('"@type": "WebSite"');
     expect(html).toContain(`"description": "${COLONY_DESCRIPTION}"`);
+  });
+});
+
+describe('apple-touch-icon asset', () => {
+  it('is a branded PNG icon, not a tiny placeholder', () => {
+    const iconPath = resolve(process.cwd(), 'public/apple-touch-icon.png');
+    const bytes = readFileSync(iconPath);
+    const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+    expect(bytes.subarray(0, 8).equals(pngSignature)).toBe(true);
+    expect(bytes.readUInt32BE(16)).toBe(192);
+    expect(bytes.readUInt32BE(20)).toBe(192);
+    expect(bytes.byteLength).toBeGreaterThan(500);
   });
 });
 
