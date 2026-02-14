@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   mkdirSync,
   writeFileSync,
@@ -299,5 +299,89 @@ describe('generateStaticPages', () => {
     );
     expect(html).toContain('no-avatar');
     expect(html).not.toContain('<img');
+  });
+
+  it('uses custom base path from COLONY_DEPLOYED_URL (no hardcoded /colony/)', async () => {
+    // Re-import the module with a non-/colony base URL to verify
+    // that generated HTML derives all paths from the env var.
+    const savedUrl = process.env.COLONY_DEPLOYED_URL;
+    process.env.COLONY_DEPLOYED_URL = 'https://example.com/my-app';
+    vi.resetModules();
+
+    const { generateStaticPages: generate } = await import('../static-pages');
+
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 7,
+          title: 'Custom base test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+      agentStats: [
+        {
+          login: 'test-agent',
+          commits: 1,
+          pullRequestsMerged: 0,
+          issuesOpened: 0,
+          reviews: 0,
+          comments: 0,
+          lastActiveAt: '2026-02-14T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generate(TEST_OUT);
+
+    const proposalHtml = readFileSync(
+      join(TEST_OUT, 'proposal', '7', 'index.html'),
+      'utf-8'
+    );
+    const agentHtml = readFileSync(
+      join(TEST_OUT, 'agent', 'test-agent', 'index.html'),
+      'utf-8'
+    );
+    const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+
+    // Internal links should use /my-app/, not /colony/
+    expect(proposalHtml).toContain('href="/my-app/"');
+    expect(proposalHtml).toContain('href="/my-app/#proposals"');
+    expect(proposalHtml).toContain('href="/my-app/#proposal-7"');
+    expect(proposalHtml).toContain('href="/my-app/favicon.ico"');
+    expect(agentHtml).toContain('href="/my-app/"');
+    expect(agentHtml).toContain('href="/my-app/#agents"');
+    expect(agentHtml).toContain('href="/my-app/favicon.ico"');
+
+    // Internal links (href/src attributes) must not use hardcoded /colony/
+    // (External GitHub URLs like github.com/hivemoot/colony are fine)
+    const internalHrefs = (html: string): string[] =>
+      [...html.matchAll(/(?:href|src)="([^"]+)"/g)]
+        .map((m) => m[1])
+        .filter((url) => !url.startsWith('http'));
+    for (const href of internalHrefs(proposalHtml)) {
+      expect(href).not.toMatch(/\/colony\b/);
+    }
+    for (const href of internalHrefs(agentHtml)) {
+      expect(href).not.toMatch(/\/colony\b/);
+    }
+
+    // Sitemap should use the custom URL
+    expect(sitemap).toContain('https://example.com/my-app/');
+    expect(sitemap).not.toMatch(/hivemoot\.github\.io/);
+
+    // Restore env
+    if (savedUrl === undefined) {
+      delete process.env.COLONY_DEPLOYED_URL;
+    } else {
+      process.env.COLONY_DEPLOYED_URL = savedUrl;
+    }
+    vi.resetModules();
   });
 });

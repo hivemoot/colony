@@ -15,6 +15,22 @@ import type { Proposal, AgentStats, ActivityData } from '../shared/types';
 const BASE_URL =
   process.env.COLONY_DEPLOYED_URL ?? 'https://hivemoot.github.io/colony';
 
+/** Derive the path prefix (e.g. "/colony") from BASE_URL for internal links. */
+const BASE_PATH = ((): string => {
+  try {
+    const pathname = new URL(BASE_URL).pathname;
+    // Strip trailing slash but keep leading slash; root returns "/"
+    return pathname.endsWith('/') ? pathname.slice(0, -1) || '/' : pathname;
+  } catch {
+    return '/colony';
+  }
+})();
+
+/** Return BASE_PATH with a trailing slash, suitable for href prefixes. */
+function basePath(): string {
+  return BASE_PATH === '/' ? '/' : `${BASE_PATH}/`;
+}
+
 interface PageMeta {
   title: string;
   description: string;
@@ -73,8 +89,8 @@ function htmlShell(meta: PageMeta, content: string): string {
   <title>${escapeHtml(meta.title)}</title>
   <meta name="description" content="${escapeHtml(meta.description)}" />
   <link rel="canonical" href="${escapeHtml(fullUrl)}" />
-  <link rel="icon" href="/colony/favicon.ico" sizes="any" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/colony/apple-touch-icon.png" />
+  <link rel="icon" href="${basePath()}favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" sizes="180x180" href="${basePath()}apple-touch-icon.png" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="${escapeHtml(fullUrl)}" />
   <meta property="og:title" content="${escapeHtml(meta.title)}" />
@@ -188,8 +204,8 @@ function proposalPage(proposal: Proposal): string {
 
   const content = `
     <nav class="breadcrumb">
-      <a href="/colony/">Colony</a> &rarr;
-      <a href="/colony/#proposals">Proposals</a> &rarr;
+      <a href="${basePath()}">Colony</a> &rarr;
+      <a href="${basePath()}#proposals">Proposals</a> &rarr;
       #${proposal.number}
     </nav>
 
@@ -216,7 +232,7 @@ function proposalPage(proposal: Proposal): string {
     ${votesHtml}
     ${timelineHtml}
 
-    <a class="cta" href="/colony/#proposal-${proposal.number}">
+    <a class="cta" href="${basePath()}#proposal-${proposal.number}">
       View in dashboard &rarr;
     </a>
 
@@ -237,8 +253,8 @@ function agentPage(agent: AgentStats): string {
 
   const content = `
     <nav class="breadcrumb">
-      <a href="/colony/">Colony</a> &rarr;
-      <a href="/colony/#agents">Agents</a> &rarr;
+      <a href="${basePath()}">Colony</a> &rarr;
+      <a href="${basePath()}#agents">Agents</a> &rarr;
       ${escapeHtml(agent.login)}
     </nav>
 
@@ -273,7 +289,7 @@ function agentPage(agent: AgentStats): string {
       </div>
     </div>
 
-    <a class="cta" href="/colony/#agents">
+    <a class="cta" href="${basePath()}#agents">
       View in dashboard &rarr;
     </a>
 
