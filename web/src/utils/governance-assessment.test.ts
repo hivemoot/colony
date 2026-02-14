@@ -265,6 +265,77 @@ describe('detectAlerts', () => {
     expect(queue?.severity).toBe('warning');
   });
 
+  it('anchors merge recency to generatedAt, not wall-clock time', () => {
+    // generatedAt is Feb 1. Merged PRs are within 48h of that timestamp.
+    // Without the fix (Date.now()), these merges would appear stale and trigger
+    // a false merge-queue-growth alert.
+    const openPRs = Array.from({ length: 11 }, (_, i) => ({
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      state: 'open' as const,
+      author: 'agent-a',
+      createdAt: '2026-01-30T00:00:00Z',
+    }));
+    const mergedPRs = Array.from({ length: 4 }, (_, i) => ({
+      number: 100 + i,
+      title: `Merged PR ${i}`,
+      state: 'merged' as const,
+      author: 'agent-b',
+      createdAt: '2026-01-30T00:00:00Z',
+      mergedAt: '2026-01-31T12:00:00Z',
+    }));
+    const data = makeActivityData({
+      generatedAt: '2026-02-01T00:00:00Z',
+      pullRequests: [...openPRs, ...mergedPRs],
+    });
+    const alerts = detectAlerts(data, [], computeTrendSummary([]));
+    const queue = alerts.find((a) => a.type === 'merge-queue-growth');
+    // 4 merged within 48h of generatedAt → 11 > 4*3=12 is false → no alert
+    expect(queue).toBeUndefined();
+  });
+
+  it('counts Refs #n as linked for follow-through-gap detection', () => {
+    // 6 ready-to-implement proposals (>5 threshold for alert)
+    const proposals = Array.from({ length: 6 }, (_, i) =>
+      makeProposal({
+        number: i + 200,
+        phase: 'ready-to-implement',
+        commentCount: 5,
+      })
+    );
+    // One PR uses "Refs #200" (not a closing keyword) — should still count as linked
+    const pullRequests = [
+      {
+        number: 50,
+        title: 'feat: implement widget',
+        body: 'Refs #200',
+        state: 'open' as const,
+        author: 'agent-a',
+        createdAt: '2026-02-09T00:00:00Z',
+      },
+    ];
+    const data = makeActivityData({ proposals, pullRequests });
+    const alerts = detectAlerts(data, [], computeTrendSummary([]));
+    const gap = alerts.find((a) => a.type === 'follow-through-gap');
+    // 6 proposals, 1 linked via Refs → 5 unclaimed, which is not >5, so no alert
+    expect(gap).toBeUndefined();
+  });
+
+  it('fires follow-through-gap when no PRs reference ready proposals', () => {
+    const proposals = Array.from({ length: 6 }, (_, i) =>
+      makeProposal({
+        number: i + 300,
+        phase: 'ready-to-implement',
+        commentCount: 5,
+      })
+    );
+    const data = makeActivityData({ proposals, pullRequests: [] });
+    const alerts = detectAlerts(data, [], computeTrendSummary([]));
+    const gap = alerts.find((a) => a.type === 'follow-through-gap');
+    expect(gap).toBeDefined();
+    expect(gap?.detail).toContain('6');
+  });
+
   it('detects review concentration', () => {
     const data = makeActivityData({
       agentStats: [

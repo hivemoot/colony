@@ -243,7 +243,7 @@ export function detectAlerts(
   );
   const openPRs = data.pullRequests.filter((pr) => pr.state === 'open');
   // Count ready proposals that have no linked open PR
-  const pattern = /(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
+  const pattern = /(?:fix(?:es)?|close[sd]?|resolve[sd]?|refs?)\s+#(\d+)/gi;
   const linkedIssues = new Set<number>();
   for (const pr of openPRs) {
     const text = `${pr.title} ${pr.body ?? ''}`;
@@ -266,11 +266,17 @@ export function detectAlerts(
   }
 
   // Merge queue growth: many open PRs relative to recent merges
+  // Anchor recency window to data generation time, not wall-clock time,
+  // so the assessment is deterministic for a given snapshot.
+  const anchorTime = ((): number => {
+    const parsed = new Date(data.generatedAt).getTime();
+    return Number.isNaN(parsed) ? Date.now() : parsed;
+  })();
   const mergedRecently = data.pullRequests.filter(
     (pr) =>
       pr.state === 'merged' &&
       pr.mergedAt &&
-      Date.now() - new Date(pr.mergedAt).getTime() < 2 * MS_PER_DAY
+      anchorTime - new Date(pr.mergedAt).getTime() < 2 * MS_PER_DAY
   );
   if (openPRs.length > 10 && openPRs.length > mergedRecently.length * 3) {
     alerts.push({
