@@ -1509,8 +1509,12 @@ export async function buildExternalVisibility(
         if (!isNaN(timestamp)) {
           const ageMs = Date.now() - timestamp;
           const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18; // Critical threshold from proposal
-          freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
+          if (ageMs < 0) {
+            freshnessDetails = `generatedAt is in the future (${Math.round(Math.abs(ageHours))}h ahead). ${deployedSourceDetails}`;
+          } else {
+            freshnessOk = ageHours <= 18; // Critical threshold from proposal
+            freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
+          }
         } else {
           freshnessDetails = `Invalid timestamp in deployed activity.json. ${deployedSourceDetails}`;
         }
