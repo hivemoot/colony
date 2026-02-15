@@ -71,4 +71,29 @@ describe('evaluateEligibility', () => {
     expect(result.reasons[2]).toMatch(/CI checks must be SUCCESS/);
     expect(result.reasons[3]).toMatch(/OPEN linked issue/);
   });
+
+  it('marks PR ineligible when a thumbs-down veto is present', () => {
+    const result = evaluateEligibility({
+      number: 103,
+      title: 'fix: improve merge readiness report',
+      url: 'https://example.test/pr/103',
+      latestReviews: [
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+      ],
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 307, state: 'OPEN' }],
+      reactionGroups: [
+        {
+          content: 'THUMBS_DOWN',
+          users: { totalCount: 1 },
+        },
+      ],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.reasons).toContain(
+      'cannot have a 👎 veto reaction on the PR'
+    );
+  });
 });

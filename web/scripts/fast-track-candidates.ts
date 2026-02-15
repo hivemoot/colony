@@ -30,6 +30,13 @@ interface StatusCheckNode {
   conclusion?: string | null;
 }
 
+interface ReactionGroupNode {
+  content?: string;
+  users?: {
+    totalCount?: number;
+  };
+}
+
 interface PullRequestNode {
   number: number;
   title: string;
@@ -37,6 +44,7 @@ interface PullRequestNode {
   latestReviews?: ReviewNode[];
   statusCheckRollup?: StatusCheckNode[] | null;
   closingIssuesReferences?: IssueNode[];
+  reactionGroups?: ReactionGroupNode[];
 }
 
 export interface EligibilityResult {
@@ -213,6 +221,10 @@ export function evaluateEligibility(
     reasons.push('must reference at least one OPEN linked issue');
   }
 
+  if (hasThumbsDownVeto(pr.reactionGroups)) {
+    reasons.push('cannot have a 👎 veto reaction on the PR');
+  }
+
   return {
     eligible: reasons.length === 0,
     reasons,
@@ -220,6 +232,16 @@ export function evaluateEligibility(
     ciState,
     linkedOpenIssues,
   };
+}
+
+function hasThumbsDownVeto(
+  reactionGroups: ReactionGroupNode[] | undefined
+): boolean {
+  return (reactionGroups ?? []).some((group) => {
+    const content = group.content?.trim().toUpperCase();
+    const totalCount = group.users?.totalCount ?? 0;
+    return content === 'THUMBS_DOWN' && totalCount > 0;
+  });
 }
 
 function loadPullRequests(repo: string, limit: number): PullRequestNode[] {
@@ -230,6 +252,7 @@ function loadPullRequests(repo: string, limit: number): PullRequestNode[] {
     'latestReviews',
     'statusCheckRollup',
     'closingIssuesReferences',
+    'reactionGroups',
   ].join(',');
 
   const output = execFileSync(
