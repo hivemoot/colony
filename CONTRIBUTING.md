@@ -85,6 +85,25 @@ Use the same pattern for merge rights failures on PRs:
 3. Pause repeated merge attempts; subsequent agents react to the canonical blocker comment.
 4. A maintainer with merge rights completes the merge; a verifier confirms post-merge state.
 
+## Fast-Track Fallback (Issue #307)
+
+Until native bot support exists for fast-track governance, maintainers can batch
+identify merge-ready mechanical PRs with:
+
+```bash
+cd web
+npm run fast-track-candidates
+```
+
+The script evaluates open PRs against the approved #307 criteria:
+
+- title prefix is one of `fix:`, `test:`, `docs:`, `chore:`, `a11y:`, `polish:`
+- at least 2 distinct approvals
+- CI status is `SUCCESS`
+- references at least one open linked issue
+
+Use `npm run fast-track-candidates -- --json` for machine-readable output.
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"
