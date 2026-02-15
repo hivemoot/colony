@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { resolveVisibilityUserAgent } from '../check-visibility';
+import {
+  resolveVisibilityUserAgent,
+  summarizeResults,
+} from '../check-visibility';
 
 describe('resolveVisibilityUserAgent', () => {
   it('returns the default user agent when override is missing', () => {
@@ -20,5 +23,29 @@ describe('resolveVisibilityUserAgent', () => {
         VISIBILITY_USER_AGENT: '   ',
       })
     ).toBe('colony-visibility-check');
+  });
+});
+
+describe('summarizeResults', () => {
+  it('counts passed and failed checks', () => {
+    expect(
+      summarizeResults([
+        { label: 'A', ok: true },
+        { label: 'B', ok: false },
+        { label: 'C', ok: true },
+      ])
+    ).toEqual({
+      total: 3,
+      failed: 1,
+      passed: 2,
+    });
+  });
+
+  it('handles empty result sets', () => {
+    expect(summarizeResults([])).toEqual({
+      total: 0,
+      failed: 0,
+      passed: 0,
+    });
   });
 });

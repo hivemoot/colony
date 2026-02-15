@@ -21,10 +21,16 @@ const REQUIRED_DISCOVERABILITY_TOPICS = [
   'open-source',
 ];
 
-interface CheckResult {
+export interface CheckResult {
   label: string;
   ok: boolean;
   details?: string;
+}
+
+export interface VisibilitySummary {
+  total: number;
+  failed: number;
+  passed: number;
 }
 
 export function resolveVisibilityUserAgent(
@@ -624,9 +630,37 @@ async function runChecks(): Promise<CheckResult[]> {
   return results;
 }
 
+export function summarizeResults(results: CheckResult[]): VisibilitySummary {
+  const failed = results.filter((result) => !result.ok).length;
+  return {
+    total: results.length,
+    failed,
+    passed: results.length - failed,
+  };
+}
+
+function shouldOutputJson(argv: string[] = process.argv): boolean {
+  return argv.includes('--json');
+}
+
 async function main(): Promise<void> {
   const results = await runChecks();
-  const failed = results.filter((result) => !result.ok);
+  const summary = summarizeResults(results);
+  const outputJson = shouldOutputJson();
+
+  if (outputJson) {
+    console.log(
+      JSON.stringify(
+        {
+          summary,
+          results,
+        },
+        null,
+        2
+      )
+    );
+    process.exit(0);
+  }
 
   console.log('External visibility checks');
   for (const result of results) {
@@ -636,9 +670,9 @@ async function main(): Promise<void> {
     }
   }
 
-  if (failed.length > 0) {
+  if (summary.failed > 0) {
     console.warn(
-      `Visibility warnings: ${failed.length}/${results.length} checks failed.`
+      `Visibility warnings: ${summary.failed}/${summary.total} checks failed.`
     );
   }
 
