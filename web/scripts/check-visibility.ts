@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { evaluateGeneratedAtFreshness } from './freshness';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -642,26 +643,23 @@ async function runChecks(): Promise<CheckResult[]> {
   });
 
   let freshnessOk = false;
+  let freshnessDetails = 'Could not fetch deployed activity data';
   if (activityRes?.status === 200) {
     try {
       const activity = (await activityRes.json()) as {
         generatedAt?: unknown;
       };
-      if (typeof activity.generatedAt === 'string') {
-        const timestamp = new Date(activity.generatedAt).getTime();
-        if (!isNaN(timestamp)) {
-          const ageMs = Date.now() - timestamp;
-          const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18;
-        }
-      }
+      const freshness = evaluateGeneratedAtFreshness(activity.generatedAt);
+      freshnessOk = freshness.ok;
+      freshnessDetails = freshness.details;
     } catch {
-      // ignore
+      freshnessDetails = 'Invalid activity.json format on deployed site';
     }
   }
   results.push({
     label: 'Deployed data freshness (<= 18h)',
     ok: freshnessOk,
+    details: freshnessDetails,
   });
 
   return results;

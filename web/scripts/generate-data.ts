@@ -45,6 +45,7 @@ import {
   type GovernanceHistoryArtifact,
 } from '../shared/governance-snapshot.ts';
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
+import { evaluateGeneratedAtFreshness } from './freshness';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -1504,19 +1505,11 @@ export async function buildExternalVisibility(
       const activity = (await activityRes.json()) as {
         generatedAt?: unknown;
       };
-      if (typeof activity.generatedAt === 'string') {
-        const timestamp = new Date(activity.generatedAt).getTime();
-        if (!isNaN(timestamp)) {
-          const ageMs = Date.now() - timestamp;
-          const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18; // Critical threshold from proposal
-          freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
-        } else {
-          freshnessDetails = `Invalid timestamp in deployed activity.json. ${deployedSourceDetails}`;
-        }
-      } else {
-        freshnessDetails = `Missing generatedAt in deployed activity.json. ${deployedSourceDetails}`;
-      }
+      const freshness = evaluateGeneratedAtFreshness(activity.generatedAt);
+      freshnessOk = freshness.ok;
+      freshnessDetails = freshness.ok
+        ? freshness.details
+        : `${freshness.details}. ${deployedSourceDetails}`;
     } catch {
       freshnessDetails = `Invalid activity.json format on deployed site. ${deployedSourceDetails}`;
     }
