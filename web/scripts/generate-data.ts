@@ -62,14 +62,14 @@ const DEFAULT_REPO = 'colony';
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
-  'ai-governance',
-  'multi-agent',
-  'agent-collaboration',
+  'governance',
+  'multi-agent-systems',
+  'collaboration',
   'dashboard',
+  'hivemoot',
+  'ai-agents',
   'react',
   'typescript',
-  'github-pages',
-  'open-source',
 ];
 const HISTORY_GENERATOR_ID = 'web/scripts/generate-data.ts';
 const HISTORY_GENERATOR_VERSION = process.env.npm_package_version ?? '0.1.0';

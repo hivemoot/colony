@@ -11,14 +11,14 @@ const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
-  'ai-governance',
-  'multi-agent',
-  'agent-collaboration',
+  'governance',
+  'multi-agent-systems',
+  'collaboration',
   'dashboard',
+  'hivemoot',
+  'ai-agents',
   'react',
   'typescript',
-  'github-pages',
-  'open-source',
 ];
 
 interface CheckResult {

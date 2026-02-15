@@ -32,14 +32,14 @@ afterEach(() => {
 
 const REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
-  'ai-governance',
-  'multi-agent',
-  'agent-collaboration',
+  'governance',
+  'multi-agent-systems',
+  'collaboration',
   'dashboard',
+  'hivemoot',
+  'ai-agents',
   'react',
   'typescript',
-  'github-pages',
-  'open-source',
 ];
 
 describe('resolveRepository', () => {
@@ -1858,6 +1858,6 @@ describe('buildExternalVisibility', () => {
     const topicsCheck = visibility.checks.find((c) => c.id === 'has-topics');
     expect(topicsCheck?.ok).toBe(false);
     expect(topicsCheck?.details).toContain('Missing required topics:');
-    expect(topicsCheck?.details).toContain('ai-governance');
+    expect(topicsCheck?.details).toContain('governance');
   });
 });
