@@ -41,16 +41,14 @@ function readIfExists(path: string): string {
   return readFileSync(path, 'utf-8');
 }
 
-function resolveDeployedBaseUrl(homepage?: string): {
+export function resolveDeployedBaseUrl(homepage?: string): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = normalizeHttpsHomepageUrl(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }
@@ -59,6 +57,30 @@ function resolveDeployedBaseUrl(homepage?: string): {
     baseUrl: DEFAULT_DEPLOYED_BASE_URL,
     usedFallback: true,
   };
+}
+
+function normalizeHttpsHomepageUrl(homepage?: string): string {
+  const trimmedHomepage = homepage?.trim();
+  if (!trimmedHomepage) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmedHomepage);
+    if (
+      parsed.protocol !== 'https:' ||
+      !parsed.hostname ||
+      parsed.username ||
+      parsed.password
+    ) {
+      return '';
+    }
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
 }
 
 function normalizeUrlForMatch(value: string): string {
@@ -253,7 +275,7 @@ async function runChecks(): Promise<CheckResult[]> {
       });
       results.push({
         label: 'Repository homepage URL is set',
-        ok: Boolean(repo.homepage && repo.homepage.includes('github.io')),
+        ok: Boolean(normalizeHttpsHomepageUrl(repo.homepage ?? undefined)),
       });
       results.push({
         label: 'Repository description mentions dashboard',

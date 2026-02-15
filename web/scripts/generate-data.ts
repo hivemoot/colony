@@ -890,12 +890,10 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = normalizeHttpsHomepageUrl(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }
@@ -904,6 +902,30 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
     baseUrl: DEFAULT_DEPLOYED_BASE_URL,
     usedFallback: true,
   };
+}
+
+function normalizeHttpsHomepageUrl(homepage?: string | null): string {
+  const trimmedHomepage = homepage?.trim();
+  if (!trimmedHomepage) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmedHomepage);
+    if (
+      parsed.protocol !== 'https:' ||
+      !parsed.hostname ||
+      parsed.username ||
+      parsed.password
+    ) {
+      return '';
+    }
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
 }
 
 function normalizeUrlForMatch(value: string): string {
@@ -1045,7 +1067,8 @@ export async function buildExternalVisibility(
     (topic) => !normalizedTopics.has(topic)
   );
 
-  const hasHomepage = Boolean(primary?.homepage?.trim());
+  const normalizedHomepage = normalizeHttpsHomepageUrl(primary?.homepage);
+  const hasHomepage = Boolean(normalizedHomepage);
   const hasTopics = missingRequiredTopics.length === 0;
   const hasDescription = Boolean(
     primary?.description && /dashboard/i.test(primary.description)
@@ -1071,8 +1094,8 @@ export async function buildExternalVisibility(
       label: 'Repository homepage URL configured',
       ok: hasHomepage,
       details: hasHomepage
-        ? (primary.homepage ?? undefined)
-        : 'Missing homepage repository setting.',
+        ? normalizedHomepage
+        : 'Missing or invalid https homepage repository setting.',
       blockedByAdmin: !hasHomepage,
     },
     {
