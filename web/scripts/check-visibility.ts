@@ -27,11 +27,51 @@ interface CheckResult {
   details?: string;
 }
 
+interface RunChecksOptions {
+  warn?: (message: string) => void;
+}
+
+interface VisibilitySummary {
+  total: number;
+  passed: number;
+  failed: number;
+}
+
+interface VisibilityJsonOutput {
+  summary: VisibilitySummary;
+  warnings: string[];
+  results: CheckResult[];
+}
+
 export function resolveVisibilityUserAgent(
   env: NodeJS.ProcessEnv = process.env
 ): string {
   const configured = env.VISIBILITY_USER_AGENT?.trim();
   return configured || DEFAULT_VISIBILITY_USER_AGENT;
+}
+
+export function summarizeResults(results: CheckResult[]): VisibilitySummary {
+  const failed = results.filter((result) => !result.ok).length;
+  return {
+    total: results.length,
+    passed: results.length - failed,
+    failed,
+  };
+}
+
+export function buildJsonOutput(
+  results: CheckResult[],
+  warnings: string[]
+): VisibilityJsonOutput {
+  return {
+    summary: summarizeResults(results),
+    warnings,
+    results,
+  };
+}
+
+export function hasJsonFlag(argv: string[] = process.argv.slice(2)): boolean {
+  return argv.includes('--json');
 }
 
 function readIfExists(path: string): string {
@@ -189,7 +229,11 @@ function extractFileBackedFaviconHref(html: string): string {
   return '';
 }
 
-async function runChecks(): Promise<CheckResult[]> {
+async function runChecks(
+  options: RunChecksOptions = {}
+): Promise<CheckResult[]> {
+  const warn =
+    options.warn ?? ((message: string): void => console.warn(message));
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
   const robotsTxt = readIfExists(ROBOTS_PATH);
@@ -260,16 +304,16 @@ async function runChecks(): Promise<CheckResult[]> {
         ok: Boolean(repo.description && /dashboard/i.test(repo.description)),
       });
     } else {
-      console.warn(`Could not fetch repo metadata: ${response.status}`);
+      warn(`Could not fetch repo metadata: ${response.status}`);
     }
   } catch (err) {
-    console.warn(`Error checking repo metadata: ${err}`);
+    warn(`Error checking repo metadata: ${err}`);
   }
 
   // Deployed site checks (always run; fallback when homepage metadata is missing).
   const { baseUrl, usedFallback } = resolveDeployedBaseUrl(homepageUrl);
   if (usedFallback) {
-    console.warn(
+    warn(
       `Repository homepage missing/invalid. Using fallback deployed URL: ${DEFAULT_DEPLOYED_BASE_URL}`
     );
   }
@@ -625,8 +669,19 @@ async function runChecks(): Promise<CheckResult[]> {
 }
 
 async function main(): Promise<void> {
-  const results = await runChecks();
-  const failed = results.filter((result) => !result.ok);
+  const jsonMode = hasJsonFlag();
+  const warnings: string[] = [];
+  const warn = jsonMode
+    ? (message: string): void => warnings.push(message)
+    : (message: string): void => console.warn(message);
+  const results = await runChecks({ warn });
+  const summary = summarizeResults(results);
+
+  if (jsonMode) {
+    console.log(JSON.stringify(buildJsonOutput(results, warnings), null, 2));
+    process.exit(0);
+    return;
+  }
 
   console.log('External visibility checks');
   for (const result of results) {
@@ -636,9 +691,9 @@ async function main(): Promise<void> {
     }
   }
 
-  if (failed.length > 0) {
+  if (summary.failed > 0) {
     console.warn(
-      `Visibility warnings: ${failed.length}/${results.length} checks failed.`
+      `Visibility warnings: ${summary.failed}/${summary.total} checks failed.`
     );
   }
 
