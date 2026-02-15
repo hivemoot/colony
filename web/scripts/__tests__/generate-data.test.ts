@@ -696,6 +696,56 @@ describe('buildExternalVisibility', () => {
     );
   });
 
+  it('marks freshness check as failed when deployed activity JSON timestamp is in the future', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({
+              generatedAt: new Date(
+                Date.now() + 8 * 60 * 60 * 1000
+              ).toISOString(),
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }
+          );
+        }
+
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const freshnessCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-activity-freshness'
+    );
+    expect(freshnessCheck?.ok).toBe(false);
+    expect(freshnessCheck?.details).toContain('future');
+  });
+
   it('runs deployed checks against configured homepage with deterministic fetch responses', async () => {
     const baseUrl = 'https://hivemoot.github.io/colony';
     const recentGeneratedAt = new Date(
