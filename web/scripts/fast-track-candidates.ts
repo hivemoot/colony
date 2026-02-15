@@ -83,6 +83,12 @@ interface CliOptions {
   json: boolean;
 }
 
+type GhApiRunner = (
+  file: string,
+  args: string[],
+  options: { encoding: BufferEncoding }
+) => string;
+
 function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
@@ -290,6 +296,14 @@ function getIssueKey(issue: IssueNode, defaultRepo: string): string {
   return `${defaultRepo}#${issue.number}`;
 }
 
+function normalizeIssueState(state: string | undefined): string | null {
+  const normalized = state?.trim().toUpperCase();
+  if (normalized === 'OPEN' || normalized === 'CLOSED') {
+    return normalized;
+  }
+  return null;
+}
+
 function parseIssueRefFromUrl(
   url: string | undefined
 ): { repo: string; number: number } | null {
@@ -317,28 +331,38 @@ function parseIssueRefFromUrl(
   }
 }
 
-function resolveIssueStates(
+export function resolveIssueStates(
   repo: string,
-  prs: PullRequestNode[]
+  prs: PullRequestNode[],
+  runGhApi: GhApiRunner = execFileSync
 ): Map<string, string> {
-  const issueKeys = Array.from(
-    new Set(
-      prs.flatMap((pr) =>
-        (pr.closingIssuesReferences ?? []).map((issue) =>
-          getIssueKey(issue, repo)
-        )
-      )
-    )
-  );
   const states = new Map<string, string>();
+  const issueKeysToResolve = new Set<string>();
 
-  for (const issueKey of issueKeys) {
+  for (const pr of prs) {
+    for (const issue of pr.closingIssuesReferences ?? []) {
+      const issueKey = getIssueKey(issue, repo);
+      const directState = normalizeIssueState(issue.state);
+
+      if (directState) {
+        states.set(issueKey, directState);
+        issueKeysToResolve.delete(issueKey);
+        continue;
+      }
+
+      if (!states.has(issueKey)) {
+        issueKeysToResolve.add(issueKey);
+      }
+    }
+  }
+
+  for (const issueKey of issueKeysToResolve) {
     const hashIndex = issueKey.lastIndexOf('#');
     const issueRepo = issueKey.slice(0, hashIndex);
     const issueNumber = issueKey.slice(hashIndex + 1);
 
     try {
-      const state = execFileSync(
+      const state = runGhApi(
         'gh',
         ['api', `repos/${issueRepo}/issues/${issueNumber}`, '--jq', '.state'],
         {

@@ -3,6 +3,7 @@ import {
   countDistinctApprovals,
   evaluateEligibility,
   hasAllowedPrefix,
+  resolveIssueStates,
 } from '../fast-track-candidates';
 
 describe('hasAllowedPrefix', () => {
@@ -127,5 +128,47 @@ describe('evaluateEligibility', () => {
     expect(result.reasons).toContain(
       'must reference at least one OPEN linked issue'
     );
+  });
+});
+
+describe('resolveIssueStates', () => {
+  it('skips gh api lookups when linked issue state is already known', () => {
+    let ghApiCalls = 0;
+
+    const issueStates = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 201,
+          title: 'fix: keep direct issue states',
+          url: 'https://example.test/pr/201',
+          closingIssuesReferences: [
+            {
+              number: 307,
+              state: 'OPEN',
+              url: 'https://github.com/hivemoot/colony/issues/307',
+            },
+            {
+              number: 308,
+              state: 'CLOSED',
+              url: 'https://github.com/hivemoot/colony/issues/308',
+            },
+            {
+              number: 309,
+              url: 'https://github.com/hivemoot/colony/issues/309',
+            },
+          ],
+        },
+      ],
+      (_file, _args, _options) => {
+        ghApiCalls += 1;
+        return 'open\n';
+      }
+    );
+
+    expect(ghApiCalls).toBe(1);
+    expect(issueStates.get('hivemoot/colony#307')).toBe('OPEN');
+    expect(issueStates.get('hivemoot/colony#308')).toBe('CLOSED');
+    expect(issueStates.get('hivemoot/colony#309')).toBe('OPEN');
   });
 });
