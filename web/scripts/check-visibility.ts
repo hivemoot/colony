@@ -34,6 +34,28 @@ export function resolveVisibilityUserAgent(
   return configured || DEFAULT_VISIBILITY_USER_AGENT;
 }
 
+export function isGeneratedAtFresh(
+  generatedAt: unknown,
+  nowMs = Date.now(),
+  maxAgeHours = 18
+): boolean {
+  if (typeof generatedAt !== 'string') {
+    return false;
+  }
+
+  const timestamp = Date.parse(generatedAt);
+  if (Number.isNaN(timestamp)) {
+    return false;
+  }
+
+  const ageMs = nowMs - timestamp;
+  if (ageMs < 0) {
+    return false;
+  }
+
+  return ageMs <= maxAgeHours * 60 * 60 * 1000;
+}
+
 function readIfExists(path: string): string {
   if (!existsSync(path)) {
     return '';
@@ -604,14 +626,7 @@ async function runChecks(): Promise<CheckResult[]> {
       const activity = (await activityRes.json()) as {
         generatedAt?: unknown;
       };
-      if (typeof activity.generatedAt === 'string') {
-        const timestamp = new Date(activity.generatedAt).getTime();
-        if (!isNaN(timestamp)) {
-          const ageMs = Date.now() - timestamp;
-          const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18;
-        }
-      }
+      freshnessOk = isGeneratedAtFresh(activity.generatedAt);
     } catch {
       // ignore
     }
