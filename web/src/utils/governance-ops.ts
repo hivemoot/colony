@@ -223,8 +223,34 @@ function computeDashboardFreshnessCheck(
   now: Date
 ): GovernanceSLOCheck {
   const generated = new Date(data.generatedAt);
-  const freshnessHours =
-    (now.getTime() - generated.getTime()) / (1000 * 60 * 60);
+  const generatedMs = generated.getTime();
+  const nowMs = now.getTime();
+
+  if (Number.isNaN(generatedMs)) {
+    return {
+      id: 'dashboard-freshness',
+      label: 'Dashboard Freshness',
+      target: '<=6h data staleness',
+      status: 'fail',
+      value: 'Invalid timestamp',
+      detail:
+        'Latest snapshot timestamp is invalid. Verify generatedAt formatting in activity data.',
+    };
+  }
+
+  if (generatedMs > nowMs) {
+    return {
+      id: 'dashboard-freshness',
+      label: 'Dashboard Freshness',
+      target: '<=6h data staleness',
+      status: 'fail',
+      value: formatHours(0),
+      detail:
+        'Latest snapshot timestamp is in the future. Check clock skew or corrupted generatedAt data.',
+    };
+  }
+
+  const freshnessHours = (nowMs - generatedMs) / (1000 * 60 * 60);
 
   const status =
     freshnessHours <= DASHBOARD_FRESH_HOURS

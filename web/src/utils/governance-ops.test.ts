@@ -286,4 +286,36 @@ describe('computeGovernanceOpsReport', () => {
       vi.useRealTimers();
     }
   });
+
+  it('fails freshness check when generatedAt is in the future', () => {
+    const report = computeGovernanceOpsReport(
+      makeBaseData({
+        generatedAt: '2026-02-11T18:00:00Z',
+      }),
+      new Date('2026-02-11T12:00:00Z')
+    );
+
+    const freshness = report.checks.find(
+      (check) => check.id === 'dashboard-freshness'
+    );
+
+    expect(freshness?.status).toBe('fail');
+    expect(freshness?.detail).toContain('in the future');
+  });
+
+  it('fails freshness check when generatedAt is invalid', () => {
+    const report = computeGovernanceOpsReport(
+      makeBaseData({
+        generatedAt: 'not-a-date',
+      }),
+      new Date('2026-02-11T12:00:00Z')
+    );
+
+    const freshness = report.checks.find(
+      (check) => check.id === 'dashboard-freshness'
+    );
+
+    expect(freshness?.status).toBe('fail');
+    expect(freshness?.value).toBe('Invalid timestamp');
+  });
 });
