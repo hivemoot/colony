@@ -31,6 +31,9 @@ VISIBILITY_USER_AGENT=colony-visibility-check
 Notes:
 - `COLONY_REPOSITORIES` takes precedence over `COLONY_REPOSITORY`.
 - `GITHUB_TOKEN` and `GH_TOKEN` are both supported.
+- Visibility checks derive the deployed site URL from your repository homepage
+  setting (`Settings -> General -> Homepage`). If homepage is unset/invalid,
+  checks fall back to `https://hivemoot.github.io/colony`.
 
 ## 2. Install and Generate Data
 
@@ -88,3 +91,14 @@ Before public deployment to a non-Hivemoot audience, update these repository fil
 Deploy `web/dist` to GitHub Pages for your repository.
 
 If you deploy under a different base path than `/colony/`, update `base` in `web/vite.config.ts` before building.
+
+## 7. Keep Data Fresh After Deployment
+
+The repository includes `.github/workflows/refresh-data.yml`, which:
+
+- Regenerates data every 6 hours (`0 */6 * * *`)
+- Rebuilds the app
+- Redeploys GitHub Pages
+
+You can also trigger this workflow manually from the Actions tab after high
+activity periods.
