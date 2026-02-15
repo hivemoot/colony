@@ -16,6 +16,7 @@ import { GovernanceHealth } from './GovernanceHealth';
 import { GovernanceTrend } from './GovernanceTrend';
 import { GovernanceOps } from './GovernanceOps';
 import { GovernanceBalance } from './GovernanceBalance';
+import { VelocityMetrics } from './VelocityMetrics';
 import { CollaborationNetwork } from './CollaborationNetwork';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
@@ -318,6 +319,25 @@ export function ActivityFeed({
                 Governance Balance
               </h2>
               <GovernanceBalance data={data} />
+            </section>
+          )}
+
+          {data && data.pullRequests.length > 0 && (
+            <section
+              id="velocity"
+              aria-labelledby="section-velocity"
+              className="scroll-mt-28 bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2
+                id="section-velocity"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
+                <span role="img" aria-label="velocity">
+                  ⚡
+                </span>
+                Velocity
+              </h2>
+              <VelocityMetrics data={data} />
             </section>
           )}
 
