@@ -53,6 +53,7 @@ export interface EligibilityResult {
   approvals: number;
   ciState: string;
   linkedOpenIssues: number[];
+  linkedOpenIssueRefs: string[];
 }
 
 interface CandidateRecord {
@@ -64,6 +65,7 @@ interface CandidateRecord {
   approvals: number;
   ciState: string;
   linkedOpenIssues: number[];
+  linkedOpenIssueRefs: string[];
 }
 
 interface Report {
@@ -176,24 +178,26 @@ function getCiState(pr: PullRequestNode): string {
   return hasPending ? 'PENDING' : 'SUCCESS';
 }
 
-function getLinkedOpenIssues(
+function getLinkedOpenIssueRefs(
   pr: PullRequestNode,
   issueStates: Map<string, string>,
   defaultRepo: string
-): number[] {
+): string[] {
   return (pr.closingIssuesReferences ?? [])
-    .filter((issue) => {
-      const refKey = getIssueRefKey(issue, defaultRepo);
-      const directState = issue.state?.toUpperCase();
+    .map((issue) => ({
+      refKey: getIssueRefKey(issue, defaultRepo),
+      directState: issue.state?.toUpperCase() ?? null,
+    }))
+    .filter(({ refKey, directState }) => {
       if (directState === 'OPEN') {
         return true;
       }
       const resolvedState = issueStates.get(refKey)?.toUpperCase();
       return resolvedState === 'OPEN';
     })
-    .map((issue) => issue.number)
+    .map(({ refKey }) => refKey)
     .filter((value, index, all) => all.indexOf(value) === index)
-    .sort((a, b) => a - b);
+    .sort();
 }
 
 export function evaluateEligibility(
@@ -204,7 +208,15 @@ export function evaluateEligibility(
   const reasons: string[] = [];
   const approvals = countDistinctApprovals(pr.latestReviews);
   const ciState = getCiState(pr);
-  const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates, defaultRepo);
+  const linkedOpenIssueRefs = getLinkedOpenIssueRefs(
+    pr,
+    issueStates,
+    defaultRepo
+  );
+  const linkedOpenIssues = linkedOpenIssueRefs
+    .map((ref) => Number.parseInt(ref.split('#')[1], 10))
+    .filter((number) => Number.isFinite(number))
+    .sort((a, b) => a - b);
 
   if (!hasAllowedPrefix(pr.title)) {
     reasons.push(
@@ -220,7 +232,7 @@ export function evaluateEligibility(
     reasons.push(`CI checks must be SUCCESS (found ${ciState})`);
   }
 
-  if (linkedOpenIssues.length === 0) {
+  if (linkedOpenIssueRefs.length === 0) {
     reasons.push('must reference at least one OPEN linked issue');
   }
 
@@ -234,6 +246,7 @@ export function evaluateEligibility(
     approvals,
     ciState,
     linkedOpenIssues,
+    linkedOpenIssueRefs,
   };
 }
 
@@ -285,15 +298,16 @@ function resolveIssueStates(
   repo: string,
   prs: PullRequestNode[]
 ): Map<string, string> {
-  const issueRefs = Array.from(
-    new Set(
-      prs.flatMap((pr) =>
-        (pr.closingIssuesReferences ?? []).map((issue) =>
-          getIssueRefKey(issue, repo)
-        )
-      )
-    )
-  );
+  const issueRefs = new Set<string>();
+  for (const pr of prs) {
+    for (const issue of pr.closingIssuesReferences ?? []) {
+      const directState = issue.state?.toUpperCase();
+      if (directState === 'OPEN' || directState === 'CLOSED') {
+        continue;
+      }
+      issueRefs.add(getIssueRefKey(issue, repo));
+    }
+  }
   const states = new Map<string, string>();
 
   for (const ref of issueRefs) {
@@ -351,6 +365,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       approvals: evaluation.approvals,
       ciState: evaluation.ciState,
       linkedOpenIssues: evaluation.linkedOpenIssues,
+      linkedOpenIssueRefs: evaluation.linkedOpenIssueRefs,
     };
   });
 
@@ -381,7 +396,7 @@ function printHumanReport(report: Report): void {
 
   console.log('Eligible PRs:');
   for (const pr of eligible) {
-    const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
+    const linked = pr.linkedOpenIssueRefs.join(', ');
     console.log(
       `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, linked ${linked}) ${pr.url}`
     );

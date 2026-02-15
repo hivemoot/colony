@@ -50,6 +50,7 @@ describe('evaluateEligibility', () => {
     expect(result.approvals).toBe(2);
     expect(result.ciState).toBe('SUCCESS');
     expect(result.linkedOpenIssues).toEqual([307]);
+    expect(result.linkedOpenIssueRefs).toEqual(['hivemoot/colony#307']);
   });
 
   it('explains all failed criteria', () => {
@@ -127,5 +128,34 @@ describe('evaluateEligibility', () => {
     expect(result.reasons).toContain(
       'must reference at least one OPEN linked issue'
     );
+    expect(result.linkedOpenIssueRefs).toEqual([]);
+  });
+
+  it('returns repo-qualified linked issue references for open issues', () => {
+    const result = evaluateEligibility(
+      {
+        number: 105,
+        title: 'fix: scope issue links in fast-track report',
+        url: 'https://example.test/pr/105',
+        latestReviews: [
+          { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+          { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+        ],
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        closingIssuesReferences: [
+          {
+            number: 307,
+            state: 'OPEN',
+            url: 'https://api.github.com/repos/hivemoot/other-repo/issues/307',
+          },
+        ],
+      },
+      new Map(),
+      'hivemoot/colony'
+    );
+
+    expect(result.eligible).toBe(true);
+    expect(result.linkedOpenIssueRefs).toEqual(['hivemoot/other-repo#307']);
+    expect(result.linkedOpenIssues).toEqual([307]);
   });
 });

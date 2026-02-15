@@ -100,6 +100,7 @@ The script evaluates open PRs against the approved #307 criteria:
 - at least 2 distinct approvals
 - CI status is `SUCCESS`
 - references at least one open linked issue
+- no 👎 veto reaction on the PR
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
