@@ -96,4 +96,36 @@ describe('evaluateEligibility', () => {
       'cannot have a 👎 veto reaction on the PR'
     );
   });
+
+  it('resolves linked issue states by repo-qualified reference', () => {
+    const result = evaluateEligibility(
+      {
+        number: 104,
+        title: 'fix: make candidate filter deterministic',
+        url: 'https://example.test/pr/104',
+        latestReviews: [
+          { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+          { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+        ],
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        closingIssuesReferences: [
+          {
+            number: 307,
+            state: 'CLOSED',
+            url: 'https://api.github.com/repos/hivemoot/other-repo/issues/307',
+          },
+        ],
+      },
+      new Map([
+        ['hivemoot/colony#307', 'OPEN'],
+        ['hivemoot/other-repo#307', 'CLOSED'],
+      ]),
+      'hivemoot/colony'
+    );
+
+    expect(result.eligible).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
+    );
+  });
 });

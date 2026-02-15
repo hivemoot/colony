@@ -178,15 +178,17 @@ function getCiState(pr: PullRequestNode): string {
 
 function getLinkedOpenIssues(
   pr: PullRequestNode,
-  issueStates: Map<number, string>
+  issueStates: Map<string, string>,
+  defaultRepo: string
 ): number[] {
   return (pr.closingIssuesReferences ?? [])
     .filter((issue) => {
+      const refKey = getIssueRefKey(issue, defaultRepo);
       const directState = issue.state?.toUpperCase();
       if (directState === 'OPEN') {
         return true;
       }
-      const resolvedState = issueStates.get(issue.number)?.toUpperCase();
+      const resolvedState = issueStates.get(refKey)?.toUpperCase();
       return resolvedState === 'OPEN';
     })
     .map((issue) => issue.number)
@@ -196,12 +198,13 @@ function getLinkedOpenIssues(
 
 export function evaluateEligibility(
   pr: PullRequestNode,
-  issueStates: Map<number, string> = new Map()
+  issueStates: Map<string, string> = new Map(),
+  defaultRepo = DEFAULT_REPO
 ): EligibilityResult {
   const reasons: string[] = [];
   const approvals = countDistinctApprovals(pr.latestReviews);
   const ciState = getCiState(pr);
-  const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates);
+  const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates, defaultRepo);
 
   if (!hasAllowedPrefix(pr.title)) {
     reasons.push(
@@ -281,40 +284,64 @@ function loadPullRequests(repo: string, limit: number): PullRequestNode[] {
 function resolveIssueStates(
   repo: string,
   prs: PullRequestNode[]
-): Map<number, string> {
-  const numbers = Array.from(
+): Map<string, string> {
+  const issueRefs = Array.from(
     new Set(
       prs.flatMap((pr) =>
-        (pr.closingIssuesReferences ?? []).map((issue) => issue.number)
+        (pr.closingIssuesReferences ?? []).map((issue) =>
+          getIssueRefKey(issue, repo)
+        )
       )
     )
   );
-  const states = new Map<number, string>();
+  const states = new Map<string, string>();
 
-  for (const number of numbers) {
+  for (const ref of issueRefs) {
+    const [issueRepo, issueNumber] = ref.split('#');
     try {
       const state = execFileSync(
         'gh',
-        ['api', `repos/${repo}/issues/${number}`, '--jq', '.state'],
+        ['api', `repos/${issueRepo}/issues/${issueNumber}`, '--jq', '.state'],
         {
           encoding: 'utf8',
         }
       )
         .trim()
         .toUpperCase();
-      states.set(number, state);
+      states.set(ref, state);
     } catch {
-      states.set(number, 'UNKNOWN');
+      states.set(ref, 'UNKNOWN');
     }
   }
 
   return states;
 }
 
+function getIssueRefKey(issue: IssueNode, defaultRepo: string): string {
+  const fromUrl = parseRepoFromIssueUrl(issue.url);
+  const repo = fromUrl ?? defaultRepo;
+  return `${repo}#${issue.number}`;
+}
+
+function parseRepoFromIssueUrl(url: string | undefined): string | null {
+  if (!url) {
+    return null;
+  }
+
+  const match = url.match(
+    /github\.com\/(?:repos\/)?([^/\s]+\/[^/\s]+)\/issues\/\d+/
+  );
+  if (!match) {
+    return null;
+  }
+
+  return match[1];
+}
+
 function buildReport(prs: PullRequestNode[], repo: string): Report {
   const issueStates = resolveIssueStates(repo, prs);
   const candidates: CandidateRecord[] = prs.map((pr) => {
-    const evaluation = evaluateEligibility(pr, issueStates);
+    const evaluation = evaluateEligibility(pr, issueStates, repo);
     return {
       number: pr.number,
       title: pr.title,
