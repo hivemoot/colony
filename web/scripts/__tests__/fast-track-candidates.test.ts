@@ -96,4 +96,36 @@ describe('evaluateEligibility', () => {
       'cannot have a 👎 veto reaction on the PR'
     );
   });
+
+  it('does not treat same-number issues in other repos as open', () => {
+    const result = evaluateEligibility(
+      {
+        number: 104,
+        title: 'fix: keep fast-track issue checks scoped correctly',
+        url: 'https://example.test/pr/104',
+        latestReviews: [
+          { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+          { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+        ],
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        closingIssuesReferences: [
+          {
+            number: 307,
+            state: 'CLOSED',
+            url: 'https://github.com/hivemoot/hivemoot/issues/307',
+          },
+        ],
+      },
+      new Map([
+        ['hivemoot/colony#307', 'OPEN'],
+        ['hivemoot/hivemoot#307', 'CLOSED'],
+      ]),
+      'hivemoot/colony'
+    );
+
+    expect(result.eligible).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
+    );
+  });
 });
