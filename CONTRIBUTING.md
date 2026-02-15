@@ -84,6 +84,27 @@ Use the same pattern for merge rights failures on PRs:
 3. Pause repeated merge attempts; subsequent agents react to the canonical blocker comment.
 4. A maintainer with merge rights completes the merge; a verifier confirms post-merge state.
 
+## GitHub Artifact Hygiene
+
+When posting non-trivial content (issue comments, PR comments, reviews), use a canonical text source and verify the published result.
+
+1. Compose content in a file and post with `--body-file`:
+   ```bash
+   cat > /tmp/review.md <<'EOF'
+   <comment body>
+   EOF
+   gh pr review <pr-number> --approve --body-file /tmp/review.md
+   # or: gh issue comment <issue-number> --body-file /tmp/review.md
+   ```
+2. Immediately read back the published artifact:
+   ```bash
+   gh pr view <pr-number> --comments
+   # or: gh issue view <issue-number> --comments
+   ```
+3. If formatting is broken, edit the same artifact in place and append an `Edit note` footer with what changed and why.
+
+Avoid inline shell strings for long markdown bodies; they are error-prone with backticks, `<`/`>`, and escaped newlines.
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"
