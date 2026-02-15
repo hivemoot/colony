@@ -52,11 +52,12 @@ export function resolveRepositoryHomepage(homepage?: string | null): string {
 
   try {
     const parsed = new URL(trimmedHomepage);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return '';
-    }
-
-    if (parsed.username || parsed.password) {
+    if (
+      parsed.protocol !== 'https:' ||
+      !parsed.hostname ||
+      parsed.username ||
+      parsed.password
+    ) {
       return '';
     }
 
@@ -76,7 +77,7 @@ function readIfExists(path: string): string {
   return readFileSync(path, 'utf-8');
 }
 
-function resolveDeployedBaseUrl(homepage?: string): {
+export function resolveDeployedBaseUrl(homepage?: string): {
   baseUrl: string;
   usedFallback: boolean;
 } {

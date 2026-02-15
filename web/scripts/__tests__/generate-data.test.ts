@@ -978,6 +978,39 @@ describe('buildExternalVisibility', () => {
     );
   });
 
+  it('treats non-https homepage as invalid and uses fallback URL', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      });
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'http://hivemoot.github.io/colony',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const homepageCheck = visibility.checks.find(
+      (c) => c.id === 'has-homepage'
+    );
+    expect(homepageCheck?.ok).toBe(false);
+    expect(homepageCheck?.details).toContain('invalid https homepage');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
   it('flags canonical mismatch on deployed homepage', async () => {
     const baseUrl = 'https://hivemoot.github.io/colony';
     vi.spyOn(globalThis, 'fetch').mockImplementation(

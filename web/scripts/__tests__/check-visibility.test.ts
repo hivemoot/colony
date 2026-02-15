@@ -3,6 +3,7 @@ import {
   buildRepositoryApiUrl,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
+  resolveDeployedBaseUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
   resolveVisibilityUserAgent,
@@ -49,13 +50,37 @@ describe('resolveRepositoryHomepage', () => {
     ).toBe('https://colony.example.org/path');
   });
 
-  it('rejects invalid or unsupported homepage URLs', () => {
+  it('rejects non-https, invalid, or unsupported homepage URLs', () => {
+    expect(resolveRepositoryHomepage('http://colony.example.org')).toBe('');
     expect(resolveRepositoryHomepage('ftp://colony.example.org')).toBe('');
     expect(
       resolveRepositoryHomepage('https://user:pass@colony.example.org')
     ).toBe('');
     expect(resolveRepositoryHomepage('not-a-url')).toBe('');
     expect(resolveRepositoryHomepage('   ')).toBe('');
+  });
+});
+
+describe('resolveDeployedBaseUrl', () => {
+  it('uses normalized https homepage when valid', () => {
+    expect(resolveDeployedBaseUrl(' https://example.com/path/ ')).toEqual({
+      baseUrl: 'https://example.com/path',
+      usedFallback: false,
+    });
+  });
+
+  it('falls back when homepage is non-https', () => {
+    expect(resolveDeployedBaseUrl('http://example.com/path')).toEqual({
+      baseUrl: 'https://hivemoot.github.io/colony',
+      usedFallback: true,
+    });
+  });
+
+  it('falls back when homepage URL is malformed', () => {
+    expect(resolveDeployedBaseUrl('not-a-url')).toEqual({
+      baseUrl: 'https://hivemoot.github.io/colony',
+      usedFallback: true,
+    });
   });
 });
 
