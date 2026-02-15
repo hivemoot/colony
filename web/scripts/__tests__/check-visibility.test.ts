@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   resolveVisibilityUserAgent,
   summarizeResults,
+  toVisibilityJsonReport,
 } from '../check-visibility';
 
 describe('resolveVisibilityUserAgent', () => {
@@ -46,6 +47,31 @@ describe('summarizeResults', () => {
       total: 0,
       failed: 0,
       passed: 0,
+    });
+  });
+});
+
+describe('toVisibilityJsonReport', () => {
+  it('builds a stable JSON payload with summary and warnings', () => {
+    expect(
+      toVisibilityJsonReport(
+        [
+          { label: 'A', ok: true },
+          { label: 'B', ok: false },
+        ],
+        ['fallback homepage in use']
+      )
+    ).toEqual({
+      summary: {
+        total: 2,
+        failed: 1,
+        passed: 1,
+      },
+      results: [
+        { label: 'A', ok: true },
+        { label: 'B', ok: false },
+      ],
+      warnings: ['fallback homepage in use'],
     });
   });
 });

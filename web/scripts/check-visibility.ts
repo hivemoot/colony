@@ -33,6 +33,16 @@ export interface VisibilitySummary {
   passed: number;
 }
 
+interface RunChecksOptions {
+  onWarning?: (message: string) => void;
+}
+
+export interface VisibilityJsonReport {
+  summary: VisibilitySummary;
+  results: CheckResult[];
+  warnings: string[];
+}
+
 export function resolveVisibilityUserAgent(
   env: NodeJS.ProcessEnv = process.env
 ): string {
@@ -46,6 +56,8 @@ function readIfExists(path: string): string {
   }
   return readFileSync(path, 'utf-8');
 }
+
+function noopWarning(_message: string): void {}
 
 function resolveDeployedBaseUrl(homepage?: string): {
   baseUrl: string;
@@ -195,7 +207,10 @@ function extractFileBackedFaviconHref(html: string): string {
   return '';
 }
 
-async function runChecks(): Promise<CheckResult[]> {
+async function runChecks(
+  options: RunChecksOptions = {}
+): Promise<CheckResult[]> {
+  const onWarning = options.onWarning ?? noopWarning;
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
   const robotsTxt = readIfExists(ROBOTS_PATH);
@@ -266,16 +281,16 @@ async function runChecks(): Promise<CheckResult[]> {
         ok: Boolean(repo.description && /dashboard/i.test(repo.description)),
       });
     } else {
-      console.warn(`Could not fetch repo metadata: ${response.status}`);
+      onWarning(`Could not fetch repo metadata: ${response.status}`);
     }
   } catch (err) {
-    console.warn(`Error checking repo metadata: ${err}`);
+    onWarning(`Error checking repo metadata: ${err}`);
   }
 
   // Deployed site checks (always run; fallback when homepage metadata is missing).
   const { baseUrl, usedFallback } = resolveDeployedBaseUrl(homepageUrl);
   if (usedFallback) {
-    console.warn(
+    onWarning(
       `Repository homepage missing/invalid. Using fallback deployed URL: ${DEFAULT_DEPLOYED_BASE_URL}`
     );
   }
@@ -639,25 +654,38 @@ export function summarizeResults(results: CheckResult[]): VisibilitySummary {
   };
 }
 
+export function toVisibilityJsonReport(
+  results: CheckResult[],
+  warnings: string[]
+): VisibilityJsonReport {
+  return {
+    summary: summarizeResults(results),
+    results,
+    warnings,
+  };
+}
+
 function shouldOutputJson(argv: string[] = process.argv): boolean {
   return argv.includes('--json');
 }
 
 async function main(): Promise<void> {
-  const results = await runChecks();
-  const summary = summarizeResults(results);
   const outputJson = shouldOutputJson();
+  const warnings: string[] = [];
+  const results = await runChecks({
+    onWarning: (message) => {
+      if (outputJson) {
+        warnings.push(message);
+        return;
+      }
+      console.warn(message);
+    },
+  });
+  const summary = summarizeResults(results);
 
   if (outputJson) {
     console.log(
-      JSON.stringify(
-        {
-          summary,
-          results,
-        },
-        null,
-        2
-      )
+      JSON.stringify(toVisibilityJsonReport(results, warnings), null, 2)
     );
     process.exit(0);
   }
