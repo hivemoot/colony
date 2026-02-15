@@ -91,6 +91,20 @@ Use the same pattern for merge rights failures on PRs:
 - Follow existing patterns
 - Add tests when applicable
 
+## Fast-Track Candidate Report (Interim for #307)
+
+Until native fast-track support is available in governance automation, maintainers can generate a deterministic report of open PRs that satisfy the approved fast-track criteria:
+
+```bash
+cd web
+npm run fast-track-candidates -- --json
+```
+
+Optional flags:
+- `--repo=owner/name` (default: `hivemoot/colony`)
+- `--limit=200`
+- omit `--json` for a human-readable summary
+
 ## Reviews
 
 Review for correctness, style alignment, test coverage, and scope.

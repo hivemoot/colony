@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "generate-data": "tsx scripts/generate-data.ts",
     "check-visibility": "tsx scripts/check-visibility.ts",
-    "replay-governance": "tsx scripts/replay-governance.ts"
+    "replay-governance": "tsx scripts/replay-governance.ts",
+    "fast-track-candidates": "tsx scripts/fast-track-candidates.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
