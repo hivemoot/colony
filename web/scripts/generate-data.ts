@@ -1831,6 +1831,29 @@ function loadHistory(): GovernanceHistoryArtifact {
   return emptyHistoryArtifact(new Date(0).toISOString());
 }
 
+/**
+ * Update the sitemap lastmod date to match the data generation timestamp.
+ * Keeps the sitemap file accurate for search engine crawl priority.
+ */
+export function updateSitemapLastmod(
+  generatedAt: string,
+  sitemapPath: string = SITEMAP_PATH
+): void {
+  if (!existsSync(sitemapPath)) {
+    return;
+  }
+  const content = readFileSync(sitemapPath, 'utf-8');
+  const dateOnly = generatedAt.slice(0, 10);
+  const updated = content.replace(
+    /<lastmod>[^<]+<\/lastmod>/gi,
+    `<lastmod>${dateOnly}</lastmod>`
+  );
+  if (updated !== content) {
+    writeFileSync(sitemapPath, updated);
+    console.log(`Sitemap lastmod updated to ${dateOnly}`);
+  }
+}
+
 function toRepoTag(repo: { owner: string; name: string }): string {
   return `${repo.owner}/${repo.name}`;
 }
@@ -1845,6 +1868,9 @@ async function main(): Promise<void> {
     // Write activity data
     writeFileSync(OUTPUT_FILE, JSON.stringify(data, null, 2));
     console.log(`Activity data written to ${OUTPUT_FILE}`);
+
+    // Keep sitemap lastmod in sync with the generation timestamp
+    updateSitemapLastmod(data.generatedAt);
 
     // Compute and append governance snapshot for historical tracking
     const requestedRepos = resolveRepositories().map(
