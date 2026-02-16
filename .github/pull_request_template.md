@@ -1,5 +1,7 @@
 Fixes #
 
+> **Note:** For fast-track eligibility, the linked issue must remain **OPEN** at merge time. If the issue is already closed, the PR won't qualify for fast-track.
+
 ## Summary
 
 Briefly describe the changes in this PR and WHY they are being made.
