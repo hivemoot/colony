@@ -35,6 +35,31 @@ export function resolveVisibilityUserAgent(
   return configured || DEFAULT_VISIBILITY_USER_AGENT;
 }
 
+export function resolveRepositoryHomepage(homepage?: string | null): string {
+  const trimmedHomepage = homepage?.trim();
+  if (!trimmedHomepage) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmedHomepage);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return '';
+    }
+
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    parsed.search = '';
+    parsed.hash = '';
+
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
 function readIfExists(path: string): string {
   if (!existsSync(path)) {
     return '';
@@ -46,12 +71,10 @@ function resolveDeployedBaseUrl(homepage?: string): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = resolveRepositoryHomepage(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }
@@ -246,7 +269,7 @@ async function runChecks(): Promise<CheckResult[]> {
         homepage?: string | null;
         description?: string | null;
       };
-      homepageUrl = repo.homepage || '';
+      homepageUrl = resolveRepositoryHomepage(repo.homepage);
       const normalizedTopics = new Set(
         (repo.topics ?? []).map((topic) => topic.toLowerCase())
       );
@@ -263,7 +286,7 @@ async function runChecks(): Promise<CheckResult[]> {
       });
       results.push({
         label: 'Repository homepage URL is set',
-        ok: Boolean(repo.homepage && repo.homepage.includes('github.io')),
+        ok: Boolean(homepageUrl),
       });
       results.push({
         label: 'Repository description mentions dashboard',
