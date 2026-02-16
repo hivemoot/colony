@@ -128,4 +128,35 @@ describe('evaluateEligibility', () => {
       'must reference at least one OPEN linked issue'
     );
   });
+
+  it('ignores non-github issue URLs and falls back to the default repo scope', () => {
+    const result = evaluateEligibility(
+      {
+        number: 105,
+        title: 'fix: keep linked-issue URL parsing strict',
+        url: 'https://example.test/pr/105',
+        latestReviews: [
+          { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+          { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+        ],
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        closingIssuesReferences: [
+          {
+            number: 307,
+            state: 'CLOSED',
+            url: 'https://example.com/hivemoot/hivemoot/issues/307',
+          },
+        ],
+      },
+      new Map([
+        ['hivemoot/colony#307', 'OPEN'],
+        ['hivemoot/hivemoot#307', 'CLOSED'],
+      ]),
+      'hivemoot/colony'
+    );
+
+    expect(result.eligible).toBe(true);
+    expect(result.reasons).toEqual([]);
+    expect(result.linkedOpenIssues).toEqual([307]);
+  });
 });
