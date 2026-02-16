@@ -74,6 +74,24 @@ describe('resolveRepository', () => {
   it('should throw on invalid format', () => {
     expect(() => resolveRepository({ COLONY_REPOSITORY: 'invalid' })).toThrow();
   });
+
+  it('should reject repository values with extra path segments', () => {
+    expect(() =>
+      resolveRepository({ COLONY_REPOSITORY: 'hivemoot/colony/extra' })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+
+  it('should trim whitespace around owner and repo', () => {
+    const result = resolveRepository({
+      COLONY_REPOSITORY: '  hivemoot / colony  ',
+    });
+    expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
+
+  it('should fall back to defaults when COLONY_REPOSITORY is blank', () => {
+    const result = resolveRepository({ COLONY_REPOSITORY: '   ' });
+    expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
 });
 
 describe('resolveRepositories', () => {
@@ -123,6 +141,14 @@ describe('resolveRepositories', () => {
         COLONY_REPOSITORIES: 'hivemoot/colony,invalid',
       })
     ).toThrow(/Invalid repository "invalid"/);
+  });
+
+  it('should throw when a multi-repo entry has extra path segments', () => {
+    expect(() =>
+      resolveRepositories({
+        COLONY_REPOSITORIES: 'hivemoot/colony,hivemoot/hivemoot/extra',
+      })
+    ).toThrow(/Expected format "owner\/repo"/);
   });
 
   it('should handle single repo in COLONY_REPOSITORIES', () => {

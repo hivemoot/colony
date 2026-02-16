@@ -208,20 +208,16 @@ export function resolveRepository(env = process.env): {
   repo: string;
 } {
   const repository = env.COLONY_REPOSITORY ?? env.GITHUB_REPOSITORY;
+  const normalizedRepository = repository?.trim();
 
-  if (!repository) {
+  if (!normalizedRepository) {
     return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
   }
 
-  const [owner, repo] = repository.split('/');
-
-  if (!owner || !repo) {
-    throw new Error(
-      `Invalid repository "${repository}". Expected format "owner/repo".`
-    );
-  }
-
-  return { owner, repo };
+  return parseOwnerRepo(
+    normalizedRepository,
+    `Invalid repository "${normalizedRepository}". Expected format "owner/repo".`
+  );
 }
 
 export function resolveRequiredDiscoverabilityTopics(
@@ -270,12 +266,11 @@ export function resolveRepositories(
   const result: Array<{ owner: string; repo: string }> = [];
 
   for (const r of repos) {
-    const [owner, repo] = r.split('/');
-    if (!owner || !repo) {
-      throw new Error(
-        `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
-      );
-    }
+    const parsed = parseOwnerRepo(
+      r,
+      `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
+    );
+    const { owner, repo } = parsed;
     const key = `${owner}/${repo}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -284,6 +279,25 @@ export function resolveRepositories(
   }
 
   return result;
+}
+
+function parseOwnerRepo(
+  input: string,
+  invalidMessage: string
+): { owner: string; repo: string } {
+  const parts = input.split('/');
+  if (parts.length !== 2) {
+    throw new Error(invalidMessage);
+  }
+
+  const owner = parts[0]?.trim() ?? '';
+  const repo = parts[1]?.trim() ?? '';
+
+  if (!owner || !repo) {
+    throw new Error(invalidMessage);
+  }
+
+  return { owner, repo };
 }
 
 export function mapCommits(

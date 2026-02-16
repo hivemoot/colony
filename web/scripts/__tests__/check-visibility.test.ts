@@ -77,6 +77,14 @@ describe('resolveVisibilityRepository', () => {
       repo: 'example-colony',
     });
   });
+
+  it('rejects malformed repository values', () => {
+    expect(() =>
+      resolveVisibilityRepository({
+        COLONY_REPOSITORY: 'example-org/example-colony/extra',
+      })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
 });
 
 describe('buildRepositoryApiUrl', () => {
