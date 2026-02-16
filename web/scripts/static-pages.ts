@@ -77,6 +77,16 @@ function formatDate(iso: string): string {
   });
 }
 
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim();
+  const safeProtocols = ['http://', 'https://', 'mailto:'];
+  const isSafe = safeProtocols.some((p) => trimmed.toLowerCase().startsWith(p));
+  if (!isSafe) {
+    return '#';
+  }
+  return escapeHtml(trimmed);
+}
+
 function renderMarkdown(md: string): string {
   // Convert markdown to basic HTML for static pages
   // This is a lightweight renderer - full markdown parsing can be added later
@@ -112,10 +122,11 @@ function renderMarkdown(md: string): string {
       /`([^`]+)`/g,
       '<code style="background: #f5f5f5; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace;">$1</code>'
     )
-    // Links
+    // Links - sanitize URLs to prevent XSS
     .replace(
       /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" style="color: #b45309; text-decoration: underline;">$1</a>'
+      (_, text, url) =>
+        `<a href="${sanitizeUrl(url)}" style="color: #b45309; text-decoration: underline;">${text}</a>`
     )
     // Lists
     .replace(

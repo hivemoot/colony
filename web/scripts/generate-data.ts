@@ -88,6 +88,7 @@ export interface GitHubRepo {
 export interface GitHubIssue {
   number: number;
   title: string;
+  body?: string;
   state: string;
   state_reason?: string | null;
   labels: Array<{ name: string }>;
