@@ -489,6 +489,7 @@ async function fetchProposals(
     proposals.push({
       number: i.number,
       title: i.title,
+      ...(i.body ? { body: i.body.slice(0, 10000) } : {}),
       phase,
       author: i.user.login,
       createdAt: i.created_at,

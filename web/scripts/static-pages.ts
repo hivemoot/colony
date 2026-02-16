@@ -77,6 +77,79 @@ function formatDate(iso: string): string {
   });
 }
 
+function renderMarkdown(md: string): string {
+  // Convert markdown to basic HTML for static pages
+  // This is a lightweight renderer - full markdown parsing can be added later
+  const html = md
+    // Escape HTML first
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // Headers
+    .replace(
+      /^### (.*$)/gim,
+      '<h3 style="font-size: 1.125rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">$1</h3>'
+    )
+    .replace(
+      /^## (.*$)/gim,
+      '<h2 style="font-size: 1.25rem; font-weight: 600; margin: 1.5rem 0 0.75rem;">$1</h2>'
+    )
+    .replace(
+      /^# (.*$)/gim,
+      '<h1 style="font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 1rem;">$1</h1>'
+    )
+    // Bold and italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Code blocks (preserve formatting)
+    .replace(
+      /```([\s\S]*?)```/g,
+      '<pre style="background: #f5f5f5; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; margin: 1rem 0;"><code>$1</code></pre>'
+    )
+    // Inline code
+    .replace(
+      /`([^`]+)`/g,
+      '<code style="background: #f5f5f5; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace;">$1</code>'
+    )
+    // Links
+    .replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" style="color: #b45309; text-decoration: underline;">$1</a>'
+    )
+    // Lists
+    .replace(
+      /^\s*- (.+$)/gim,
+      '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
+    )
+    // Paragraphs (split on double newlines and wrap)
+    .split('\n\n')
+    .map((para) => {
+      const trimmed = para.trim();
+      if (!trimmed) return '';
+      // Don't wrap block elements in paragraphs
+      if (
+        trimmed.startsWith('<h') ||
+        trimmed.startsWith('<pre') ||
+        trimmed.startsWith('<li')
+      ) {
+        // Handle lists - wrap consecutive li elements
+        if (trimmed.startsWith('<li')) {
+          return (
+            '<ul style="margin: 1rem 0; padding-left: 1.5rem;">' +
+            trimmed +
+            '</ul>'
+          );
+        }
+        return trimmed;
+      }
+      return '<p style="margin: 0.75rem 0;">' + trimmed + '</p>';
+    })
+    .join('');
+
+  return html;
+}
+
 // -- HTML templates --
 
 function htmlShell(meta: PageMeta, content: string): string {
@@ -115,6 +188,12 @@ function htmlShell(meta: PageMeta, content: string): string {
     .meta { font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem; }
     .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1rem; }
     @media (prefers-color-scheme: dark) { .card { background: #262626; border-color: #404040; } }
+    .proposal-body h1, .proposal-body h2, .proposal-body h3 { color: #1a1a1a; }
+    @media (prefers-color-scheme: dark) { .proposal-body h1, .proposal-body h2, .proposal-body h3 { color: #e5e5e5; } }
+    .proposal-body pre { background: #f5f5f5; }
+    @media (prefers-color-scheme: dark) { .proposal-body pre { background: #1f1f1f; } }
+    .proposal-body code { background: #f5f5f5; }
+    @media (prefers-color-scheme: dark) { .proposal-body code { background: #1f1f1f; color: #e5e5e5; } }
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
     .stat { text-align: center; padding: 0.75rem; }
     .stat-value { font-size: 1.5rem; font-weight: 700; color: #b45309; }
@@ -145,7 +224,6 @@ function htmlShell(meta: PageMeta, content: string): string {
 function proposalPage(proposal: Proposal): string {
   const phaseLabel = PHASE_LABELS[proposal.phase] ?? proposal.phase;
   const phaseColor = PHASE_COLORS[proposal.phase] ?? '#6b7280';
-  const repo = proposal.repo ?? 'hivemoot/colony';
 
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
@@ -202,6 +280,14 @@ function proposalPage(proposal: Proposal): string {
     </div>`;
   }
 
+  let bodyHtml = '';
+  if (proposal.body) {
+    bodyHtml = `
+    <div class="card">
+      <div class="proposal-body" style="font-size: 0.9375rem; line-height: 1.7;">${renderMarkdown(proposal.body)}</div>
+    </div>`;
+  }
+
   const content = `
     <nav class="breadcrumb">
       <a href="${basePath()}">Colony</a> &rarr;
@@ -220,15 +306,7 @@ function proposalPage(proposal: Proposal): string {
       ${proposal.commentCount} comment${proposal.commentCount !== 1 ? 's' : ''}
     </div>
 
-    <div class="card">
-      <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">Overview</h2>
-      <p style="font-size: 0.875rem;">
-        This is a governance proposal in the
-        <a href="https://github.com/${escapeHtml(repo)}/issues/${proposal.number}" style="color: #b45309;">${escapeHtml(repo)}</a>
-        repository. The proposal is currently in the <strong>${escapeHtml(phaseLabel)}</strong> phase.
-      </p>
-    </div>
-
+    ${bodyHtml}
     ${votesHtml}
     ${timelineHtml}
 

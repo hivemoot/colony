@@ -41,6 +41,7 @@ export interface PhaseTransition {
 export interface Proposal {
   number: number;
   title: string;
+  body?: string;
   phase:
     | 'discussion'
     | 'voting'
