@@ -272,12 +272,14 @@ export function detectAlerts(
     const parsed = new Date(data.generatedAt).getTime();
     return Number.isNaN(parsed) ? Date.now() : parsed;
   })();
-  const mergedRecently = data.pullRequests.filter(
-    (pr) =>
-      pr.state === 'merged' &&
-      pr.mergedAt &&
-      anchorTime - new Date(pr.mergedAt).getTime() < 2 * MS_PER_DAY
-  );
+  const mergedRecently = data.pullRequests.filter((pr) => {
+    if (pr.state !== 'merged' || !pr.mergedAt) return false;
+    const mergedAtTime = new Date(pr.mergedAt).getTime();
+    // Reject invalid, future, or non-recent timestamps
+    if (!Number.isFinite(mergedAtTime)) return false;
+    if (mergedAtTime > anchorTime) return false;
+    return anchorTime - mergedAtTime < 2 * MS_PER_DAY;
+  });
   if (openPRs.length > 10 && openPRs.length > mergedRecently.length * 3) {
     alerts.push({
       type: 'merge-queue-growth',

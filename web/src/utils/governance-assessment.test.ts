@@ -294,6 +294,43 @@ describe('detectAlerts', () => {
     expect(queue).toBeUndefined();
   });
 
+  it('excludes future mergedAt timestamps from merge recency calculation', () => {
+    // generatedAt is Feb 1. One merged PR has a future timestamp (Feb 5).
+    // The future-dated PR should be excluded from mergedRecently count.
+    const openPRs = Array.from({ length: 11 }, (_, i) => ({
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      state: 'open' as const,
+      author: 'agent-a',
+      createdAt: '2026-01-30T00:00:00Z',
+    }));
+    const validMergedPR = {
+      number: 100,
+      title: 'Valid merged PR',
+      state: 'merged' as const,
+      author: 'agent-b',
+      createdAt: '2026-01-30T00:00:00Z',
+      mergedAt: '2026-01-31T12:00:00Z',
+    };
+    const futureMergedPR = {
+      number: 101,
+      title: 'Future merged PR',
+      state: 'merged' as const,
+      author: 'agent-c',
+      createdAt: '2026-01-30T00:00:00Z',
+      mergedAt: '2026-02-05T00:00:00Z', // 4 days after generatedAt
+    };
+    const data = makeActivityData({
+      generatedAt: '2026-02-01T00:00:00Z',
+      pullRequests: [...openPRs, validMergedPR, futureMergedPR],
+    });
+    const alerts = detectAlerts(data, [], computeTrendSummary([]));
+    const queue = alerts.find((a) => a.type === 'merge-queue-growth');
+    // Only 1 valid merged PR (future timestamp excluded) → 11 > 1*3 → alert triggers
+    expect(queue).toBeDefined();
+    expect(queue?.detail).toContain('1 merged in last 48h');
+  });
+
   it('counts Refs #n as linked for follow-through-gap detection', () => {
     // 6 ready-to-implement proposals (>5 threshold for alert)
     const proposals = Array.from({ length: 6 }, (_, i) =>
