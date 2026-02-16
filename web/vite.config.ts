@@ -44,6 +44,12 @@ function staticPageGenerator(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), spa404Fallback(), staticPageGenerator(), colonyHtmlPlugin()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    spa404Fallback(),
+    staticPageGenerator(),
+    colonyHtmlPlugin(),
+  ],
   base: resolveBasePath(),
 });
