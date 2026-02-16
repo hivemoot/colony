@@ -892,13 +892,25 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   usedFallback: boolean;
 } {
   const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
-    return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
-      usedFallback: false,
-    };
+  if (trimmedHomepage) {
+    try {
+      const parsed = new URL(trimmedHomepage);
+      if (
+        parsed.protocol === 'https:' &&
+        !parsed.username &&
+        !parsed.password
+      ) {
+        parsed.search = '';
+        parsed.hash = '';
+        parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+        return {
+          baseUrl: parsed.toString().replace(/\/+$/, ''),
+          usedFallback: false,
+        };
+      }
+    } catch {
+      // Fall through to default URL fallback.
+    }
   }
 
   return {

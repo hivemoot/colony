@@ -616,6 +616,74 @@ describe('aggregateAgentStats', () => {
 });
 
 describe('buildExternalVisibility', () => {
+  it('strips query/hash from homepage before deployed fetch checks', async () => {
+    const rawHomepage = 'https://colony.example.org/path/?utm=campaign#hero';
+    const sanitizedBaseUrl = 'https://colony.example.org/path';
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('not found', { status: 404 });
+    });
+
+    await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: rawHomepage,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const requestedUrls = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([input]) =>
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url
+      );
+
+    expect(requestedUrls).toContain(sanitizedBaseUrl);
+    expect(requestedUrls).toContain(`${sanitizedBaseUrl}/robots.txt`);
+    expect(requestedUrls).toContain(`${sanitizedBaseUrl}/sitemap.xml`);
+    expect(requestedUrls).toContain(`${sanitizedBaseUrl}/data/activity.json`);
+    expect(requestedUrls).not.toContain(rawHomepage);
+  });
+
+  it('falls back to default deployed URL when homepage includes credentials', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('not found', { status: 404 });
+    });
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'https://user:pass@colony.example.org/',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-root-reachable')?.details
+    ).toContain(`Fallback URL used: ${fallbackBaseUrl}`);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
   it('flags admin-blocked repo settings when homepage/topics/description are missing', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
       return new Response('not found', { status: 404 });

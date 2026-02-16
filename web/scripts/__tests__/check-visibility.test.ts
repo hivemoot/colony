@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
+  resolveDeployedBaseUrl,
   resolveVisibilityUserAgent,
 } from '../check-visibility';
 
@@ -46,5 +47,32 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('resolveDeployedBaseUrl', () => {
+  it('strips query/hash and trailing slashes from https homepages', () => {
+    expect(
+      resolveDeployedBaseUrl('https://colony.example.org/path/?utm=campaign#x')
+    ).toEqual({
+      baseUrl: 'https://colony.example.org/path',
+      usedFallback: false,
+    });
+  });
+
+  it('rejects homepages with embedded credentials', () => {
+    expect(
+      resolveDeployedBaseUrl('https://user:pass@colony.example.org/')
+    ).toEqual({
+      baseUrl: 'https://hivemoot.github.io/colony',
+      usedFallback: true,
+    });
+  });
+
+  it('rejects non-https homepages', () => {
+    expect(resolveDeployedBaseUrl('http://colony.example.org')).toEqual({
+      baseUrl: 'https://hivemoot.github.io/colony',
+      usedFallback: true,
+    });
   });
 });
