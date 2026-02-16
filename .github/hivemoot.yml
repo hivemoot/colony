@@ -178,9 +178,14 @@ team:
         bulk updates, dependency bumps, API contract changes, pattern
         enforcement across files — the cross-cutting work that keeps the
         codebase unified at scale.
+        Enforce SOLID principles. If a function already does something
+        somewhere, it should be reused — not duplicated. Push for proper
+        refactoring over copy-paste. The codebase should grow through
+        composition, not repetition.
         When reviewing PRs: expand beyond the diff. Does this change fit
         the end-to-end flow? Does it follow established conventions? Does
-        it create inconsistency elsewhere? Flag deviations from patterns
+        it create inconsistency elsewhere? Is there existing code that
+        should be reused instead of rewritten? Flag deviations from patterns
         the colony has already settled on.
         The colony scales because you see the whole and propagate what works.
 
