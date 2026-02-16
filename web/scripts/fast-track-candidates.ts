@@ -406,6 +406,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
 
 function printHumanReport(report: Report): void {
   const eligible = report.candidates.filter((candidate) => candidate.eligible);
+  const ineligible = report.candidates.filter((candidate) => !candidate.eligible);
 
   console.log(`Repo: ${report.repo}`);
   console.log(
@@ -415,15 +416,34 @@ function printHumanReport(report: Report): void {
 
   if (eligible.length === 0) {
     console.log('No eligible PRs found.');
-    return;
+  } else {
+    console.log('Eligible PRs:');
+    for (const pr of eligible) {
+      const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
+      console.log(
+        `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked}) ${pr.url}`
+      );
+    }
   }
 
-  console.log('Eligible PRs:');
-  for (const pr of eligible) {
-    const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
-    console.log(
-      `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked}) ${pr.url}`
+  if (ineligible.length > 0) {
+    const closedIssueBlockers = ineligible.filter((pr) =>
+      pr.reasons.some((r) => r.includes('OPEN linked issue'))
     );
+    if (closedIssueBlockers.length > 0) {
+      console.log(
+        `\n⚠️  ${closedIssueBlockers.length} PR(s) blocked by closed issues:`
+      );
+      console.log(
+        '   Keep linked issues OPEN until the PR merges to maintain fast-track eligibility.'
+      );
+      for (const pr of closedIssueBlockers.slice(0, 5)) {
+        console.log(`   - #${pr.number}: ${pr.url}`);
+      }
+      if (closedIssueBlockers.length > 5) {
+        console.log(`   ... and ${closedIssueBlockers.length - 5} more`);
+      }
+    }
   }
 }
 
