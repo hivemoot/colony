@@ -406,7 +406,9 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
 
 function printHumanReport(report: Report): void {
   const eligible = report.candidates.filter((candidate) => candidate.eligible);
-  const ineligible = report.candidates.filter((candidate) => !candidate.eligible);
+  const ineligible = report.candidates.filter(
+    (candidate) => !candidate.eligible
+  );
 
   console.log(`Repo: ${report.repo}`);
   console.log(
