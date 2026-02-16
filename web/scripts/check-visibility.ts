@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { evaluateGeneratedAtFreshness } from './freshness';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -72,6 +73,15 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
   } catch {
     return '';
   }
+}
+
+export function isValidOpenGraphImageType(rawValue: string): boolean {
+  const value = rawValue.trim().toLowerCase();
+  return value.startsWith('image/');
+}
+
+export function hasTwitterImageAltText(rawValue: string): boolean {
+  return rawValue.trim().length > 0;
 }
 
 function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
@@ -392,6 +402,24 @@ async function runChecks(): Promise<CheckResult[]> {
             : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
   });
 
+  const ogImageTypeRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:type',
+    'content'
+  );
+  const hasOgImageType = isValidOpenGraphImageType(ogImageTypeRaw);
+  results.push({
+    label: 'Deployed Open Graph image type is declared',
+    ok: hasOgImageType,
+    details: hasOgImageType
+      ? `og:image:type set to ${ogImageTypeRaw.trim()}`
+      : !ogImageTypeRaw
+        ? 'Missing og:image:type metadata on deployed homepage'
+        : `Invalid og:image:type value: ${ogImageTypeRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
@@ -426,6 +454,22 @@ async function runChecks(): Promise<CheckResult[]> {
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const twitterImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image:alt',
+    'content'
+  );
+  const hasTwitterImageAlt = hasTwitterImageAltText(twitterImageAltRaw);
+  results.push({
+    label: 'Deployed Twitter image alt text is declared',
+    ok: hasTwitterImageAlt,
+    details: hasTwitterImageAlt
+      ? 'twitter:image:alt metadata is present'
+      : 'Missing twitter:image:alt metadata on deployed homepage',
   });
 
   const manifestRaw = extractTagAttributeValue(
@@ -599,26 +643,23 @@ async function runChecks(): Promise<CheckResult[]> {
   });
 
   let freshnessOk = false;
+  let freshnessDetails = 'Could not fetch deployed activity data';
   if (activityRes?.status === 200) {
     try {
       const activity = (await activityRes.json()) as {
         generatedAt?: unknown;
       };
-      if (typeof activity.generatedAt === 'string') {
-        const timestamp = new Date(activity.generatedAt).getTime();
-        if (!isNaN(timestamp)) {
-          const ageMs = Date.now() - timestamp;
-          const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18;
-        }
-      }
+      const freshness = evaluateGeneratedAtFreshness(activity.generatedAt);
+      freshnessOk = freshness.ok;
+      freshnessDetails = freshness.details;
     } catch {
-      // ignore
+      freshnessDetails = 'Invalid activity.json format on deployed site';
     }
   }
   results.push({
     label: 'Deployed data freshness (<= 18h)',
     ok: freshnessOk,
+    details: freshnessDetails,
   });
 
   return results;

@@ -1,7 +1,11 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import {
   resolveRepository,
   resolveRepositories,
+  updateSitemapLastmod,
   mapCommits,
   mapIssues,
   mapPullRequests,
@@ -690,6 +694,56 @@ describe('buildExternalVisibility', () => {
     expect(freshnessCheck?.details).toContain(
       'Invalid timestamp in deployed activity.json'
     );
+  });
+
+  it('marks freshness check as failed when deployed activity JSON timestamp is in the future', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({
+              generatedAt: new Date(
+                Date.now() + 8 * 60 * 60 * 1000
+              ).toISOString(),
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }
+          );
+        }
+
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const freshnessCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-activity-freshness'
+    );
+    expect(freshnessCheck?.ok).toBe(false);
+    expect(freshnessCheck?.details).toContain('future');
   });
 
   it('runs deployed checks against configured homepage with deterministic fetch responses', async () => {
@@ -1859,5 +1913,69 @@ describe('buildExternalVisibility', () => {
     expect(topicsCheck?.ok).toBe(false);
     expect(topicsCheck?.details).toContain('Missing required topics:');
     expect(topicsCheck?.details).toContain('ai-governance');
+  });
+});
+
+describe('updateSitemapLastmod', () => {
+  let tempDir: string;
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('should update lastmod to the generation date', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    writeFileSync(
+      sitemapPath,
+      '<?xml version="1.0"?>\n<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>'
+    );
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    const result = readFileSync(sitemapPath, 'utf-8');
+    expect(result).toContain('<lastmod>2026-02-12</lastmod>');
+    expect(result).not.toContain('2026-02-11');
+  });
+
+  it('should not throw when sitemap does not exist', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const missingPath = join(tempDir, 'nonexistent.xml');
+
+    expect(() =>
+      updateSitemapLastmod('2026-02-12T20:05:04.575Z', missingPath)
+    ).not.toThrow();
+  });
+
+  it('should not rewrite when lastmod is already current', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    const content =
+      '<?xml version="1.0"?>\n<urlset><url><lastmod>2026-02-12</lastmod></url></urlset>';
+    writeFileSync(sitemapPath, content);
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    expect(readFileSync(sitemapPath, 'utf-8')).toBe(content);
+  });
+
+  it('should update all lastmod tags in a multi-URL sitemap', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    writeFileSync(
+      sitemapPath,
+      '<?xml version="1.0"?>\n<urlset>' +
+        '<url><loc>https://example.com/</loc><lastmod>2026-02-10</lastmod></url>' +
+        '<url><loc>https://example.com/about</loc><lastmod>2026-02-09</lastmod></url>' +
+        '</urlset>'
+    );
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    const result = readFileSync(sitemapPath, 'utf-8');
+    const matches = result.match(/<lastmod>2026-02-12<\/lastmod>/g);
+    expect(matches).toHaveLength(2);
+    expect(result).not.toContain('2026-02-10');
+    expect(result).not.toContain('2026-02-09');
   });
 });

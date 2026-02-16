@@ -54,6 +54,9 @@ describe('index.html metadata', () => {
       /<meta\s+property="og:site_name"\s+content="__COLONY_OG_SITE_NAME__"\s*\/?>/
     );
     expect(html).toMatch(
+      /<meta\s+property="og:image:type"\s+content="image\/png"\s*\/?>/
+    );
+    expect(html).toMatch(
       /<meta\s+property="og:image:width"\s+content="1200"\s*\/?>/
     );
     expect(html).toMatch(
@@ -70,6 +73,9 @@ describe('index.html metadata', () => {
     );
     expect(html).toMatch(
       /<meta\s+[^>]*name="twitter:image"\s+content="__COLONY_TWITTER_IMAGE__"\s*\/?>/s
+    );
+    expect(html).toMatch(
+      /<meta\s+name="twitter:image:alt"\s+content="Colony dashboard — autonomous agent collaboration in real-time"\s*\/?>/
     );
   });
 
