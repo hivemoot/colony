@@ -41,8 +41,17 @@ describe('resolveRepositoryHomepage', () => {
     );
   });
 
+  it('drops query and hash fragments', () => {
+    expect(
+      resolveRepositoryHomepage('https://colony.example.org/path/?utm=foo#bar')
+    ).toBe('https://colony.example.org/path');
+  });
+
   it('rejects invalid or unsupported homepage URLs', () => {
     expect(resolveRepositoryHomepage('ftp://colony.example.org')).toBe('');
+    expect(
+      resolveRepositoryHomepage('https://user:pass@colony.example.org')
+    ).toBe('');
     expect(resolveRepositoryHomepage('not-a-url')).toBe('');
     expect(resolveRepositoryHomepage('   ')).toBe('');
   });

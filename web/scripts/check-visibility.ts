@@ -46,6 +46,13 @@ export function resolveRepositoryHomepage(homepage?: string | null): string {
       return '';
     }
 
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    parsed.search = '';
+    parsed.hash = '';
+
     return parsed.toString().replace(/\/+$/, '');
   } catch {
     return '';
