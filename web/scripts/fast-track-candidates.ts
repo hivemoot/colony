@@ -396,7 +396,8 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       totalOpenPrs: prs.length,
       eligiblePrs: candidates.filter((candidate) => candidate.eligible).length,
       mergeReadyEligiblePrs: candidates.filter(
-        (candidate) => candidate.eligible && isMergeReady(candidate.mergeStateStatus)
+        (candidate) =>
+          candidate.eligible && isMergeReady(candidate.mergeStateStatus)
       ).length,
     },
     candidates,
