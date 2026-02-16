@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   resolveRepository,
+  resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
   updateSitemapLastmod,
   mapCommits,
@@ -139,6 +140,31 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('resolveRequiredDiscoverabilityTopics', () => {
+  it('returns defaults when COLONY_REQUIRED_DISCOVERABILITY_TOPICS is unset', () => {
+    expect(resolveRequiredDiscoverabilityTopics({})).toEqual(
+      REQUIRED_DISCOVERABILITY_TOPICS
+    );
+  });
+
+  it('parses, normalizes, and deduplicates configured topics', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS:
+          ' Custom-Topic,custom-topic, dashboard ,',
+      })
+    ).toEqual(['custom-topic', 'dashboard']);
+  });
+
+  it('falls back to defaults when configured topics are blank', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' , , ',
+      })
+    ).toEqual(REQUIRED_DISCOVERABILITY_TOPICS);
   });
 });
 
