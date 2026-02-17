@@ -1,12 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { isIP } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { evaluateGeneratedAtFreshness } from './freshness';
 import {
   resolveRepository,
+  resolveRepositoryHomepage,
   resolveRequiredDiscoverabilityTopics,
 } from './generate-data';
+
+export { resolveRepositoryHomepage };
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -43,43 +45,6 @@ export function buildRepositoryApiUrl(repository: {
   repo: string;
 }): string {
   return `https://api.github.com/repos/${repository.owner}/${repository.repo}`;
-}
-
-export function resolveRepositoryHomepage(homepage?: string | null): string {
-  const trimmedHomepage = homepage?.trim();
-  if (!trimmedHomepage) {
-    return '';
-  }
-
-  try {
-    const parsed = new URL(trimmedHomepage);
-    if (parsed.protocol !== 'https:') {
-      return '';
-    }
-
-    if (parsed.username || parsed.password) {
-      return '';
-    }
-
-    const normalizedHostname = parsed.hostname
-      .toLowerCase()
-      .replace(/^\[|\]$/g, '')
-      .replace(/\.$/, '');
-    if (
-      normalizedHostname === 'localhost' ||
-      normalizedHostname.endsWith('.localhost') ||
-      isIP(normalizedHostname) !== 0
-    ) {
-      return '';
-    }
-
-    parsed.search = '';
-    parsed.hash = '';
-
-    return parsed.toString().replace(/\/+$/, '');
-  } catch {
-    return '';
-  }
 }
 
 function readIfExists(path: string): string {
