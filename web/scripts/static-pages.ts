@@ -128,6 +128,8 @@ function renderMarkdown(md: string): string {
     .replace(
       /\[([^\]]+)\]\(([^)]+)\)/g,
       (_, text, url) =>
+        // `text` is already HTML-escaped at the top of renderMarkdown().
+        // Escaping again here would double-escape entities.
         `<a href="${sanitizeUrl(url)}" style="color: #b45309; text-decoration: underline;">${text}</a>`
     )
     // Lists

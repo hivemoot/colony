@@ -478,6 +478,36 @@ describe('proposal body rendering', () => {
     expect(html).toContain('>GitHub</a>');
   });
 
+  it('keeps HTML in link labels escaped', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 11,
+          title: 'Link Label Escape Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '[<img src=x onerror=alert(1)>](https://example.com)',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '11', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('href="https://example.com/"');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+
   it('blocks javascript: URLs to prevent XSS', () => {
     const data = minimalActivityData({
       proposals: [
