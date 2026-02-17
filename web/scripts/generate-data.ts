@@ -14,6 +14,7 @@
  */
 
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
@@ -924,12 +925,10 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = resolveRepositoryHomepage(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }
@@ -938,6 +937,43 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
     baseUrl: DEFAULT_DEPLOYED_BASE_URL,
     usedFallback: true,
   };
+}
+
+export function resolveRepositoryHomepage(homepage?: string | null): string {
+  const trimmedHomepage = homepage?.trim();
+  if (!trimmedHomepage) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmedHomepage);
+    if (parsed.protocol !== 'https:') {
+      return '';
+    }
+
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    const normalizedHostname = parsed.hostname
+      .toLowerCase()
+      .replace(/^\[|\]$/g, '')
+      .replace(/\.$/, '');
+    if (
+      normalizedHostname === 'localhost' ||
+      normalizedHostname.endsWith('.localhost') ||
+      isIP(normalizedHostname) !== 0
+    ) {
+      return '';
+    }
+
+    parsed.search = '';
+    parsed.hash = '';
+
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
 }
 
 function normalizeUrlForMatch(value: string): string {
@@ -1072,6 +1108,7 @@ export async function buildExternalVisibility(
   repositories: RepositoryInfo[]
 ): Promise<ExternalVisibility> {
   const primary = repositories[0];
+  const normalizedHomepage = resolveRepositoryHomepage(primary?.homepage);
   const requiredDiscoverabilityTopics = resolveRequiredDiscoverabilityTopics();
   const normalizedTopics = new Set(
     (primary?.topics ?? []).map((topic) => topic.toLowerCase())
@@ -1080,7 +1117,7 @@ export async function buildExternalVisibility(
     (topic) => !normalizedTopics.has(topic)
   );
 
-  const hasHomepage = Boolean(primary?.homepage?.trim());
+  const hasHomepage = Boolean(normalizedHomepage);
   const hasTopics = missingRequiredTopics.length === 0;
   const hasDescription = Boolean(
     primary?.description && /dashboard/i.test(primary.description)
@@ -1106,8 +1143,8 @@ export async function buildExternalVisibility(
       label: 'Repository homepage URL configured',
       ok: hasHomepage,
       details: hasHomepage
-        ? (primary.homepage ?? undefined)
-        : 'Missing homepage repository setting.',
+        ? normalizedHomepage
+        : 'Missing or invalid homepage repository setting.',
       blockedByAdmin: !hasHomepage,
     },
     {
@@ -1155,7 +1192,7 @@ export async function buildExternalVisibility(
   ];
 
   // Deployed site parity checks (Scout Intelligence)
-  const { baseUrl, usedFallback } = resolveDeployedBaseUrl(primary?.homepage);
+  const { baseUrl, usedFallback } = resolveDeployedBaseUrl(normalizedHomepage);
   const deployedSourceDetails = usedFallback
     ? `Fallback URL used: ${DEFAULT_DEPLOYED_BASE_URL} (repository homepage missing or invalid).`
     : `Source URL: ${baseUrl}`;

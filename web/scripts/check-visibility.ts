@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { evaluateGeneratedAtFreshness } from './freshness';
@@ -52,11 +53,23 @@ export function resolveRepositoryHomepage(homepage?: string | null): string {
 
   try {
     const parsed = new URL(trimmedHomepage);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
+    if (parsed.protocol !== 'https:') {
       return '';
     }
 
     if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    const normalizedHostname = parsed.hostname
+      .toLowerCase()
+      .replace(/^\[|\]$/g, '')
+      .replace(/\.$/, '');
+    if (
+      normalizedHostname === 'localhost' ||
+      normalizedHostname.endsWith('.localhost') ||
+      isIP(normalizedHostname) !== 0
+    ) {
       return '';
     }
 
