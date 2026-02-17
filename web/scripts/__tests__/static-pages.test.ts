@@ -474,7 +474,7 @@ describe('proposal body rendering', () => {
       join(TEST_OUT, 'proposal', '3', 'index.html'),
       'utf-8'
     );
-    expect(html).toContain('<a href="https://github.com"');
+    expect(html).toContain('href="https://github.com/"');
     expect(html).toContain('>GitHub</a>');
   });
 
@@ -651,7 +651,8 @@ describe('proposal body rendering', () => {
       'utf-8'
     );
     expect(html).not.toContain('onclick="alert');
-    expect(html).toContain('&quot;');
+    // Malformed URL with quotes fails URL parsing and falls back to '#'
+    expect(html).toContain('href="#');
   });
 
   it('allows mailto: URLs', () => {

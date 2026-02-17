@@ -78,13 +78,15 @@ function formatDate(iso: string): string {
 }
 
 function sanitizeUrl(url: string): string {
-  const trimmed = url.trim();
-  const safeProtocols = ['http://', 'https://', 'mailto:'];
-  const isSafe = safeProtocols.some((p) => trimmed.toLowerCase().startsWith(p));
-  if (!isSafe) {
+  try {
+    const parsed = new URL(url.trim());
+    if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+      return '#';
+    }
+    return parsed.href;
+  } catch {
     return '#';
   }
-  return escapeHtml(trimmed);
 }
 
 function renderMarkdown(md: string): string {
@@ -205,6 +207,8 @@ function htmlShell(meta: PageMeta, content: string): string {
     @media (prefers-color-scheme: dark) { .proposal-body pre { background: #1f1f1f; } }
     .proposal-body code { background: #f5f5f5; }
     @media (prefers-color-scheme: dark) { .proposal-body code { background: #1f1f1f; color: #e5e5e5; } }
+    .proposal-body a { color: #b45309; }
+    @media (prefers-color-scheme: dark) { .proposal-body a { color: #fcd34d; } }
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
     .stat { text-align: center; padding: 0.75rem; }
     .stat-value { font-size: 1.5rem; font-weight: 700; color: #b45309; }
