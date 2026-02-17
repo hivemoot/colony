@@ -61,7 +61,7 @@ const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-const REQUIRED_DISCOVERABILITY_TOPICS = [
+export const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
   'multi-agent',
@@ -208,20 +208,35 @@ export function resolveRepository(env = process.env): {
   repo: string;
 } {
   const repository = env.COLONY_REPOSITORY ?? env.GITHUB_REPOSITORY;
+  const normalizedRepository = repository?.trim();
 
-  if (!repository) {
+  if (!normalizedRepository) {
     return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
   }
 
-  const [owner, repo] = repository.split('/');
+  return parseOwnerRepo(
+    normalizedRepository,
+    `Invalid repository "${normalizedRepository}". Expected format "owner/repo".`
+  );
+}
 
-  if (!owner || !repo) {
-    throw new Error(
-      `Invalid repository "${repository}". Expected format "owner/repo".`
-    );
+export function resolveRequiredDiscoverabilityTopics(
+  env: NodeJS.ProcessEnv = process.env
+): string[] {
+  const configured = env.COLONY_REQUIRED_DISCOVERABILITY_TOPICS;
+  if (!configured) {
+    return DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS;
   }
 
-  return { owner, repo };
+  const parsed = configured
+    .split(',')
+    .map((topic) => topic.trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueTopics = [...new Set(parsed)];
+  return uniqueTopics.length > 0
+    ? uniqueTopics
+    : DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS;
 }
 
 /**
@@ -251,12 +266,11 @@ export function resolveRepositories(
   const result: Array<{ owner: string; repo: string }> = [];
 
   for (const r of repos) {
-    const [owner, repo] = r.split('/');
-    if (!owner || !repo) {
-      throw new Error(
-        `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
-      );
-    }
+    const parsed = parseOwnerRepo(
+      r,
+      `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
+    );
+    const { owner, repo } = parsed;
     const key = `${owner}/${repo}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -265,6 +279,25 @@ export function resolveRepositories(
   }
 
   return result;
+}
+
+function parseOwnerRepo(
+  input: string,
+  invalidMessage: string
+): { owner: string; repo: string } {
+  const parts = input.split('/');
+  if (parts.length !== 2) {
+    throw new Error(invalidMessage);
+  }
+
+  const owner = parts[0]?.trim() ?? '';
+  const repo = parts[1]?.trim() ?? '';
+
+  if (!owner || !repo) {
+    throw new Error(invalidMessage);
+  }
+
+  return { owner, repo };
 }
 
 export function mapCommits(
@@ -1039,10 +1072,11 @@ export async function buildExternalVisibility(
   repositories: RepositoryInfo[]
 ): Promise<ExternalVisibility> {
   const primary = repositories[0];
+  const requiredDiscoverabilityTopics = resolveRequiredDiscoverabilityTopics();
   const normalizedTopics = new Set(
     (primary?.topics ?? []).map((topic) => topic.toLowerCase())
   );
-  const missingRequiredTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+  const missingRequiredTopics = requiredDiscoverabilityTopics.filter(
     (topic) => !normalizedTopics.has(topic)
   );
 
@@ -1081,7 +1115,7 @@ export async function buildExternalVisibility(
       label: 'Repository topics configured',
       ok: hasTopics,
       details: hasTopics
-        ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+        ? `${requiredDiscoverabilityTopics.length}/${requiredDiscoverabilityTopics.length} required topics present`
         : `Missing required topics: ${missingRequiredTopics.join(', ')}`,
       blockedByAdmin: !hasTopics,
     },

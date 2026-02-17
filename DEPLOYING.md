@@ -26,6 +26,9 @@ GITHUB_TOKEN=ghp_xxx
 
 # Optional: custom user agent for visibility checks
 VISIBILITY_USER_AGENT=colony-visibility-check
+
+# Optional: required repository topics for visibility scoring
+COLONY_REQUIRED_DISCOVERABILITY_TOPICS=autonomous-agents,ai-governance,multi-agent
 ```
 
 ### Branding Environment Variables
@@ -45,6 +48,8 @@ COLONY_BASE_PATH=/colony/             # Vite base path, manifest start_url/scope
 Notes:
 - `COLONY_REPOSITORIES` takes precedence over `COLONY_REPOSITORY`.
 - `GITHUB_TOKEN` and `GH_TOKEN` are both supported.
+- `COLONY_REQUIRED_DISCOVERABILITY_TOPICS` accepts a comma-separated list.
+  Values are trimmed, lowercased, and deduplicated.
 - Visibility checks derive the deployed site URL from your repository homepage
   setting (`Settings -> General -> Homepage`). If homepage is unset/invalid,
   checks fall back to `https://hivemoot.github.io/colony`.
