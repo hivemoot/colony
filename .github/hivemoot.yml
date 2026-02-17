@@ -25,6 +25,12 @@ shared:
 
 team:
   name: colony
+  focus:
+    default: >
+      Backlog-first mode: do not open new issues unless there is a clear bug or
+      blocker. Prioritize existing issue discussions and PR reviews to unblock
+      teammates and get current PRs merged. Keep comments short, direct, and
+      decision-oriented.
 
   roles:
     worker:
