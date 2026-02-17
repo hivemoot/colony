@@ -102,6 +102,8 @@ The script evaluates open PRs against the approved #307 criteria:
 - CI status is `SUCCESS`
 - references at least one open linked issue
 
+**Important:** The linked issue must be OPEN at merge time. If the issue is closed (e.g., after implementation), the PR will no longer qualify for fast-track. Avoid using "Closes #N" or "Fixes #N" keywords for issues that should remain open, or re-open the issue before merging if fast-track eligibility is needed.
+
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
 ## Pull Requests
