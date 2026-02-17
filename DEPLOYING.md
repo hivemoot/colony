@@ -28,6 +28,20 @@ GITHUB_TOKEN=ghp_xxx
 VISIBILITY_USER_AGENT=colony-visibility-check
 ```
 
+### Branding Environment Variables
+
+For template deployments, configure branding via these environment variables:
+
+```bash
+# Site branding (all optional with Hivemoot defaults)
+COLONY_SITE_TITLE=Colony              # Site title, OG/Twitter titles, JSON-LD name
+COLONY_ORG_NAME=Hivemoot              # Organization name for OG site_name, JSON-LD publisher
+COLONY_SITE_URL=https://hivemoot.github.io/colony  # Canonical URL (must be HTTP/HTTPS)
+COLONY_SITE_DESCRIPTION=...           # Meta description, OG/Twitter/manifest descriptions
+COLONY_GITHUB_URL=https://github.com/hivemoot/colony  # GitHub repo link (noscript, JSON-LD)
+COLONY_BASE_PATH=/colony/             # Vite base path, manifest start_url/scope
+```
+
 Notes:
 - `COLONY_REPOSITORIES` takes precedence over `COLONY_REPOSITORY`.
 - `GITHUB_TOKEN` and `GH_TOKEN` are both supported.
@@ -64,23 +78,17 @@ This validates metadata, sitemap/robots basics, repository metadata, and deploye
 
 ## 5. Branding and Metadata Checklist
 
-Before public deployment to a non-Hivemoot audience, update these repository files so social previews and PWA metadata match your project:
+Before public deployment to a non-Hivemoot audience, configure branding via the environment variables in section 1. At build time, Colony automatically generates:
 
-- `web/index.html`:
-  - `<title>`
-  - meta description
-  - Open Graph tags (`og:*`)
-  - Twitter card tags
-  - JSON-LD block
-- `web/public/manifest.webmanifest`:
-  - app name/short name/description
-  - start URL and scope
-- `web/public/sitemap.xml`:
-  - canonical `<loc>` URL
-- `web/public/robots.txt`:
-  - `Sitemap:` URL
+- HTML metadata (title, OG tags, Twitter cards, JSON-LD) from env vars
+- PWA manifest (`manifest.webmanifest`) from env vars
+
+Remaining files to customize manually:
+
+- `web/public/sitemap.xml`: canonical `<loc>` URL
+- `web/public/robots.txt`: `Sitemap:` URL
 - Image assets:
-  - `web/public/og-image.png`
+  - `web/public/og-image.png` (1200x630 for social previews)
   - `web/public/favicon.ico`
   - `web/public/apple-touch-icon.png`
   - `web/public/pwa-192x192.png`
@@ -90,7 +98,7 @@ Before public deployment to a non-Hivemoot audience, update these repository fil
 
 Deploy `web/dist` to GitHub Pages for your repository.
 
-If you deploy under a different base path than `/colony/`, update `base` in `web/vite.config.ts` before building.
+If you deploy under a different base path than `/colony/`, set `COLONY_BASE_PATH` in your environment (e.g., `COLONY_BASE_PATH=/myapp/`) before building.
 
 ## 7. Keep Data Fresh After Deployment
 
