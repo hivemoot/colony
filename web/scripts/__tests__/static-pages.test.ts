@@ -385,3 +385,300 @@ describe('generateStaticPages', () => {
     vi.resetModules();
   });
 });
+
+describe('proposal body rendering', () => {
+  it('renders proposal body content in static pages', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Test Proposal',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '## Problem\n\nThis is a test proposal.\n\n## Solution\n\nHere is the solution.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '1', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('Problem');
+    expect(html).toContain('This is a test proposal.');
+    expect(html).toContain('Solution');
+    expect(html).toContain('Here is the solution.');
+    expect(html).toContain('proposal-body');
+  });
+
+  it('renders markdown headers correctly', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 2,
+          title: 'Headers Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '# H1\n## H2\n### H3',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '2', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('<h1');
+    expect(html).toContain('<h2');
+    expect(html).toContain('<h3');
+  });
+
+  it('renders markdown links as anchor tags', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 3,
+          title: 'Links Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'See [GitHub](https://github.com) for more.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '3', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('<a href="https://github.com"');
+    expect(html).toContain('>GitHub</a>');
+  });
+
+  it('blocks javascript: URLs to prevent XSS', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 4,
+          title: 'XSS Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Click [here](javascript:alert(1)) for XSS.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '4', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('alert(1)');
+    expect(html).toContain('href="#"');
+  });
+
+  it('blocks data: URLs to prevent XSS', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 5,
+          title: 'Data URL Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Click [here](data:text/html,<script>alert(1)</script>) for XSS.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '5', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('data:text/html');
+    expect(html).not.toContain('<script>');
+  });
+
+  it('escapes HTML content in body to prevent XSS', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 6,
+          title: 'HTML Escape Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '<script>alert("xss")</script>',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '6', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('</script>');
+    expect(html).toContain('&lt;script');
+    expect(html).toContain('/script&gt;');
+  });
+
+  it('handles proposals without body content', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 7,
+          title: 'No Body',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '7', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('No Body');
+    expect(html).not.toContain('class="proposal-body"');
+  });
+
+  it('renders code blocks with proper escaping', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 8,
+          title: 'Code Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '```\nconst x = "<test>";\n```',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '8', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('<pre');
+    expect(html).toContain('&lt;test&gt;');
+  });
+
+  it('escapes quotes in URLs to prevent attribute injection', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 9,
+          title: 'Quote Injection Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Click [here](http://evil.com" onclick="alert(1))',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '9', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('onclick="alert');
+    expect(html).toContain('&quot;');
+  });
+
+  it('allows mailto: URLs', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 10,
+          title: 'Mailto Test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Contact [support](mailto:test@example.com)',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '10', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('href="mailto:test@example.com"');
+  });
+});
