@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { colonyHtmlPlugin } from './scripts/vite-colony-html-plugin';
+import { resolveBasePath } from './scripts/colony-config';
 import { generateStaticPages } from './scripts/static-pages';
 
 /**
@@ -42,6 +44,12 @@ function staticPageGenerator(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), spa404Fallback(), staticPageGenerator()],
-  base: '/colony/',
+  plugins: [
+    react(),
+    tailwindcss(),
+    spa404Fallback(),
+    staticPageGenerator(),
+    colonyHtmlPlugin(),
+  ],
+  base: resolveBasePath(),
 });
