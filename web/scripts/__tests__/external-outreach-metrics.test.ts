@@ -70,4 +70,23 @@ describe('buildOutreachReport', () => {
 
     clock.useRealTimers();
   });
+
+  it('keeps unknown PRs out of accepted/open/closed totals', () => {
+    const report = buildOutreachReport('hivemoot/colony', 2, null, [
+      {
+        ref: 'owner/repo#1',
+        title: '(failed to load)',
+        url: 'https://github.com/owner/repo/pull/1',
+        state: 'unknown',
+        error: 'gh api failed',
+      },
+    ]);
+
+    expect(report.outreach.acceptedLinks).toBe(0);
+    expect(report.outreach.openSubmissions).toBe(0);
+    expect(report.outreach.rejectedOrClosed).toBe(0);
+    expect(report.outreach.trackedPullRequests[0]?.error).toContain(
+      'gh api failed'
+    );
+  });
 });

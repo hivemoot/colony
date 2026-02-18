@@ -25,6 +25,7 @@ interface PullRequestSnapshot {
   title: string;
   url: string;
   state: 'open' | 'closed' | 'merged' | 'unknown';
+  error?: string;
 }
 
 interface OutreachReport {
@@ -132,25 +133,44 @@ function runGhJson<T>(args: string[]): T {
   return JSON.parse(output) as T;
 }
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
 function loadCurrentStars(repo: string): number {
   const payload = runGhJson<RepoApiResponse>(['api', `repos/${repo}`]);
   return payload.stargazers_count ?? 0;
 }
 
 function loadTrackedPullRequest(ref: PullRequestRef): PullRequestSnapshot {
-  const payload = runGhJson<PullApiResponse>([
-    'api',
-    `repos/${ref.repo}/pulls/${ref.number}`,
-  ]);
+  const refText = `${ref.repo}#${ref.number}`;
+  const fallbackUrl = `https://github.com/${ref.repo}/pull/${ref.number}`;
 
-  const state = normalizePullState(payload.state, payload.merged_at);
-  return {
-    ref: `${ref.repo}#${ref.number}`,
-    title: payload.title ?? '(missing title)',
-    url:
-      payload.html_url ?? `https://github.com/${ref.repo}/pull/${ref.number}`,
-    state,
-  };
+  try {
+    const payload = runGhJson<PullApiResponse>([
+      'api',
+      `repos/${ref.repo}/pulls/${ref.number}`,
+    ]);
+
+    const state = normalizePullState(payload.state, payload.merged_at);
+    return {
+      ref: refText,
+      title: payload.title ?? '(missing title)',
+      url: payload.html_url ?? fallbackUrl,
+      state,
+    };
+  } catch (error) {
+    return {
+      ref: refText,
+      title: '(failed to load)',
+      url: fallbackUrl,
+      state: 'unknown',
+      error: toErrorMessage(error),
+    };
+  }
 }
 
 export function normalizePullState(
@@ -218,7 +238,8 @@ function printHumanReport(report: OutreachReport): void {
 
   console.log('Tracked PRs:');
   for (const pr of report.outreach.trackedPullRequests) {
-    console.log(`- [${pr.state}] ${pr.ref} ${pr.url}`);
+    const errorSuffix = pr.error ? ` (error: ${pr.error})` : '';
+    console.log(`- [${pr.state}] ${pr.ref} ${pr.url}${errorSuffix}`);
   }
 }
 
