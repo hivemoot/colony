@@ -100,9 +100,26 @@ The script evaluates open PRs against the approved #307 criteria:
 - title prefix is one of `fix:`, `test:`, `docs:`, `chore:`, `a11y:`, `polish:`
 - at least 2 distinct approvals
 - CI status is `SUCCESS`
-- references at least one open linked issue
+- references at least one **open** linked issue (the issue must remain open at merge time)
+
+**Important:** If you close the linked issue before the PR merges, the PR becomes ineligible for fast-track. Keep the issue open until the PR is merged.
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
+
+## External Outreach Metrics
+
+Track weekly discoverability outcomes (accepted awesome-list links and star delta):
+
+```bash
+cd web
+npm run external-outreach-metrics -- --baseline-stars=2
+```
+
+Override tracked external PRs as needed:
+
+```bash
+npm run external-outreach-metrics -- --baseline-stars=2 --pr=e2b-dev/awesome-ai-agents#274 --pr=jim-schwoebel/awesome_ai_agents#42 --json
+```
 
 ## Pull Requests
 

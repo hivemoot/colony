@@ -301,6 +301,123 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('<img');
   });
 
+  it('renders proposal body markdown on static pages', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 55,
+          title: 'Body render test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '## Problem\n\nShip [details](https://github.com/hivemoot).',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '55', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('proposal-body');
+    expect(html).toContain('Problem');
+    expect(html).toContain('href="https://github.com/hivemoot"');
+  });
+
+  it('does not render proposal body block when body is missing', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 56,
+          title: 'No body test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '56', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('class="proposal-body"');
+  });
+
+  it('blocks javascript links in markdown body', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 57,
+          title: 'URL sanitization test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Click [me](javascript:alert(1)).',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '57', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('href="#"');
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('alert(1)');
+  });
+
+  it('keeps link-label HTML escaped in markdown body', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 58,
+          title: 'Escaping test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: '[<img src=x onerror=alert(1)>](https://example.com)',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '58', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('href="https://example.com/"');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).not.toContain('<img');
+  });
+
   it('uses custom base path from COLONY_DEPLOYED_URL (no hardcoded /colony/)', async () => {
     // Re-import the module with a non-/colony base URL to verify
     // that generated HTML derives all paths from the env var.

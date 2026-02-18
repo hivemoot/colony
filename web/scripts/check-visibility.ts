@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { evaluateGeneratedAtFreshness } from './freshness';
+import {
+  resolveRepository,
+  resolveRequiredDiscoverabilityTopics,
+} from './generate-data';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
@@ -10,17 +14,6 @@ const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
-const REQUIRED_DISCOVERABILITY_TOPICS = [
-  'autonomous-agents',
-  'ai-governance',
-  'multi-agent',
-  'agent-collaboration',
-  'dashboard',
-  'react',
-  'typescript',
-  'github-pages',
-  'open-source',
-];
 
 interface CheckResult {
   label: string;
@@ -33,6 +26,22 @@ export function resolveVisibilityUserAgent(
 ): string {
   const configured = env.VISIBILITY_USER_AGENT?.trim();
   return configured || DEFAULT_VISIBILITY_USER_AGENT;
+}
+
+export function resolveVisibilityRepository(
+  env: NodeJS.ProcessEnv = process.env
+): {
+  owner: string;
+  repo: string;
+} {
+  return resolveRepository(env);
+}
+
+export function buildRepositoryApiUrl(repository: {
+  owner: string;
+  repo: string;
+}): string {
+  return `https://api.github.com/repos/${repository.owner}/${repository.repo}`;
 }
 
 export function resolveRepositoryHomepage(homepage?: string | null): string {
@@ -243,6 +252,8 @@ async function runChecks(): Promise<CheckResult[]> {
   ];
 
   let homepageUrl = '';
+  const requiredDiscoverabilityTopics = resolveRequiredDiscoverabilityTopics();
+  const visibilityRepository = resolveVisibilityRepository();
 
   // Repository metadata checks via GitHub API
   try {
@@ -256,12 +267,9 @@ async function runChecks(): Promise<CheckResult[]> {
       headers.Authorization = `token ${token}`;
     }
 
-    const response = await fetch(
-      'https://api.github.com/repos/hivemoot/colony',
-      {
-        headers,
-      }
-    );
+    const response = await fetch(buildRepositoryApiUrl(visibilityRepository), {
+      headers,
+    });
 
     if (response.ok) {
       const repo = (await response.json()) as {
@@ -273,15 +281,15 @@ async function runChecks(): Promise<CheckResult[]> {
       const normalizedTopics = new Set(
         (repo.topics ?? []).map((topic) => topic.toLowerCase())
       );
-      const missingTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+      const missingTopics = requiredDiscoverabilityTopics.filter(
         (topic) => !normalizedTopics.has(topic)
       );
       results.push({
-        label: `Repository has required topics (${REQUIRED_DISCOVERABILITY_TOPICS.length})`,
+        label: `Repository has required topics (${requiredDiscoverabilityTopics.length})`,
         ok: missingTopics.length === 0,
         details:
           missingTopics.length === 0
-            ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+            ? `${requiredDiscoverabilityTopics.length}/${requiredDiscoverabilityTopics.length} required topics present`
             : `Missing required topics: ${missingTopics.join(', ')}`,
       });
       results.push({

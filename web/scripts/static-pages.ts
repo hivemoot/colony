@@ -77,6 +77,67 @@ function formatDate(iso: string): string {
   });
 }
 
+function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url.trim());
+    if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+      return '#';
+    }
+    return parsed.href;
+  } catch {
+    return '#';
+  }
+}
+
+function renderMarkdown(md: string): string {
+  return escapeHtml(md)
+    .replace(
+      /```([\s\S]*?)```/g,
+      '<pre style="padding: 1rem; border-radius: 0.375rem; overflow-x: auto; margin: 1rem 0;"><code>$1</code></pre>'
+    )
+    .replace(
+      /^### (.*$)/gim,
+      '<h3 style="font-size: 1.125rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">$1</h3>'
+    )
+    .replace(
+      /^## (.*$)/gim,
+      '<h2 style="font-size: 1.25rem; font-weight: 600; margin: 1.5rem 0 0.75rem;">$1</h2>'
+    )
+    .replace(
+      /^# (.*$)/gim,
+      '<h1 style="font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 1rem;">$1</h1>'
+    )
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(
+      /`([^`]+)`/g,
+      '<code style="padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace;">$1</code>'
+    )
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, rawUrl) => {
+      const safeUrl = sanitizeUrl(rawUrl);
+      // Link label text is already escaped by the top-level escapeHtml call.
+      return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
+    })
+    .replace(
+      /^\s*- (.+$)/gim,
+      '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
+    )
+    .split('\n\n')
+    .map((para) => {
+      const trimmed = para.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('<li')) {
+        return `<ul style="margin: 1rem 0; padding-left: 1.5rem;">${trimmed}</ul>`;
+      }
+      if (trimmed.startsWith('<h') || trimmed.startsWith('<pre')) {
+        return trimmed;
+      }
+      return `<p style="margin: 0.75rem 0;">${trimmed}</p>`;
+    })
+    .join('');
+}
+
 // -- HTML templates --
 
 function htmlShell(meta: PageMeta, content: string): string {
@@ -115,6 +176,12 @@ function htmlShell(meta: PageMeta, content: string): string {
     .meta { font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem; }
     .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1rem; }
     @media (prefers-color-scheme: dark) { .card { background: #262626; border-color: #404040; } }
+    .proposal-body h1, .proposal-body h2, .proposal-body h3 { color: #1a1a1a; }
+    @media (prefers-color-scheme: dark) { .proposal-body h1, .proposal-body h2, .proposal-body h3 { color: #e5e5e5; } }
+    .proposal-body pre, .proposal-body code { background: #f5f5f5; }
+    @media (prefers-color-scheme: dark) { .proposal-body pre, .proposal-body code { background: #1f1f1f; color: #e5e5e5; } }
+    .proposal-body a { color: #b45309; }
+    @media (prefers-color-scheme: dark) { .proposal-body a { color: #fcd34d; } }
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
     .stat { text-align: center; padding: 0.75rem; }
     .stat-value { font-size: 1.5rem; font-weight: 700; color: #b45309; }
@@ -202,6 +269,14 @@ function proposalPage(proposal: Proposal): string {
     </div>`;
   }
 
+  let bodyHtml = '';
+  if (proposal.body) {
+    bodyHtml = `
+    <div class="card">
+      <div class="proposal-body" style="font-size: 0.9375rem; line-height: 1.7;">${renderMarkdown(proposal.body)}</div>
+    </div>`;
+  }
+
   const content = `
     <nav class="breadcrumb">
       <a href="${basePath()}">Colony</a> &rarr;
@@ -229,6 +304,7 @@ function proposalPage(proposal: Proposal): string {
       </p>
     </div>
 
+    ${bodyHtml}
     ${votesHtml}
     ${timelineHtml}
 

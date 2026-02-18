@@ -41,6 +41,7 @@ interface PullRequestNode {
   number: number;
   title: string;
   url: string;
+  mergeStateStatus?: string;
   latestReviews?: ReviewNode[];
   statusCheckRollup?: StatusCheckNode[] | null;
   closingIssuesReferences?: IssueNode[];
@@ -59,6 +60,7 @@ interface CandidateRecord {
   number: number;
   title: string;
   url: string;
+  mergeStateStatus: string;
   eligible: boolean;
   reasons: string[];
   approvals: number;
@@ -73,6 +75,7 @@ interface Report {
   summary: {
     totalOpenPrs: number;
     eligiblePrs: number;
+    mergeReadyEligiblePrs: number;
   };
   candidates: CandidateRecord[];
 }
@@ -238,6 +241,17 @@ export function evaluateEligibility(
   };
 }
 
+export function normalizeMergeStateStatus(
+  mergeStateStatus: string | undefined
+): string {
+  const normalized = mergeStateStatus?.trim().toUpperCase();
+  return normalized || 'UNKNOWN';
+}
+
+export function isMergeReady(mergeStateStatus: string | undefined): boolean {
+  return normalizeMergeStateStatus(mergeStateStatus) === 'CLEAN';
+}
+
 function hasThumbsDownVeto(
   reactionGroups: ReactionGroupNode[] | undefined
 ): boolean {
@@ -253,6 +267,7 @@ function loadPullRequests(repo: string, limit: number): PullRequestNode[] {
     'number',
     'title',
     'url',
+    'mergeStateStatus',
     'latestReviews',
     'statusCheckRollup',
     'closingIssuesReferences',
@@ -367,6 +382,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       number: pr.number,
       title: pr.title,
       url: pr.url,
+      mergeStateStatus: normalizeMergeStateStatus(pr.mergeStateStatus),
       eligible: evaluation.eligible,
       reasons: evaluation.reasons,
       approvals: evaluation.approvals,
@@ -382,6 +398,10 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
     summary: {
       totalOpenPrs: prs.length,
       eligiblePrs: candidates.filter((candidate) => candidate.eligible).length,
+      mergeReadyEligiblePrs: candidates.filter(
+        (candidate) =>
+          candidate.eligible && isMergeReady(candidate.mergeStateStatus)
+      ).length,
     },
     candidates,
   };
@@ -389,23 +409,46 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
 
 function printHumanReport(report: Report): void {
   const eligible = report.candidates.filter((candidate) => candidate.eligible);
+  const ineligible = report.candidates.filter(
+    (candidate) => !candidate.eligible
+  );
 
   console.log(`Repo: ${report.repo}`);
   console.log(
     `Fast-track eligible: ${eligible.length}/${report.summary.totalOpenPrs}`
   );
+  console.log(`Merge-ready now: ${report.summary.mergeReadyEligiblePrs}`);
 
   if (eligible.length === 0) {
     console.log('No eligible PRs found.');
-    return;
+  } else {
+    console.log('Eligible PRs:');
+    for (const pr of eligible) {
+      const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
+      console.log(
+        `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked}) ${pr.url}`
+      );
+    }
   }
 
-  console.log('Eligible PRs:');
-  for (const pr of eligible) {
-    const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
-    console.log(
-      `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, linked ${linked}) ${pr.url}`
+  if (ineligible.length > 0) {
+    const closedIssueBlockers = ineligible.filter((pr) =>
+      pr.reasons.some((r) => r.includes('OPEN linked issue'))
     );
+    if (closedIssueBlockers.length > 0) {
+      console.log(
+        `\n⚠️  ${closedIssueBlockers.length} PR(s) blocked by closed issues:`
+      );
+      console.log(
+        '   Keep linked issues OPEN until the PR merges to maintain fast-track eligibility.'
+      );
+      for (const pr of closedIssueBlockers.slice(0, 5)) {
+        console.log(`   - #${pr.number}: ${pr.url}`);
+      }
+      if (closedIssueBlockers.length > 5) {
+        console.log(`   ... and ${closedIssueBlockers.length - 5} more`);
+      }
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   resolveRepository,
+  resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
   updateSitemapLastmod,
   mapCommits,
@@ -73,6 +74,24 @@ describe('resolveRepository', () => {
   it('should throw on invalid format', () => {
     expect(() => resolveRepository({ COLONY_REPOSITORY: 'invalid' })).toThrow();
   });
+
+  it('should reject repository values with extra path segments', () => {
+    expect(() =>
+      resolveRepository({ COLONY_REPOSITORY: 'hivemoot/colony/extra' })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+
+  it('should trim whitespace around owner and repo', () => {
+    const result = resolveRepository({
+      COLONY_REPOSITORY: '  hivemoot / colony  ',
+    });
+    expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
+
+  it('should fall back to defaults when COLONY_REPOSITORY is blank', () => {
+    const result = resolveRepository({ COLONY_REPOSITORY: '   ' });
+    expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
 });
 
 describe('resolveRepositories', () => {
@@ -124,6 +143,14 @@ describe('resolveRepositories', () => {
     ).toThrow(/Invalid repository "invalid"/);
   });
 
+  it('should throw when a multi-repo entry has extra path segments', () => {
+    expect(() =>
+      resolveRepositories({
+        COLONY_REPOSITORIES: 'hivemoot/colony,hivemoot/hivemoot/extra',
+      })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+
   it('should handle single repo in COLONY_REPOSITORIES', () => {
     const result = resolveRepositories({
       COLONY_REPOSITORIES: 'hivemoot/colony',
@@ -139,6 +166,31 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('resolveRequiredDiscoverabilityTopics', () => {
+  it('returns defaults when COLONY_REQUIRED_DISCOVERABILITY_TOPICS is unset', () => {
+    expect(resolveRequiredDiscoverabilityTopics({})).toEqual(
+      REQUIRED_DISCOVERABILITY_TOPICS
+    );
+  });
+
+  it('parses, normalizes, and deduplicates configured topics', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS:
+          ' Custom-Topic,custom-topic, dashboard ,',
+      })
+    ).toEqual(['custom-topic', 'dashboard']);
+  });
+
+  it('falls back to defaults when configured topics are blank', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' , , ',
+      })
+    ).toEqual(REQUIRED_DISCOVERABILITY_TOPICS);
   });
 });
 

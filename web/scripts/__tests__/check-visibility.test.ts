@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildRepositoryApiUrl,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
   resolveRepositoryHomepage,
+  resolveVisibilityRepository,
   resolveVisibilityUserAgent,
 } from '../check-visibility';
 
@@ -54,6 +56,45 @@ describe('resolveRepositoryHomepage', () => {
     ).toBe('');
     expect(resolveRepositoryHomepage('not-a-url')).toBe('');
     expect(resolveRepositoryHomepage('   ')).toBe('');
+  });
+});
+
+describe('resolveVisibilityRepository', () => {
+  it('returns the default repository when no env vars are set', () => {
+    expect(resolveVisibilityRepository({})).toEqual({
+      owner: 'hivemoot',
+      repo: 'colony',
+    });
+  });
+
+  it('uses COLONY_REPOSITORY when configured', () => {
+    expect(
+      resolveVisibilityRepository({
+        COLONY_REPOSITORY: 'example-org/example-colony',
+      })
+    ).toEqual({
+      owner: 'example-org',
+      repo: 'example-colony',
+    });
+  });
+
+  it('rejects malformed repository values', () => {
+    expect(() =>
+      resolveVisibilityRepository({
+        COLONY_REPOSITORY: 'example-org/example-colony/extra',
+      })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+});
+
+describe('buildRepositoryApiUrl', () => {
+  it('builds the GitHub API URL from owner/repo', () => {
+    expect(
+      buildRepositoryApiUrl({
+        owner: 'example-org',
+        repo: 'example-colony',
+      })
+    ).toBe('https://api.github.com/repos/example-org/example-colony');
   });
 });
 

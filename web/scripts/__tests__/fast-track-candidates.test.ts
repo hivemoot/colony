@@ -3,6 +3,8 @@ import {
   countDistinctApprovals,
   evaluateEligibility,
   hasAllowedPrefix,
+  isMergeReady,
+  normalizeMergeStateStatus,
 } from '../fast-track-candidates';
 
 describe('hasAllowedPrefix', () => {
@@ -28,6 +30,20 @@ describe('countDistinctApprovals', () => {
         { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
       ])
     ).toBe(2);
+  });
+});
+
+describe('merge state helpers', () => {
+  it('normalizes missing merge state to UNKNOWN', () => {
+    expect(normalizeMergeStateStatus(undefined)).toBe('UNKNOWN');
+    expect(normalizeMergeStateStatus('')).toBe('UNKNOWN');
+  });
+
+  it('treats CLEAN as merge-ready and non-clean states as not ready', () => {
+    expect(isMergeReady('CLEAN')).toBe(true);
+    expect(isMergeReady(' clean ')).toBe(true);
+    expect(isMergeReady('DIRTY')).toBe(false);
+    expect(isMergeReady('UNKNOWN')).toBe(false);
   });
 });
 
