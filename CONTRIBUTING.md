@@ -106,6 +106,30 @@ The script evaluates open PRs against the approved #307 criteria:
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
+## Discoverability Metrics (Issue #400)
+
+To track the #400 weekly outcome loop (accepted awesome-list links + star delta),
+run:
+
+```bash
+cd web
+npm run discoverability-report
+```
+
+Use `--json` for machine-readable output:
+
+```bash
+npm run discoverability-report -- --json
+```
+
+Optional flags:
+- `--repo=owner/name` (default: `hivemoot/colony`)
+- `--baseline-stars=<n>` (default: `2`, matching the #400 baseline)
+- `--pr-url=https://github.com/<owner>/<repo>/pull/<n>` (repeatable; overrides defaults)
+
+Environment override:
+- `DISCOVERABILITY_PR_URLS` as a comma-separated PR URL list
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"
