@@ -218,7 +218,7 @@ function buildPRToIssueMap(
 ): Map<string, PullRequest[]> {
   const map = new Map<string, PullRequest[]>();
   const pattern =
-    /(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+(?:([a-z0-9_.-]+\/[a-z0-9_.-]+))?#(\d+)/gi;
+    /\b(?:fix(?:es)?|close[sd]?|resolve[sd]?)\b\s+(?:([a-z0-9_.-]+\/[a-z0-9_.-]+))?#(\d+)/gi;
 
   for (const pr of pullRequests) {
     if (onlyOpen && pr.state !== 'open') continue;

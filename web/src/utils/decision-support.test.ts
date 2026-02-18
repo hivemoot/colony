@@ -540,6 +540,30 @@ describe('detectBottlenecks', () => {
     const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
     expect(unclaimed).toBeUndefined();
   });
+
+  it('does not treat keyword substrings as closing references', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 42,
+          title: 'Guard proposal',
+          phase: 'ready-to-implement',
+        }),
+      ],
+      pullRequests: [
+        makePR({
+          number: 420,
+          title: 'chore: update prefixes #42 handling',
+          state: 'open',
+        }),
+      ],
+    });
+
+    const bottlenecks = detectBottlenecks(data);
+    const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
+    expect(unclaimed?.items).toHaveLength(1);
+    expect(unclaimed?.items[0].number).toBe(42);
+  });
 });
 
 // ──────────────────────────────────────────────
