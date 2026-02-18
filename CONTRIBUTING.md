@@ -106,6 +106,21 @@ The script evaluates open PRs against the approved #307 criteria:
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
+## External Outreach Metrics
+
+Track weekly discoverability outcomes (accepted awesome-list links and star delta):
+
+```bash
+cd web
+npm run external-outreach-metrics -- --baseline-stars=2
+```
+
+Override tracked external PRs as needed:
+
+```bash
+npm run external-outreach-metrics -- --baseline-stars=2 --pr=e2b-dev/awesome-ai-agents#274 --pr=jim-schwoebel/awesome_ai_agents#42 --json
+```
+
 ## Pull Requests
 
 - Link the issue in the description with "Fixes #123"
