@@ -350,7 +350,13 @@ function mapIssueToPRs(
       }
       const key = issueKey(referencedRepo, issueNumber);
       const existing = map.get(key) ?? [];
-      if (!existing.some((entry) => entry.number === pr.number)) {
+      if (
+        !existing.some(
+          (entry) =>
+            entry.number === pr.number &&
+            resolveRepoTag(entry.repo, defaultRepo) === prRepo
+        )
+      ) {
         existing.push(pr);
       }
       map.set(key, existing);
