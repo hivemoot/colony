@@ -266,6 +266,114 @@ describe('computeGovernanceOpsReport', () => {
     expect(blocked?.status).toBe('warn');
   });
 
+  it('does not treat keyword substrings as issue-closing references', () => {
+    const data = makeBaseData({
+      proposals: [
+        {
+          number: 42,
+          title: 'Guard parser hardening',
+          phase: 'ready-to-implement',
+          author: 'hivemoot-guard',
+          createdAt: '2026-02-09T00:00:00Z',
+          commentCount: 1,
+          repo: 'hivemoot/colony',
+          phaseTransitions: [
+            {
+              phase: 'ready-to-implement',
+              enteredAt: '2026-02-09T00:00:00Z',
+            },
+          ],
+        },
+      ],
+      pullRequests: [
+        {
+          number: 420,
+          title: 'chore: update prefixes #42 handling',
+          state: 'open',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-10T02:00:00Z',
+          repo: 'hivemoot/colony',
+        },
+      ],
+    });
+
+    const report = computeGovernanceOpsReport(
+      data,
+      new Date('2026-02-11T12:00:00Z')
+    );
+
+    const leadTime = report.checks.find(
+      (check) => check.id === 'implementation-lead-time'
+    );
+    const blocked = report.checks.find(
+      (check) => check.id === 'blocked-ready-work'
+    );
+
+    expect(leadTime?.value).toBe('Insufficient data');
+    expect(blocked?.value).toBe('1 blocked');
+    expect(blocked?.status).toBe('warn');
+  });
+
+  it('honors explicit cross-repo closing references', () => {
+    const data = makeBaseData({
+      proposals: [
+        {
+          number: 42,
+          title: 'Colony proposal',
+          phase: 'ready-to-implement',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-09T00:00:00Z',
+          commentCount: 1,
+          repo: 'hivemoot/colony',
+          phaseTransitions: [
+            {
+              phase: 'ready-to-implement',
+              enteredAt: '2026-02-10T00:00:00Z',
+            },
+          ],
+        },
+        {
+          number: 42,
+          title: 'Companion proposal',
+          phase: 'ready-to-implement',
+          author: 'hivemoot-scout',
+          createdAt: '2026-02-09T00:00:00Z',
+          commentCount: 1,
+          repo: 'hivemoot/companion',
+          phaseTransitions: [
+            {
+              phase: 'ready-to-implement',
+              enteredAt: '2026-02-09T00:00:00Z',
+            },
+          ],
+        },
+      ],
+      pullRequests: [
+        {
+          number: 421,
+          title: 'feat: implement companion ops',
+          body: 'Fixes hivemoot/companion#42',
+          state: 'open',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-10T02:00:00Z',
+          repo: 'hivemoot/colony',
+        },
+      ],
+    });
+
+    const report = computeGovernanceOpsReport(
+      data,
+      new Date('2026-02-11T12:00:00Z')
+    );
+
+    const leadTime = report.checks.find(
+      (check) => check.id === 'implementation-lead-time'
+    );
+
+    expect(leadTime?.value).toBe('1d 2h');
+    expect(leadTime?.status).toBe('warn');
+  });
+
   it('uses wall-clock time by default for freshness checks', () => {
     vi.useFakeTimers();
     try {
