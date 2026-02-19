@@ -72,6 +72,12 @@ describe('resolveSiteUrl', () => {
     );
   });
 
+  it('strips query params and hash fragments', () => {
+    expect(
+      resolveSiteUrl({ COLONY_SITE_URL: 'https://example.com/app?utm=1#frag' })
+    ).toBe('https://example.com/app');
+  });
+
   it('falls back to default for empty string', () => {
     expect(resolveSiteUrl({ COLONY_SITE_URL: '' })).toBe(
       'https://hivemoot.github.io/colony'
@@ -94,6 +100,12 @@ describe('resolveSiteUrl', () => {
     expect(resolveSiteUrl({ COLONY_SITE_URL: 'ftp://example.com' })).toBe(
       'https://hivemoot.github.io/colony'
     );
+  });
+
+  it('falls back to default for credential-bearing URL', () => {
+    expect(
+      resolveSiteUrl({ COLONY_SITE_URL: 'https://user:pass@example.com/app' })
+    ).toBe('https://hivemoot.github.io/colony');
   });
 
   it('accepts http:// URLs', () => {
@@ -148,6 +160,22 @@ describe('resolveGitHubUrl', () => {
     expect(
       resolveGitHubUrl({ COLONY_GITHUB_URL: 'https://github.com/org/repo/' })
     ).toBe('https://github.com/org/repo');
+  });
+
+  it('strips query params and hash fragments', () => {
+    expect(
+      resolveGitHubUrl({
+        COLONY_GITHUB_URL: 'https://github.com/org/repo?tab=readme#section',
+      })
+    ).toBe('https://github.com/org/repo');
+  });
+
+  it('falls back to default for credential-bearing URL', () => {
+    expect(
+      resolveGitHubUrl({
+        COLONY_GITHUB_URL: 'https://token@github.com/org/repo',
+      })
+    ).toBe('https://github.com/hivemoot/colony');
   });
 });
 
