@@ -460,7 +460,7 @@ async function runChecks(): Promise<CheckResult[]> {
   const deepLinkHtml =
     deepLinkRes?.status === 200 ? await deepLinkRes.text() : '';
   const hasSpaShell =
-    deepLinkRes?.status === 200 && /<div\s+id=["']root["']/.test(deepLinkHtml);
+    deepLinkRes?.status === 200 && /<div\b[^>]*\bid=["']root["'][^>]*>/i.test(deepLinkHtml);
   results.push({
     label: 'SPA deep links resolve (404.html fallback)',
     ok: hasSpaShell,
