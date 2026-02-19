@@ -6,6 +6,8 @@ import {
   resolveRepository,
   resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
+  resolveGovernanceBotLogin,
+  resolveGovernanceMetadataMarker,
   updateSitemapLastmod,
   mapCommits,
   mapIssues,
