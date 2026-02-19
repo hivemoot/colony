@@ -418,6 +418,115 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('<img');
   });
 
+  it('falls back to default deployed URL for non-http env values', async () => {
+    const savedUrl = process.env.COLONY_DEPLOYED_URL;
+    process.env.COLONY_DEPLOYED_URL = 'javascript:alert(1)';
+    vi.resetModules();
+
+    try {
+      const { generateStaticPages: generate } = await import('../static-pages');
+
+      const data = minimalActivityData({
+        proposals: [
+          {
+            number: 60,
+            title: 'Fallback URL test',
+            phase: 'discussion',
+            author: 'agent',
+            createdAt: '2026-02-14T00:00:00Z',
+            commentCount: 0,
+          },
+        ],
+      });
+      writeFileSync(
+        join(TEST_OUT, 'data', 'activity.json'),
+        JSON.stringify(data)
+      );
+
+      generate(TEST_OUT);
+
+      const html = readFileSync(
+        join(TEST_OUT, 'proposal', '60', 'index.html'),
+        'utf-8'
+      );
+      const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+
+      expect(html).toContain(
+        'href="https://hivemoot.github.io/colony/proposal/60/"'
+      );
+      expect(html).toContain(
+        'content="https://hivemoot.github.io/colony/og-image.png"'
+      );
+      expect(html).toContain('href="/colony/"');
+      expect(html).not.toContain('javascript:alert(1)');
+      expect(sitemap).toContain(
+        '<loc>https://hivemoot.github.io/colony/proposal/60/</loc>'
+      );
+    } finally {
+      if (savedUrl === undefined) {
+        delete process.env.COLONY_DEPLOYED_URL;
+      } else {
+        process.env.COLONY_DEPLOYED_URL = savedUrl;
+      }
+      vi.resetModules();
+    }
+  });
+
+  it('strips query and hash from configured deployed URL', async () => {
+    const savedUrl = process.env.COLONY_DEPLOYED_URL;
+    process.env.COLONY_DEPLOYED_URL = 'https://example.com/my-app/?utm=1#frag';
+    vi.resetModules();
+
+    try {
+      const { generateStaticPages: generate } = await import('../static-pages');
+
+      const data = minimalActivityData({
+        proposals: [
+          {
+            number: 61,
+            title: 'URL normalization test',
+            phase: 'discussion',
+            author: 'agent',
+            createdAt: '2026-02-14T00:00:00Z',
+            commentCount: 0,
+          },
+        ],
+      });
+      writeFileSync(
+        join(TEST_OUT, 'data', 'activity.json'),
+        JSON.stringify(data)
+      );
+
+      generate(TEST_OUT);
+
+      const html = readFileSync(
+        join(TEST_OUT, 'proposal', '61', 'index.html'),
+        'utf-8'
+      );
+      const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+
+      expect(html).toContain('href="https://example.com/my-app/proposal/61/"');
+      expect(html).toContain(
+        'content="https://example.com/my-app/og-image.png"'
+      );
+      expect(html).toContain('href="/my-app/"');
+      expect(html).not.toContain('utm=1');
+      expect(html).not.toContain('#frag');
+      expect(sitemap).toContain(
+        '<loc>https://example.com/my-app/proposal/61/</loc>'
+      );
+      expect(sitemap).not.toContain('utm=1');
+      expect(sitemap).not.toContain('#frag');
+    } finally {
+      if (savedUrl === undefined) {
+        delete process.env.COLONY_DEPLOYED_URL;
+      } else {
+        process.env.COLONY_DEPLOYED_URL = savedUrl;
+      }
+      vi.resetModules();
+    }
+  });
+
   it('uses custom base path from COLONY_DEPLOYED_URL (no hardcoded /colony/)', async () => {
     // Re-import the module with a non-/colony base URL to verify
     // that generated HTML derives all paths from the env var.
