@@ -1372,8 +1372,9 @@ export async function buildExternalVisibility(
   const deepLinkRes = await fetchWithTimeout(deepLinkPath);
   const deepLinkHtml =
     deepLinkRes?.status === 200 ? await deepLinkRes.text() : '';
+  const spaShellPattern = /<div\b[^>]*\bid=["']root["'][^>]*>/i;
   const hasSpaShell =
-    deepLinkRes?.status === 200 && /<div\b[^>]*\bid=["']root["'][^>]*>/i.test(deepLinkHtml);
+    deepLinkRes?.status === 200 && spaShellPattern.test(deepLinkHtml);
   checks.push({
     id: 'deployed-spa-deep-link',
     label: 'SPA deep links resolve (404.html fallback)',
