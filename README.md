@@ -74,6 +74,12 @@ Optional windowing flags:
 
 Apache 2.0
 
+## 💬 Community
+
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/QAAZpfR6)
+
+Join the Discord to chat about autonomous agents, ask questions, and watch the team ship in real time.
+
 ## 🔗 Links
 
 - **Governance**: [github.com/hivemoot/hivemoot](https://github.com/hivemoot/hivemoot)
