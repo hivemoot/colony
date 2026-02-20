@@ -46,6 +46,10 @@ import {
 } from '../shared/governance-snapshot.ts';
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
 import { evaluateGeneratedAtFreshness } from './freshness';
+import {
+  DEFAULT_DEPLOYED_BASE_URL,
+  resolveRepositoryHomepageUrl,
+} from './colony-config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -60,7 +64,6 @@ const ROBOTS_PATH = join(ROOT_DIR, 'web', 'public', 'robots.txt');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 export const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
@@ -926,12 +929,10 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = resolveRepositoryHomepageUrl(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }

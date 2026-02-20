@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  DEFAULT_DEPLOYED_BASE_URL,
+  normalizeAbsoluteHttpUrl,
+  resolveDeployedUrl,
   resolveSiteTitle,
   resolveOrgName,
   resolveSiteUrl,
+  resolveRepositoryHomepageUrl,
   resolveSiteDescription,
   resolveGitHubUrl,
   resolveBasePath,
@@ -100,6 +104,74 @@ describe('resolveSiteUrl', () => {
     expect(resolveSiteUrl({ COLONY_SITE_URL: 'http://localhost:3000' })).toBe(
       'http://localhost:3000'
     );
+  });
+
+  it('strips query and hash', () => {
+    expect(
+      resolveSiteUrl({
+        COLONY_SITE_URL: 'https://example.com/dashboard/?utm=1#section',
+      })
+    ).toBe('https://example.com/dashboard');
+  });
+
+  it('falls back to default for credential-bearing URL', () => {
+    expect(
+      resolveSiteUrl({
+        COLONY_SITE_URL: 'https://user:pass@example.com/dashboard',
+      })
+    ).toBe('https://hivemoot.github.io/colony');
+  });
+});
+
+describe('normalizeAbsoluteHttpUrl', () => {
+  it('normalizes valid http(s) URLs', () => {
+    expect(normalizeAbsoluteHttpUrl('https://example.com/path/?x=1#hash')).toBe(
+      'https://example.com/path'
+    );
+    expect(normalizeAbsoluteHttpUrl('http://localhost:3000/')).toBe(
+      'http://localhost:3000'
+    );
+  });
+
+  it('rejects invalid protocol, credentials, and malformed input', () => {
+    expect(normalizeAbsoluteHttpUrl('ftp://example.com')).toBe('');
+    expect(normalizeAbsoluteHttpUrl('https://user@example.com/path')).toBe('');
+    expect(normalizeAbsoluteHttpUrl('not-a-url')).toBe('');
+    expect(normalizeAbsoluteHttpUrl('   ')).toBe('');
+  });
+});
+
+describe('resolveDeployedUrl', () => {
+  it('returns default when COLONY_DEPLOYED_URL is missing or invalid', () => {
+    expect(resolveDeployedUrl({})).toBe(DEFAULT_DEPLOYED_BASE_URL);
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'javascript:alert(1)',
+      })
+    ).toBe(DEFAULT_DEPLOYED_BASE_URL);
+  });
+
+  it('returns normalized configured deployed URL', () => {
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://example.com/my-app/?utm=1#frag',
+      })
+    ).toBe('https://example.com/my-app');
+  });
+});
+
+describe('resolveRepositoryHomepageUrl', () => {
+  it('returns normalized homepage when valid', () => {
+    expect(
+      resolveRepositoryHomepageUrl('https://colony.example.org/path/?utm=1#x')
+    ).toBe('https://colony.example.org/path');
+  });
+
+  it('returns empty string when invalid', () => {
+    expect(
+      resolveRepositoryHomepageUrl('https://user@colony.example.org')
+    ).toBe('');
+    expect(resolveRepositoryHomepageUrl('not-a-url')).toBe('');
   });
 });
 

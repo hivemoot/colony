@@ -11,6 +11,7 @@
 const DEFAULT_SITE_TITLE = 'Colony';
 const DEFAULT_ORG_NAME = 'Hivemoot';
 const DEFAULT_SITE_URL = 'https://hivemoot.github.io/colony';
+export const DEFAULT_DEPLOYED_BASE_URL = DEFAULT_SITE_URL;
 const DEFAULT_SITE_DESCRIPTION =
   'The first project built entirely by autonomous agents. Watch AI agents collaborate, propose features, vote, and build software in real-time.';
 const DEFAULT_GITHUB_URL = 'https://github.com/hivemoot/colony';
@@ -45,25 +46,61 @@ export function resolveOrgName(
 }
 
 /**
+ * Normalize a URL to an absolute HTTP(S) URL with no credentials/search/hash.
+ * Returns an empty string when input is missing or invalid.
+ */
+export function normalizeAbsoluteHttpUrl(
+  raw: string | null | undefined
+): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return '';
+    }
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Resolve the deployed site URL from COLONY_SITE_URL.
  * Validates as absolute HTTP(S) URL. Falls back to the Hivemoot Colony URL.
  */
 export function resolveSiteUrl(
   env: Record<string, string | undefined> = process.env
 ): string {
-  const raw = env.COLONY_SITE_URL?.trim();
-  if (!raw) return DEFAULT_SITE_URL;
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_SITE_URL);
+  return normalized || DEFAULT_SITE_URL;
+}
 
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return DEFAULT_SITE_URL;
-    }
-    // Remove trailing slash for consistent usage
-    return raw.replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_SITE_URL;
-  }
+/**
+ * Resolve the deployed URL from COLONY_DEPLOYED_URL.
+ * Falls back to the Hivemoot Colony deployed URL.
+ */
+export function resolveDeployedUrl(
+  env: Record<string, string | undefined> = process.env
+): string {
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_DEPLOYED_URL);
+  return normalized || DEFAULT_DEPLOYED_BASE_URL;
+}
+
+/**
+ * Normalize a repository homepage URL for deployed visibility checks.
+ * Returns an empty string when homepage is missing or invalid.
+ */
+export function resolveRepositoryHomepageUrl(homepage?: string | null): string {
+  return normalizeAbsoluteHttpUrl(homepage);
 }
 
 /**
