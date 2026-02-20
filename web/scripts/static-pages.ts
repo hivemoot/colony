@@ -271,7 +271,7 @@ function proposalPage(proposal: Proposal): string {
           <div class="stat-label">Support</div>
         </div>
       </div>
-      <div class="vote-bar" aria-label="${pct}% support">
+      <div class="vote-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct}% support">
         <div class="vote-fill" style="width: ${pct}%;"></div>
       </div>
     </div>`;
