@@ -15,21 +15,31 @@ const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 
-function resolveDeployedUrl(): string {
-  const configured = process.env.COLONY_DEPLOYED_URL?.trim();
-  if (configured) {
-    try {
-      const parsed = new URL(configured);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return DEFAULT_DEPLOYED_BASE_URL;
-      }
-      const normalized = parsed.origin + parsed.pathname;
-      return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
-    } catch {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
+export function resolveDeployedUrl(
+  env: Record<string, string | undefined> = process.env
+): string {
+  const configured = env.COLONY_DEPLOYED_URL?.trim();
+  if (!configured) {
+    return DEFAULT_DEPLOYED_BASE_URL;
   }
-  return DEFAULT_DEPLOYED_BASE_URL;
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    throw new Error(
+      `COLONY_DEPLOYED_URL is set but is not a valid URL: "${configured}"`
+    );
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(
+      `COLONY_DEPLOYED_URL must use http: or https: protocol (got "${parsed.protocol}")`
+    );
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error(`COLONY_DEPLOYED_URL must not contain credentials`);
+  }
+  const normalized = parsed.origin + parsed.pathname;
+  return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
 interface CheckResult {

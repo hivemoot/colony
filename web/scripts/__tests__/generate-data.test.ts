@@ -235,9 +235,9 @@ describe('resolveDeployedUrl', () => {
   });
 
   it('throws when COLONY_DEPLOYED_URL is an invalid URL', () => {
-    expect(() => resolveDeployedUrl({ COLONY_DEPLOYED_URL: ':::bad:::' })).toThrow(
-      'COLONY_DEPLOYED_URL is set but is not a valid URL'
-    );
+    expect(() =>
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: ':::bad:::' })
+    ).toThrow('COLONY_DEPLOYED_URL is set but is not a valid URL');
   });
 
   it('throws when COLONY_DEPLOYED_URL has no scheme', () => {

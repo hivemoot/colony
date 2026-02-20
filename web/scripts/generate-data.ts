@@ -94,9 +94,7 @@ export function resolveDeployedUrl(
     );
   }
   if (parsed.username || parsed.password) {
-    throw new Error(
-      `COLONY_DEPLOYED_URL must not contain credentials`
-    );
+    throw new Error(`COLONY_DEPLOYED_URL must not contain credentials`);
   }
   const normalized = parsed.origin + parsed.pathname;
   return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;

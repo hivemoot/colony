@@ -3,6 +3,7 @@ import {
   buildRepositoryApiUrl,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
+  resolveDeployedUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
   resolveVisibilityUserAgent,
@@ -117,5 +118,61 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('resolveDeployedUrl', () => {
+  it('returns default when COLONY_DEPLOYED_URL is not set', () => {
+    expect(resolveDeployedUrl({})).toBe('https://hivemoot.github.io/colony');
+  });
+
+  it('returns custom URL when COLONY_DEPLOYED_URL is valid', () => {
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://example.com/dashboard',
+      })
+    ).toBe('https://example.com/dashboard');
+  });
+
+  it('strips trailing slash from custom URL', () => {
+    expect(
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://example.com/dashboard/',
+      })
+    ).toBe('https://example.com/dashboard');
+  });
+
+  it('falls back to default when COLONY_DEPLOYED_URL is empty', () => {
+    expect(resolveDeployedUrl({ COLONY_DEPLOYED_URL: '' })).toBe(
+      'https://hivemoot.github.io/colony'
+    );
+  });
+
+  it('throws when COLONY_DEPLOYED_URL is an invalid URL', () => {
+    expect(() =>
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: ':::bad:::' })
+    ).toThrow('COLONY_DEPLOYED_URL is set but is not a valid URL');
+  });
+
+  it('throws when COLONY_DEPLOYED_URL has no scheme', () => {
+    expect(() =>
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'myorg.github.io/colony' })
+    ).toThrow('COLONY_DEPLOYED_URL is set but is not a valid URL');
+  });
+
+  it('throws when COLONY_DEPLOYED_URL uses a non-http protocol', () => {
+    expect(() =>
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'ftp://files.example.com/data',
+      })
+    ).toThrow('COLONY_DEPLOYED_URL must use http: or https: protocol');
+  });
+
+  it('throws when COLONY_DEPLOYED_URL contains credentials', () => {
+    expect(() =>
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://user:pass@example.com/app',
+      })
+    ).toThrow('COLONY_DEPLOYED_URL must not contain credentials');
   });
 });
