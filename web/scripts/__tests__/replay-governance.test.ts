@@ -12,6 +12,7 @@ import {
   parseReplayArgs,
   replayFromArtifact,
   summarizeGovernanceReplay,
+  summarizeNumericValues,
 } from '../replay-governance';
 
 function makeSnapshot(
@@ -116,6 +117,40 @@ describe('formatMissingHistoryFileMessage', () => {
   });
 });
 
+describe('summarizeNumericValues', () => {
+  it('returns null for an empty array', () => {
+    expect(summarizeNumericValues([])).toBeNull();
+  });
+
+  it('returns null when all values are non-finite', () => {
+    expect(summarizeNumericValues([null, undefined, NaN, Infinity, -Infinity])).toBeNull();
+  });
+
+  it('computes correct statistics for a single value', () => {
+    const result = summarizeNumericValues([5]);
+    expect(result).toEqual({ first: 5, last: 5, delta: 0, min: 5, max: 5, average: 5 });
+  });
+
+  it('computes correct statistics for multiple values', () => {
+    const result = summarizeNumericValues([10, 20, 30]);
+    expect(result).toEqual({ first: 10, last: 30, delta: 20, min: 10, max: 30, average: 20 });
+  });
+
+  it('filters out null and non-finite values before computing', () => {
+    const result = summarizeNumericValues([10, null, NaN, Infinity, 20]);
+    expect(result).toEqual({ first: 10, last: 20, delta: 10, min: 10, max: 20, average: 15 });
+  });
+
+  it('rounds average to two decimal places', () => {
+    const result = summarizeNumericValues([1, 2, 3]);
+    expect(result?.average).toBe(2);
+    const result2 = summarizeNumericValues([1, 2]);
+    expect(result2?.average).toBe(1.5);
+    const result3 = summarizeNumericValues([1, 1, 2]);
+    expect(result3?.average).toBe(1.33);
+  });
+});
+
 describe('summarizeGovernanceReplay', () => {
   const snapshots = [
     makeSnapshot('2026-02-01T00:00:00Z', 50),
@@ -143,6 +178,62 @@ describe('summarizeGovernanceReplay', () => {
     expect(summary.points).toBe(2);
     expect(summary.firstHealth).toBe(70);
     expect(summary.lastHealth).toBe(80);
+  });
+
+  it('returns null subMetrics for empty window', () => {
+    const summary = summarizeGovernanceReplay([], null, null);
+    expect(summary.subMetrics).toBeNull();
+  });
+
+  it('includes subMetrics in summary for non-empty window', () => {
+    const summary = summarizeGovernanceReplay(snapshots, null, null);
+    expect(summary.subMetrics).not.toBeNull();
+    expect(summary.subMetrics?.participation).not.toBeNull();
+    expect(summary.subMetrics?.pipelineFlow).not.toBeNull();
+    expect(summary.subMetrics?.followThrough).not.toBeNull();
+    expect(summary.subMetrics?.consensusQuality).not.toBeNull();
+    expect(summary.subMetrics?.activeAgents).not.toBeNull();
+    expect(summary.subMetrics?.proposalVelocity).not.toBeNull();
+  });
+
+  it('sub-metric values match snapshot data', () => {
+    // makeSnapshot sets participation=15, pipelineFlow=15 for all snapshots
+    const summary = summarizeGovernanceReplay(snapshots, null, null);
+    expect(summary.subMetrics?.participation).toEqual({
+      first: 15,
+      last: 15,
+      delta: 0,
+      min: 15,
+      max: 15,
+      average: 15,
+    });
+  });
+
+  it('filters null proposalVelocity before sub-metric summarization', () => {
+    const snapshotsWithNullVelocity: GovernanceSnapshot[] = [
+      { ...makeSnapshot('2026-02-01T00:00:00Z', 50), proposalVelocity: null },
+      { ...makeSnapshot('2026-02-02T00:00:00Z', 60), proposalVelocity: 0.5 },
+      { ...makeSnapshot('2026-02-03T00:00:00Z', 70), proposalVelocity: null },
+    ];
+    const summary = summarizeGovernanceReplay(snapshotsWithNullVelocity, null, null);
+    // Only the one finite value (0.5) should survive
+    expect(summary.subMetrics?.proposalVelocity).toEqual({
+      first: 0.5,
+      last: 0.5,
+      delta: 0,
+      min: 0.5,
+      max: 0.5,
+      average: 0.5,
+    });
+  });
+
+  it('returns null proposalVelocity summary when all velocities are null', () => {
+    const allNullVelocity: GovernanceSnapshot[] = [
+      { ...makeSnapshot('2026-02-01T00:00:00Z', 50), proposalVelocity: null },
+      { ...makeSnapshot('2026-02-02T00:00:00Z', 60), proposalVelocity: null },
+    ];
+    const summary = summarizeGovernanceReplay(allNullVelocity, null, null);
+    expect(summary.subMetrics?.proposalVelocity).toBeNull();
   });
 });
 
