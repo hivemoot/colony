@@ -155,21 +155,13 @@ export function summarizeGovernanceReplay(
   const last = scores[scores.length - 1];
 
   const subMetrics: GovernanceSubMetrics = {
-    participation: summarizeNumericValues(
-      windowed.map((s) => s.participation)
-    ),
-    pipelineFlow: summarizeNumericValues(
-      windowed.map((s) => s.pipelineFlow)
-    ),
-    followThrough: summarizeNumericValues(
-      windowed.map((s) => s.followThrough)
-    ),
+    participation: summarizeNumericValues(windowed.map((s) => s.participation)),
+    pipelineFlow: summarizeNumericValues(windowed.map((s) => s.pipelineFlow)),
+    followThrough: summarizeNumericValues(windowed.map((s) => s.followThrough)),
     consensusQuality: summarizeNumericValues(
       windowed.map((s) => s.consensusQuality)
     ),
-    activeAgents: summarizeNumericValues(
-      windowed.map((s) => s.activeAgents)
-    ),
+    activeAgents: summarizeNumericValues(windowed.map((s) => s.activeAgents)),
     proposalVelocity: summarizeNumericValues(
       windowed.map((s) => s.proposalVelocity)
     ),

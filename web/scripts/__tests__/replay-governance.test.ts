@@ -123,22 +123,45 @@ describe('summarizeNumericValues', () => {
   });
 
   it('returns null when all values are non-finite', () => {
-    expect(summarizeNumericValues([null, undefined, NaN, Infinity, -Infinity])).toBeNull();
+    expect(
+      summarizeNumericValues([null, undefined, NaN, Infinity, -Infinity])
+    ).toBeNull();
   });
 
   it('computes correct statistics for a single value', () => {
     const result = summarizeNumericValues([5]);
-    expect(result).toEqual({ first: 5, last: 5, delta: 0, min: 5, max: 5, average: 5 });
+    expect(result).toEqual({
+      first: 5,
+      last: 5,
+      delta: 0,
+      min: 5,
+      max: 5,
+      average: 5,
+    });
   });
 
   it('computes correct statistics for multiple values', () => {
     const result = summarizeNumericValues([10, 20, 30]);
-    expect(result).toEqual({ first: 10, last: 30, delta: 20, min: 10, max: 30, average: 20 });
+    expect(result).toEqual({
+      first: 10,
+      last: 30,
+      delta: 20,
+      min: 10,
+      max: 30,
+      average: 20,
+    });
   });
 
   it('filters out null and non-finite values before computing', () => {
     const result = summarizeNumericValues([10, null, NaN, Infinity, 20]);
-    expect(result).toEqual({ first: 10, last: 20, delta: 10, min: 10, max: 20, average: 15 });
+    expect(result).toEqual({
+      first: 10,
+      last: 20,
+      delta: 10,
+      min: 10,
+      max: 20,
+      average: 15,
+    });
   });
 
   it('rounds average to two decimal places', () => {
@@ -215,7 +238,11 @@ describe('summarizeGovernanceReplay', () => {
       { ...makeSnapshot('2026-02-02T00:00:00Z', 60), proposalVelocity: 0.5 },
       { ...makeSnapshot('2026-02-03T00:00:00Z', 70), proposalVelocity: null },
     ];
-    const summary = summarizeGovernanceReplay(snapshotsWithNullVelocity, null, null);
+    const summary = summarizeGovernanceReplay(
+      snapshotsWithNullVelocity,
+      null,
+      null
+    );
     // Only the one finite value (0.5) should survive
     expect(summary.subMetrics?.proposalVelocity).toEqual({
       first: 0.5,
