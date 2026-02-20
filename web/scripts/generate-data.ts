@@ -77,19 +77,29 @@ export function resolveDeployedUrl(
   env: Record<string, string | undefined> = process.env
 ): string {
   const configured = env.COLONY_DEPLOYED_URL?.trim();
-  if (configured) {
-    try {
-      const parsed = new URL(configured);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return DEFAULT_DEPLOYED_BASE_URL;
-      }
-      const normalized = parsed.origin + parsed.pathname;
-      return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
-    } catch {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
+  if (!configured) {
+    return DEFAULT_DEPLOYED_BASE_URL;
   }
-  return DEFAULT_DEPLOYED_BASE_URL;
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    throw new Error(
+      `COLONY_DEPLOYED_URL is set but is not a valid URL: "${configured}"`
+    );
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(
+      `COLONY_DEPLOYED_URL must use http: or https: protocol (got "${parsed.protocol}")`
+    );
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error(
+      `COLONY_DEPLOYED_URL must not contain credentials`
+    );
+  }
+  const normalized = parsed.origin + parsed.pathname;
+  return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 const HISTORY_GENERATOR_ID = 'web/scripts/generate-data.ts';
 const HISTORY_GENERATOR_VERSION = process.env.npm_package_version ?? '0.1.0';

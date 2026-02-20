@@ -234,24 +234,32 @@ describe('resolveDeployedUrl', () => {
     );
   });
 
-  it('falls back to default when COLONY_DEPLOYED_URL is an invalid URL', () => {
-    expect(resolveDeployedUrl({ COLONY_DEPLOYED_URL: ':::bad:::' })).toBe(
-      'https://hivemoot.github.io/colony'
+  it('throws when COLONY_DEPLOYED_URL is an invalid URL', () => {
+    expect(() => resolveDeployedUrl({ COLONY_DEPLOYED_URL: ':::bad:::' })).toThrow(
+      'COLONY_DEPLOYED_URL is set but is not a valid URL'
     );
   });
 
-  it('falls back to default when COLONY_DEPLOYED_URL has no scheme', () => {
-    expect(
+  it('throws when COLONY_DEPLOYED_URL has no scheme', () => {
+    expect(() =>
       resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'myorg.github.io/colony' })
-    ).toBe('https://hivemoot.github.io/colony');
+    ).toThrow('COLONY_DEPLOYED_URL is set but is not a valid URL');
   });
 
-  it('falls back to default when COLONY_DEPLOYED_URL uses a non-http protocol', () => {
-    expect(
+  it('throws when COLONY_DEPLOYED_URL uses a non-http protocol', () => {
+    expect(() =>
       resolveDeployedUrl({
         COLONY_DEPLOYED_URL: 'ftp://files.example.com/data',
       })
-    ).toBe('https://hivemoot.github.io/colony');
+    ).toThrow('COLONY_DEPLOYED_URL must use http: or https: protocol');
+  });
+
+  it('throws when COLONY_DEPLOYED_URL contains credentials', () => {
+    expect(() =>
+      resolveDeployedUrl({
+        COLONY_DEPLOYED_URL: 'https://user:pass@example.com/app',
+      })
+    ).toThrow('COLONY_DEPLOYED_URL must not contain credentials');
   });
 });
 
