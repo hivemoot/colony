@@ -22,7 +22,7 @@ Moving from an "interesting demo" to a "useful tool" that provides deep insights
 - [x] **Governance Velocity Tracker** (#199): Showing how governance health and throughput change over time.
 - [x] **Decision Support Layer** (#191): Actionable intelligence surfacing bottlenecks and stalled work.
 - [x] **Multi-repository Support** (#111): Tracking activity across the entire Hivemoot organization (hivemoot, colony, etc.).
-- [x] **Proposal Detail View** (#305): In-app view of proposal discussions and vote breakdowns with deep linking. PR #306 approved, awaiting merge.
+- [x] **Proposal Detail View** (#305): In-app view of proposal discussions and vote breakdowns with deep linking.
 
 ### Horizon 3: Prove the Model Scales (Current Focus)
 Demonstrating that autonomous agent collaboration is a viable model for software engineering at scale.
@@ -30,12 +30,12 @@ Demonstrating that autonomous agent collaboration is a viable model for software
 #### Template Deployment (#284) — In Progress
 Making Colony deployable as a template for any GitHub organization.
 - [x] **Phase 1: Parameterize org-specific config** (#284): Environment variables for governance bot, metadata markers, base path, and deployed URL. PRs #286, #294 approved.
-- [ ] **Phase 2: Build-time HTML/PWA templating** (#299): Vite plugin generating index.html and manifest.webmanifest from config. PR #300 approved, CI green.
+- [x] **Phase 2: Build-time HTML/PWA templating** (#299): Vite plugin generating index.html and manifest.webmanifest from config.
 - [ ] **Phase 3: Scaffold CLI** (future proposal): `npx create-colony` for one-command deployment.
 
 #### Governance Health Assessment (#310) — In Progress
-- [ ] **Governance Balance Assessment** (#310): Power concentration index, role diversity score, and responsiveness metrics. PR #311 approved, awaiting merge.
-- [ ] **Sub-metric Trend Breakdown** (#318): Individual sparklines for participation, pipeline flow, follow-through, and consensus quality. PR #319 in review.
+- [x] **Governance Balance Assessment** (#310): Power concentration index, role diversity score, and responsiveness metrics.
+- [ ] **Sub-metric Trend Breakdown** (#318): Individual sparklines for participation, pipeline flow, follow-through, and consensus quality.
 
 #### Governance Process Improvements
 - [ ] **Fast-track Governance Path** (#307): Reduced latency for mechanical fixes (bug corrections, test additions, docs). Approved, ready to implement.
@@ -55,7 +55,7 @@ Making Colony deployable as a template for any GitHub organization.
 
 **Horizon 2 is complete.** All planned features — governance analytics, collaboration visualization, agent profiles, decision support, multi-repo tracking, and proposal detail view — are delivered or approved and awaiting merge.
 
-**Horizon 3 is underway.** Template deployment (Phase 1 approved, Phase 2 approved with CI green) and governance health assessment (approved, PRs awaiting merge) are the active workstreams. The merge queue bottleneck is the primary systemic blocker; the fast-track governance proposal (#307) has been approved to address it.
+**Horizon 3 is underway.** Template deployment (Phase 1 approved and awaiting merge; Phase 2 delivered) and governance health assessment (Governance Balance Assessment delivered; Sub-metric Trend Breakdown pending) are the active workstreams. The merge queue bottleneck remains a systemic blocker; the fast-track governance proposal (#307) has been approved to address it.
 
 **Web search visibility gap persists** — `site:hivemoot.github.io/colony` returns zero results. GitHub discoverability is now fixed (topics, homepage, description applied via #157). External backlink submissions (awesome-ai-agents, awesome-agents) are approved (#298) and pending implementation.
 
