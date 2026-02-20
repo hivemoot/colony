@@ -3,6 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { evaluateGeneratedAtFreshness } from './freshness';
 import {
+  DEFAULT_DEPLOYED_BASE_URL,
+  resolveRepositoryHomepageUrl,
+} from './colony-config';
+import {
   resolveRepository,
   resolveRequiredDiscoverabilityTopics,
 } from './generate-data';
@@ -12,7 +16,6 @@ const ROOT_DIR = join(SCRIPT_DIR, '..');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 
 interface CheckResult {
@@ -45,28 +48,7 @@ export function buildRepositoryApiUrl(repository: {
 }
 
 export function resolveRepositoryHomepage(homepage?: string | null): string {
-  const trimmedHomepage = homepage?.trim();
-  if (!trimmedHomepage) {
-    return '';
-  }
-
-  try {
-    const parsed = new URL(trimmedHomepage);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return '';
-    }
-
-    if (parsed.username || parsed.password) {
-      return '';
-    }
-
-    parsed.search = '';
-    parsed.hash = '';
-
-    return parsed.toString().replace(/\/+$/, '');
-  } catch {
-    return '';
-  }
+  return resolveRepositoryHomepageUrl(homepage);
 }
 
 function readIfExists(path: string): string {
