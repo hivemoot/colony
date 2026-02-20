@@ -409,6 +409,23 @@ describe('detectPatterns', () => {
     expect(rubber?.positive).toBe(false);
   });
 
+  it('detects rubber-stamping using terminal proposals only', () => {
+    const proposals = [
+      makeProposal({ phase: 'implemented', commentCount: 0 }),
+      makeProposal({ phase: 'implemented', commentCount: 1 }),
+      makeProposal({ phase: 'implemented', commentCount: 0 }),
+      makeProposal({ phase: 'implemented', commentCount: 1 }),
+      makeProposal({ phase: 'discussion', commentCount: 25 }),
+      makeProposal({ phase: 'voting', commentCount: 20 }),
+      makeProposal({ phase: 'ready-to-implement', commentCount: 18 }),
+    ];
+    const data = makeActivityData({ proposals });
+    const patterns = detectPatterns(data, [], computeTrendSummary([]));
+    const rubber = patterns.find((p) => p.type === 'rubber-stamping');
+    expect(rubber).toBeDefined();
+    expect(rubber?.detail).toContain('0.5 avg comments');
+  });
+
   it('does not detect rubber-stamping with healthy discussion', () => {
     const proposals = [
       makeProposal({ phase: 'implemented', commentCount: 5 }),

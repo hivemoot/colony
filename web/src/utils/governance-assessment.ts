@@ -328,8 +328,7 @@ export function detectPatterns(
       terminal.filter((p) => p.phase === 'implemented').length /
       terminal.length;
     const avgComments =
-      data.proposals.reduce((s, p) => s + p.commentCount, 0) /
-      data.proposals.length;
+      terminal.reduce((s, p) => s + p.commentCount, 0) / terminal.length;
     if (approvalRate > 0.95 && avgComments < 2) {
       patterns.push({
         type: 'rubber-stamping',
