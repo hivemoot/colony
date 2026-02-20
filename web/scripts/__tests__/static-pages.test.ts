@@ -610,4 +610,44 @@ describe('generateStaticPages', () => {
     }
     vi.resetModules();
   });
+
+  it('renders markdown lists as valid <ul><li> elements when preceded by a paragraph', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 70,
+          title: 'List rendering test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Some text.\n\n- item 1\n- item 2\n\nMore text.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '70', 'index.html'),
+      'utf-8'
+    );
+
+    // List items must be inside a <ul>, not loose inside a <p>
+    expect(html).toContain('<ul');
+    expect(html).toContain('<li');
+    expect(html).toContain('item 1');
+    expect(html).toContain('item 2');
+
+    // The list must not be wrapped in a <p> tag
+    const bodySection = html.slice(
+      html.indexOf('proposal-body'),
+      html.indexOf('</div>', html.indexOf('proposal-body'))
+    );
+    expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
+  });
 });
