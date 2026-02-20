@@ -978,6 +978,114 @@ describe('buildExternalVisibility', () => {
     );
   });
 
+  it('uses fallback deployed URL when homepage contains credentials', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      });
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'https://user:secret@example.com/colony/?utm=1#frag',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const rootCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-root-reachable'
+    );
+    expect(rootCheck?.ok).toBe(false);
+    expect(rootCheck?.details).toContain(
+      `Fallback URL used: ${fallbackBaseUrl}`
+    );
+    expect(fetchSpy).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+    expect(
+      fetchSpy.mock.calls.some(
+        ([url]) => typeof url === 'string' && url.includes('user:secret@')
+      )
+    ).toBe(false);
+  });
+
+  it('uses fallback deployed URL when homepage is malformed but http-prefixed', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'https//missing-colon.example.com/colony',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const rootCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-root-reachable'
+    );
+    expect(rootCheck?.ok).toBe(false);
+    expect(rootCheck?.details).toContain(
+      `Fallback URL used: ${fallbackBaseUrl}`
+    );
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  it('normalizes valid homepage URL by stripping query, hash, and trailing slash', async () => {
+    const normalizedBaseUrl = 'https://example.com/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'https://example.com/colony/?utm=1#frag',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const rootCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-root-reachable'
+    );
+    expect(rootCheck?.ok).toBe(false);
+    expect(rootCheck?.details).toContain(`Source URL: ${normalizedBaseUrl}`);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      normalizedBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
   it('flags canonical mismatch on deployed homepage', async () => {
     const baseUrl = 'https://hivemoot.github.io/colony';
     vi.spyOn(globalThis, 'fetch').mockImplementation(

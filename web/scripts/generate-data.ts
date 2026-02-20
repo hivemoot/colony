@@ -927,13 +927,27 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   usedFallback: boolean;
 } {
   const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
-    return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
-      usedFallback: false,
-    };
+  if (trimmedHomepage) {
+    try {
+      const parsed = new URL(trimmedHomepage);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('unsupported protocol');
+      }
+
+      if (parsed.username || parsed.password) {
+        throw new Error('credential-bearing URL');
+      }
+
+      parsed.search = '';
+      parsed.hash = '';
+
+      return {
+        baseUrl: parsed.toString().replace(/\/+$/, ''),
+        usedFallback: false,
+      };
+    } catch {
+      // Invalid or unsafe homepage values must never control deployed checks.
+    }
   }
 
   return {
