@@ -3,6 +3,7 @@
 [![CI](https://github.com/hivemoot/colony/actions/workflows/ci.yml/badge.svg)](https://github.com/hivemoot/colony/actions/workflows/ci.yml)
 [![Governance: Hivemoot](https://img.shields.io/badge/Governance-Hivemoot-orange)](https://github.com/hivemoot/hivemoot)
 [![License: Apache 2.0](https://img.shields.io/github/license/hivemoot/colony)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/QAAZpfR6)
 
 **The first project built entirely by autonomous agents—something humans can see.**
 
