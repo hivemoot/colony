@@ -466,43 +466,52 @@ async function fetchPullRequests(
   return mapPullRequests([...openPRs, ...closedPRs], repoTag);
 }
 
-async function fetchProposals(
-  owner: string,
-  repo: string,
+const VALID_PHASES = [
+  'discussion',
+  'voting',
+  'extended-voting',
+  'ready-to-implement',
+  'implemented',
+  'rejected',
+  'inconclusive',
+] as const;
+
+/**
+ * Pure mapping of raw GitHub issues to Proposals (no network calls).
+ * Accepts both legacy `phase:*` and current `hivemoot:*` phase label prefixes.
+ * Exported for unit testing.
+ */
+export function filterAndMapProposals(
   rawIssues: GitHubIssue[],
   repoTag?: string
-): Promise<Proposal[]> {
+): Proposal[] {
   const proposalIssues = rawIssues.filter(
     (i) =>
-      i.labels.some((l) => l.name.startsWith('phase:')) ||
+      i.labels.some(
+        (l) => l.name.startsWith('phase:') || l.name.startsWith('hivemoot:')
+      ) ||
       i.labels.some((l) => l.name === 'inconclusive') ||
       i.labels.some((l) => l.name === 'proposal')
   );
 
   const proposals: Proposal[] = [];
-  const validPhases = [
-    'discussion',
-    'voting',
-    'extended-voting',
-    'ready-to-implement',
-    'implemented',
-    'rejected',
-    'inconclusive',
-  ] as const;
 
   for (const i of proposalIssues) {
-    // Check for phase: prefixed label first, then standalone inconclusive label,
-    // and finally fallback to 'discussion' if it only has the 'proposal' label.
-    const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
+    // Accept both legacy `phase:*` and current `hivemoot:*` prefixed labels.
+    // For standalone `inconclusive` or `proposal` labels, fall back to those
+    // phase names directly.
+    const phaseLabel = i.labels.find(
+      (l) => l.name.startsWith('phase:') || l.name.startsWith('hivemoot:')
+    )?.name;
     const phaseName =
-      phaseLabel?.replace('phase:', '') ??
+      phaseLabel?.replace(/^(?:phase:|hivemoot:)/, '') ??
       (i.labels.some((l) => l.name === 'inconclusive')
         ? 'inconclusive'
         : i.labels.some((l) => l.name === 'proposal')
           ? 'discussion'
           : undefined);
 
-    if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
+    if (!phaseName || !(VALID_PHASES as readonly string[]).includes(phaseName))
       continue;
 
     let phase = phaseName as Proposal['phase'];
@@ -532,6 +541,17 @@ async function fetchProposals(
       ...(repoTag ? { repo: repoTag } : {}),
     });
   }
+
+  return proposals;
+}
+
+async function fetchProposals(
+  owner: string,
+  repo: string,
+  rawIssues: GitHubIssue[],
+  repoTag?: string
+): Promise<Proposal[]> {
+  const proposals = filterAndMapProposals(rawIssues, repoTag);
 
   // Fetch votes for all proposals that have been through a voting round.
   // The Queen's voting comment persists after phase transitions, so we can
@@ -587,10 +607,12 @@ export function extractPhaseTransitions(
   return timelineEvents
     .filter(
       (event) =>
-        event.event === 'labeled' && event.label?.name?.startsWith('phase:')
+        event.event === 'labeled' &&
+        (event.label?.name?.startsWith('phase:') ||
+          event.label?.name?.startsWith('hivemoot:'))
     )
     .map((event) => ({
-      phase: event.label?.name.replace('phase:', '') ?? '',
+      phase: event.label?.name.replace(/^(?:phase:|hivemoot:)/, '') ?? '',
       enteredAt: event.created_at,
     }))
     .sort(
@@ -707,9 +729,15 @@ export function mapEvents(
       event.payload.action === 'labeled'
     ) {
       const { issue, label } = event.payload;
-      if (!issue || !label || !label.name.startsWith('phase:')) continue;
+      if (
+        !issue ||
+        !label ||
+        (!label.name.startsWith('phase:') &&
+          !label.name.startsWith('hivemoot:'))
+      )
+        continue;
 
-      const phase = label.name.replace('phase:', '');
+      const phase = label.name.replace(/^(?:phase:|hivemoot:)/, '');
       comments.push({
         id: parseInt(event.id),
         issueOrPrNumber: issue.number,
