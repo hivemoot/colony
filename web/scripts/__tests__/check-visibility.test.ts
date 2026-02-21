@@ -50,7 +50,14 @@ describe('resolveRepositoryHomepage', () => {
   });
 
   it('rejects invalid or unsupported homepage URLs', () => {
+    expect(resolveRepositoryHomepage('http://colony.example.org')).toBe('');
     expect(resolveRepositoryHomepage('ftp://colony.example.org')).toBe('');
+    expect(resolveRepositoryHomepage('https://localhost:4173')).toBe('');
+    expect(resolveRepositoryHomepage('https://dev.localhost/dashboard')).toBe(
+      ''
+    );
+    expect(resolveRepositoryHomepage('https://127.0.0.1:8443')).toBe('');
+    expect(resolveRepositoryHomepage('https://[::1]/')).toBe('');
     expect(
       resolveRepositoryHomepage('https://user:pass@colony.example.org')
     ).toBe('');
