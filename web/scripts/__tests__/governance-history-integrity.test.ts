@@ -8,7 +8,10 @@ import {
   isGovernanceHistoryIntegrityValid,
 } from '../governance-history-integrity';
 
-function makeSnapshot(timestamp: string, healthScore: number): GovernanceSnapshot {
+function makeSnapshot(
+  timestamp: string,
+  healthScore: number
+): GovernanceSnapshot {
   return {
     timestamp,
     healthScore,
@@ -126,9 +129,10 @@ describe('isGovernanceHistoryIntegrityValid', () => {
   it('returns false when algorithm is not sha256', () => {
     const artifact = makeArtifact([makeSnapshot('2026-02-10T00:00:00Z', 60)]);
     // Bypass the type to simulate an unsupported algorithm from an older schema.
+    const currentDigest = artifact.integrity?.digest ?? '';
     artifact.integrity = {
       algorithm: 'sha256' as const,
-      digest: artifact.integrity!.digest,
+      digest: currentDigest,
     };
     // Manually override algorithm on the raw object.
     (artifact.integrity as { algorithm: string }).algorithm = 'md5';
@@ -149,7 +153,9 @@ describe('isGovernanceHistoryIntegrityValid', () => {
   it('returns false when snapshot content is modified after sealing', () => {
     const artifact = makeArtifact([makeSnapshot('2026-02-10T00:00:00Z', 60)]);
     // Tamper with content after integrity was computed.
-    artifact.snapshots[0]!.healthScore = 99;
+    const snap = artifact.snapshots[0];
+    if (!snap) throw new Error('Expected snapshot at index 0');
+    snap.healthScore = 99;
 
     expect(isGovernanceHistoryIntegrityValid(artifact)).toBe(false);
   });
