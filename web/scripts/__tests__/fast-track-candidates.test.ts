@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   countDistinctApprovals,
   evaluateEligibility,
+  FAST_TRACK_HIGH_APPROVAL_WAIVER_THRESHOLD,
   hasAllowedPrefix,
+  hasChangesRequested,
   isMergeReady,
   normalizeMergeStateStatus,
 } from '../fast-track-candidates';
@@ -47,6 +49,36 @@ describe('merge state helpers', () => {
   });
 });
 
+describe('hasChangesRequested', () => {
+  it('returns true when any review is CHANGES_REQUESTED', () => {
+    expect(
+      hasChangesRequested([
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'CHANGES_REQUESTED', author: { login: 'hivemoot-nurse' } },
+      ])
+    ).toBe(true);
+  });
+
+  it('returns false when no review is CHANGES_REQUESTED', () => {
+    expect(
+      hasChangesRequested([
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'COMMENTED', author: { login: 'hivemoot-builder' } },
+      ])
+    ).toBe(false);
+  });
+
+  it('returns false for undefined reviews', () => {
+    expect(hasChangesRequested(undefined)).toBe(false);
+  });
+});
+
+describe('FAST_TRACK_HIGH_APPROVAL_WAIVER_THRESHOLD', () => {
+  it('is 6', () => {
+    expect(FAST_TRACK_HIGH_APPROVAL_WAIVER_THRESHOLD).toBe(6);
+  });
+});
+
 describe('evaluateEligibility', () => {
   it('marks PR eligible when all criteria pass', () => {
     const result = evaluateEligibility({
@@ -66,6 +98,7 @@ describe('evaluateEligibility', () => {
     expect(result.approvals).toBe(2);
     expect(result.ciState).toBe('SUCCESS');
     expect(result.linkedOpenIssues).toEqual([307]);
+    expect(result.waiverApplied).toBe(false);
   });
 
   it('explains all failed criteria', () => {
@@ -111,6 +144,101 @@ describe('evaluateEligibility', () => {
     expect(result.reasons).toContain(
       'cannot have a 👎 veto reaction on the PR'
     );
+  });
+
+  it('grants high-approval waiver when ≥6 approvals and linked issue is closed', () => {
+    const sixApprovers = [
+      { state: 'APPROVED', author: { login: 'agent-a' } },
+      { state: 'APPROVED', author: { login: 'agent-b' } },
+      { state: 'APPROVED', author: { login: 'agent-c' } },
+      { state: 'APPROVED', author: { login: 'agent-d' } },
+      { state: 'APPROVED', author: { login: 'agent-e' } },
+      { state: 'APPROVED', author: { login: 'agent-f' } },
+    ];
+    const result = evaluateEligibility({
+      number: 200,
+      title: 'fix: apply high-approval waiver',
+      url: 'https://example.test/pr/200',
+      latestReviews: sixApprovers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 445, state: 'CLOSED' }],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.waiverApplied).toBe(true);
+    expect(result.approvals).toBe(6);
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('does not grant waiver when a CHANGES_REQUESTED review is present', () => {
+    const reviews = [
+      { state: 'APPROVED', author: { login: 'agent-a' } },
+      { state: 'APPROVED', author: { login: 'agent-b' } },
+      { state: 'APPROVED', author: { login: 'agent-c' } },
+      { state: 'APPROVED', author: { login: 'agent-d' } },
+      { state: 'APPROVED', author: { login: 'agent-e' } },
+      { state: 'APPROVED', author: { login: 'agent-f' } },
+      { state: 'CHANGES_REQUESTED', author: { login: 'agent-g' } },
+    ];
+    const result = evaluateEligibility({
+      number: 201,
+      title: 'fix: blocked by changes-requested',
+      url: 'https://example.test/pr/201',
+      latestReviews: reviews,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 445, state: 'CLOSED' }],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.waiverApplied).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
+    );
+  });
+
+  it('does not grant waiver when approval count is below threshold', () => {
+    const result = evaluateEligibility({
+      number: 202,
+      title: 'fix: insufficient approvals for waiver',
+      url: 'https://example.test/pr/202',
+      latestReviews: [
+        { state: 'APPROVED', author: { login: 'agent-a' } },
+        { state: 'APPROVED', author: { login: 'agent-b' } },
+        { state: 'APPROVED', author: { login: 'agent-c' } },
+        { state: 'APPROVED', author: { login: 'agent-d' } },
+        { state: 'APPROVED', author: { login: 'agent-e' } },
+      ],
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 445, state: 'CLOSED' }],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.waiverApplied).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
+    );
+  });
+
+  it('sets waiverApplied to false when PR has an open linked issue (no waiver needed)', () => {
+    const sixApprovers = [
+      { state: 'APPROVED', author: { login: 'agent-a' } },
+      { state: 'APPROVED', author: { login: 'agent-b' } },
+      { state: 'APPROVED', author: { login: 'agent-c' } },
+      { state: 'APPROVED', author: { login: 'agent-d' } },
+      { state: 'APPROVED', author: { login: 'agent-e' } },
+      { state: 'APPROVED', author: { login: 'agent-f' } },
+    ];
+    const result = evaluateEligibility({
+      number: 203,
+      title: 'fix: waiver not needed, open issue present',
+      url: 'https://example.test/pr/203',
+      latestReviews: sixApprovers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 445, state: 'OPEN' }],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.waiverApplied).toBe(false);
   });
 
   it('does not treat same-number issues in other repos as open', () => {

@@ -95,14 +95,23 @@ cd web
 npm run fast-track-candidates
 ```
 
-The script evaluates open PRs against the approved #307 criteria:
+The script evaluates open PRs against the approved criteria (#307, amended by #445):
 
 - title prefix is one of `fix:`, `test:`, `docs:`, `chore:`, `a11y:`, `polish:`
 - at least 2 distinct approvals
 - CI status is `SUCCESS`
 - references at least one **open** linked issue (the issue must remain open at merge time)
+- no 👎 veto reaction on the PR
 
-**Important:** If you close the linked issue before the PR merges, the PR becomes ineligible for fast-track. Keep the issue open until the PR is merged.
+**High-approval waiver (#445):** A PR with **6 or more distinct approvals** and no
+active `CHANGES_REQUESTED` reviews is eligible for fast-track even if its linked issue
+was closed before the PR merged. This covers cases where a linked issue was closed
+prematurely — the governance process completed, and the approval count is strong evidence
+of peer consensus. The script marks waiver-eligible PRs with `[high-approval waiver]` in
+its output.
+
+**Important:** For PRs with fewer than 6 approvals, keep the linked issue open until the
+PR merges to maintain fast-track eligibility.
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 

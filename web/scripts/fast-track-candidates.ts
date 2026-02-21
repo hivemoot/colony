@@ -12,6 +12,14 @@ export const FAST_TRACK_PREFIXES = [
   'polish:',
 ] as const;
 
+/**
+ * Minimum distinct approvals required to qualify for the high-approval waiver.
+ * A PR meeting this threshold with no active CHANGES_REQUESTED reviews is
+ * considered fast-track eligible even when its linked issue was closed before
+ * the PR merged. Approved in #445.
+ */
+export const FAST_TRACK_HIGH_APPROVAL_WAIVER_THRESHOLD = 6;
+
 interface ReviewNode {
   state?: string;
   author?: {
@@ -54,6 +62,8 @@ export interface EligibilityResult {
   approvals: number;
   ciState: string;
   linkedOpenIssues: number[];
+  /** True when the high-approval waiver (#445) was the reason a missing linked issue was allowed. */
+  waiverApplied: boolean;
 }
 
 interface CandidateRecord {
@@ -66,6 +76,7 @@ interface CandidateRecord {
   approvals: number;
   ciState: string;
   linkedOpenIssues: number[];
+  waiverApplied: boolean;
 }
 
 interface Report {
@@ -125,6 +136,9 @@ function printHelp(): void {
   console.log(
     'Usage: npm run fast-track-candidates -- [--repo=owner/name] [--limit=200] [--json]'
   );
+  console.log(
+    `High-approval waiver: PRs with ≥${FAST_TRACK_HIGH_APPROVAL_WAIVER_THRESHOLD} approvals and no CHANGES_REQUESTED may skip the linked-issue requirement.`
+  );
 }
 
 export function hasAllowedPrefix(title: string): boolean {
@@ -149,6 +163,14 @@ export function countDistinctApprovals(
   }
 
   return approvedBy.size;
+}
+
+export function hasChangesRequested(
+  latestReviews: ReviewNode[] | undefined
+): boolean {
+  return (latestReviews ?? []).some(
+    (review) => review.state?.trim().toUpperCase() === 'CHANGES_REQUESTED'
+  );
 }
 
 function getCiState(pr: PullRequestNode): string {
@@ -210,6 +232,15 @@ export function evaluateEligibility(
   const ciState = getCiState(pr);
   const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates, repo);
 
+  // High-approval waiver (#445): a PR with ≥6 distinct approvals and no
+  // CHANGES_REQUESTED reviews may skip the open linked-issue requirement.
+  // The waiver covers cases where a linked issue was closed prematurely before
+  // the PR merged. It does NOT relax any other criterion.
+  const waiverQualified =
+    approvals >= FAST_TRACK_HIGH_APPROVAL_WAIVER_THRESHOLD &&
+    !hasChangesRequested(pr.latestReviews);
+  const waiverApplied = waiverQualified && linkedOpenIssues.length === 0;
+
   if (!hasAllowedPrefix(pr.title)) {
     reasons.push(
       `title prefix must be one of: ${FAST_TRACK_PREFIXES.join(', ')}`
@@ -224,7 +255,7 @@ export function evaluateEligibility(
     reasons.push(`CI checks must be SUCCESS (found ${ciState})`);
   }
 
-  if (linkedOpenIssues.length === 0) {
+  if (linkedOpenIssues.length === 0 && !waiverQualified) {
     reasons.push('must reference at least one OPEN linked issue');
   }
 
@@ -238,6 +269,7 @@ export function evaluateEligibility(
     approvals,
     ciState,
     linkedOpenIssues,
+    waiverApplied,
   };
 }
 
@@ -385,6 +417,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       approvals: evaluation.approvals,
       ciState: evaluation.ciState,
       linkedOpenIssues: evaluation.linkedOpenIssues,
+      waiverApplied: evaluation.waiverApplied,
     };
   });
 
@@ -421,9 +454,11 @@ function printHumanReport(report: Report): void {
   } else {
     console.log('Eligible PRs:');
     for (const pr of eligible) {
-      const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
+      const linked =
+        pr.linkedOpenIssues.map((num) => `#${num}`).join(', ') || 'none';
+      const waiver = pr.waiverApplied ? ' [high-approval waiver]' : '';
       console.log(
-        `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked}) ${pr.url}`
+        `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked})${waiver} ${pr.url}`
       );
     }
   }
