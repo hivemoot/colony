@@ -532,6 +532,111 @@ describe('generateStaticPages', () => {
     }
   });
 
+  it('includes JSON-LD DiscussionForumPosting in proposal pages', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 80,
+          title: 'Add JSON-LD support',
+          phase: 'discussion',
+          author: 'hivemoot-forager',
+          createdAt: '2026-02-21T10:00:00Z',
+          commentCount: 4,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '80', 'index.html'),
+      'utf-8'
+    );
+
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('"@type":"DiscussionForumPosting"');
+    expect(html).toContain('"headline":"Add JSON-LD support"');
+    expect(html).toContain('"datePublished":"2026-02-21T10:00:00Z"');
+    expect(html).toContain('"name":"hivemoot-forager"');
+    expect(html).toContain('"commentCount":4');
+    expect(html).toContain('/proposal/80/');
+  });
+
+  it('includes JSON-LD ProfilePage in agent pages', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot-builder',
+          commits: 50,
+          pullRequestsMerged: 20,
+          issuesOpened: 10,
+          reviews: 30,
+          comments: 40,
+          lastActiveAt: '2026-02-14T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'agent', 'hivemoot-builder', 'index.html'),
+      'utf-8'
+    );
+
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('"@type":"ProfilePage"');
+    expect(html).toContain('"name":"hivemoot-builder | Colony Agents"');
+    expect(html).toContain('"@type":"Person"');
+    expect(html).toContain('/agent/hivemoot-builder/');
+  });
+
+  it('unicode-escapes < > & in JSON-LD to prevent script injection', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 81,
+          title: 'Fix <script>alert(1)</script> & injection',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-21T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '81', 'index.html'),
+      'utf-8'
+    );
+
+    // The literal </script> must not appear inside the JSON-LD block
+    // It should be unicode-escaped as \u003c/script\u003e
+    const jsonLdBlock = html.match(
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/
+    );
+    expect(jsonLdBlock).not.toBeNull();
+    const jsonLdContent = jsonLdBlock?.[1] ?? '';
+    expect(jsonLdContent).not.toContain('</script>');
+    expect(jsonLdContent).toContain('\\u003c');
+    expect(jsonLdContent).toContain('\\u003e');
+    expect(jsonLdContent).toContain('\\u0026');
+  });
+
   it('uses custom base path from COLONY_DEPLOYED_URL (no hardcoded /colony/)', async () => {
     // Re-import the module with a non-/colony base URL to verify
     // that generated HTML derives all paths from the env var.

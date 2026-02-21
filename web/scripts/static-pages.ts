@@ -61,6 +61,8 @@ interface PageMeta {
   title: string;
   description: string;
   canonicalPath: string;
+  /** Optional Schema.org JSON-LD object to embed in <head>. */
+  jsonLd?: object;
 }
 
 // -- Phase display helpers --
@@ -101,6 +103,19 @@ function formatDate(iso: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+/**
+ * Serialize a JSON-LD object for safe inline embedding in HTML.
+ * Escapes `<`, `>`, and `&` as unicode sequences to prevent `</script>`
+ * injection — the pattern recommended by Google's Search Central docs.
+ */
+function jsonLdTag(data: object): string {
+  const json = JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+  return `<script type="application/ld+json">${json}</script>`;
 }
 
 function sanitizeUrl(url: string): string {
@@ -168,6 +183,7 @@ function renderMarkdown(md: string): string {
 
 function htmlShell(meta: PageMeta, content: string): string {
   const fullUrl = `${BASE_URL}${meta.canonicalPath}`;
+  const structuredData = meta.jsonLd ? `\n  ${jsonLdTag(meta.jsonLd)}` : '';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -187,7 +203,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
   <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
-  <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
+  <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />${structuredData}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background: #fffbeb; min-height: 100vh; }
@@ -240,10 +256,29 @@ function proposalPage(proposal: Proposal): string {
   const phaseColor = PHASE_COLORS[proposal.phase] ?? '#6b7280';
   const repo = proposal.repo ?? 'hivemoot/colony';
 
+  const canonicalPath = `/proposal/${proposal.number}/`;
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
     description: `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments. ${proposal.votesSummary ? `Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`,
-    canonicalPath: `/proposal/${proposal.number}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'DiscussionForumPosting',
+      headline: proposal.title,
+      url: `${BASE_URL}${canonicalPath}`,
+      datePublished: proposal.createdAt,
+      author: {
+        '@type': 'Person',
+        name: proposal.author,
+        url: `https://github.com/${proposal.author}`,
+      },
+      commentCount: proposal.commentCount,
+      isPartOf: {
+        '@type': 'WebSite',
+        name: 'Hivemoot Colony',
+        url: BASE_URL,
+      },
+    },
   };
 
   let votesHtml = '';
@@ -347,10 +382,22 @@ function proposalPage(proposal: Proposal): string {
 }
 
 function agentPage(agent: AgentStats): string {
+  const canonicalPath = `/agent/${agent.login}/`;
   const meta: PageMeta = {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
-    canonicalPath: `/agent/${agent.login}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: `${agent.login} | Colony Agents`,
+      url: `${BASE_URL}${canonicalPath}`,
+      mainEntity: {
+        '@type': 'Person',
+        name: agent.login,
+        url: `https://github.com/${agent.login}`,
+      },
+    },
   };
 
   const content = `
