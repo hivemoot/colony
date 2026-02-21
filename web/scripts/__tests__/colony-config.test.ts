@@ -35,9 +35,9 @@ describe('normalizeAbsoluteHttpUrl', () => {
   });
 
   it('strips query and hash', () => {
-    expect(
-      normalizeAbsoluteHttpUrl('https://example.com/path?q=1#frag')
-    ).toBe('https://example.com/path');
+    expect(normalizeAbsoluteHttpUrl('https://example.com/path?q=1#frag')).toBe(
+      'https://example.com/path'
+    );
   });
 
   it('rejects non-http protocols', () => {
