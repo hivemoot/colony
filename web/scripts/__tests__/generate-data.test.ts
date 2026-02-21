@@ -19,6 +19,7 @@ import {
   extractGovernanceIncidents,
   deduplicateAgents,
   extractPhaseTransitions,
+  filterAndMapProposals,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -2085,5 +2086,169 @@ describe('updateSitemapLastmod', () => {
     expect(matches).toHaveLength(2);
     expect(result).not.toContain('2026-02-10');
     expect(result).not.toContain('2026-02-09');
+  });
+});
+
+const baseIssue: GitHubIssue = {
+  number: 1,
+  title: 'Test proposal',
+  body: 'Test body',
+  state: 'open',
+  state_reason: null,
+  labels: [],
+  created_at: '2026-02-01T00:00:00Z',
+  closed_at: null,
+  user: { login: 'hivemoot-agent' },
+  comments: 0,
+};
+
+describe('filterAndMapProposals', () => {
+  it('includes issues with legacy phase: labels', () => {
+    const issues: GitHubIssue[] = [
+      { ...baseIssue, number: 1, labels: [{ name: 'phase:discussion' }] },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].phase).toBe('discussion');
+  });
+
+  it('includes issues with hivemoot:ready-to-implement label', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 100,
+        title: 'New-era proposal',
+        labels: [{ name: 'hivemoot:ready-to-implement' }],
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].number).toBe(100);
+    expect(result[0].phase).toBe('ready-to-implement');
+  });
+
+  it('includes issues with hivemoot:implemented label', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 200,
+        labels: [{ name: 'hivemoot:implemented' }],
+        state: 'closed',
+        state_reason: 'completed',
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].phase).toBe('implemented');
+  });
+
+  it('includes issues with hivemoot:inconclusive label', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 201,
+        labels: [{ name: 'hivemoot:inconclusive' }],
+        state: 'closed',
+        state_reason: null,
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].phase).toBe('inconclusive');
+  });
+
+  it('drops non-phase hivemoot:* labels like hivemoot:merge-ready', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 300,
+        labels: [{ name: 'hivemoot:merge-ready' }],
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    // merge-ready is not in validPhases, so it gets filtered out
+    expect(result).toHaveLength(0);
+  });
+
+  it('handles a mix of legacy phase: and hivemoot: issues', () => {
+    const issues: GitHubIssue[] = [
+      { ...baseIssue, number: 10, labels: [{ name: 'phase:implemented' }] },
+      {
+        ...baseIssue,
+        number: 400,
+        labels: [{ name: 'hivemoot:ready-to-implement' }],
+      },
+      { ...baseIssue, number: 50, labels: [{ name: 'unrelated' }] },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(2);
+    const numbers = result.map((p) => p.number).sort((a, b) => a - b);
+    expect(numbers).toEqual([10, 400]);
+  });
+
+  it('attaches repoTag when provided', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 500,
+        labels: [{ name: 'hivemoot:ready-to-implement' }],
+      },
+    ];
+    const result = filterAndMapProposals(issues, 'hivemoot/colony');
+    expect(result[0].repo).toBe('hivemoot/colony');
+  });
+});
+
+describe('extractPhaseTransitions with hivemoot:* labels', () => {
+  it('extracts hivemoot:* prefixed phase label events', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:discussion' },
+        created_at: '2026-02-10T10:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:voting' },
+        created_at: '2026-02-11T10:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:ready-to-implement' },
+        created_at: '2026-02-12T10:00:00Z',
+      },
+    ];
+    const result = extractPhaseTransitions(timeline);
+    expect(result).toEqual([
+      { phase: 'discussion', enteredAt: '2026-02-10T10:00:00Z' },
+      { phase: 'voting', enteredAt: '2026-02-11T10:00:00Z' },
+      { phase: 'ready-to-implement', enteredAt: '2026-02-12T10:00:00Z' },
+    ]);
+  });
+
+  it('handles a mix of phase: and hivemoot: prefixed events', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'phase:discussion' },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:voting' },
+        created_at: '2026-01-02T00:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:implemented' },
+        created_at: '2026-01-03T00:00:00Z',
+      },
+    ];
+    const result = extractPhaseTransitions(timeline);
+    expect(result).toEqual([
+      { phase: 'discussion', enteredAt: '2026-01-01T00:00:00Z' },
+      { phase: 'voting', enteredAt: '2026-01-02T00:00:00Z' },
+      { phase: 'implemented', enteredAt: '2026-01-03T00:00:00Z' },
+    ]);
   });
 });
