@@ -87,6 +87,11 @@ describe('generateStaticPages', () => {
     expect(html).toContain('Implemented');
     expect(html).toContain('3'); // votes for
     expect(html).toContain('100%'); // support pct
+    // vote bar must have progressbar role with ARIA value attributes for screen readers
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuenow="100"');
+    expect(html).toContain('aria-valuemin="0"');
+    expect(html).toContain('aria-valuemax="100"');
   });
 
   it('generates agent pages', () => {
