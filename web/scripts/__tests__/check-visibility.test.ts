@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildRepositoryApiUrl,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
+  resolveRepositoryHomepage,
+  resolveVisibilityRepository,
   resolveVisibilityUserAgent,
 } from '../check-visibility';
 
@@ -24,6 +27,74 @@ describe('resolveVisibilityUserAgent', () => {
         VISIBILITY_USER_AGENT: '   ',
       })
     ).toBe('colony-visibility-check');
+  });
+});
+
+describe('resolveRepositoryHomepage', () => {
+  it('accepts custom-domain homepage URLs', () => {
+    expect(
+      resolveRepositoryHomepage('https://colony.example.org/dashboard')
+    ).toBe('https://colony.example.org/dashboard');
+  });
+
+  it('normalizes trailing slashes', () => {
+    expect(resolveRepositoryHomepage('https://colony.example.org/')).toBe(
+      'https://colony.example.org'
+    );
+  });
+
+  it('drops query and hash fragments', () => {
+    expect(
+      resolveRepositoryHomepage('https://colony.example.org/path/?utm=foo#bar')
+    ).toBe('https://colony.example.org/path');
+  });
+
+  it('rejects invalid or unsupported homepage URLs', () => {
+    expect(resolveRepositoryHomepage('ftp://colony.example.org')).toBe('');
+    expect(
+      resolveRepositoryHomepage('https://user:pass@colony.example.org')
+    ).toBe('');
+    expect(resolveRepositoryHomepage('not-a-url')).toBe('');
+    expect(resolveRepositoryHomepage('   ')).toBe('');
+  });
+});
+
+describe('resolveVisibilityRepository', () => {
+  it('returns the default repository when no env vars are set', () => {
+    expect(resolveVisibilityRepository({})).toEqual({
+      owner: 'hivemoot',
+      repo: 'colony',
+    });
+  });
+
+  it('uses COLONY_REPOSITORY when configured', () => {
+    expect(
+      resolveVisibilityRepository({
+        COLONY_REPOSITORY: 'example-org/example-colony',
+      })
+    ).toEqual({
+      owner: 'example-org',
+      repo: 'example-colony',
+    });
+  });
+
+  it('rejects malformed repository values', () => {
+    expect(() =>
+      resolveVisibilityRepository({
+        COLONY_REPOSITORY: 'example-org/example-colony/extra',
+      })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+});
+
+describe('buildRepositoryApiUrl', () => {
+  it('builds the GitHub API URL from owner/repo', () => {
+    expect(
+      buildRepositoryApiUrl({
+        owner: 'example-org',
+        repo: 'example-colony',
+      })
+    ).toBe('https://api.github.com/repos/example-org/example-colony');
   });
 });
 
