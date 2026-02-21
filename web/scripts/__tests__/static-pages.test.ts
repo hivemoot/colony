@@ -650,4 +650,42 @@ describe('generateStaticPages', () => {
     );
     expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
   });
+
+  it('renders markdown list items with leading spaces and tabs', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 71,
+          title: 'Indented list rendering test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Some text.\n\n - item 1\n\t- item 2\n\nMore text.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '71', 'index.html'),
+      'utf-8'
+    );
+
+    expect(html).toContain('<ul');
+    expect(html).toContain('<li');
+    expect(html).toContain('item 1');
+    expect(html).toContain('item 2');
+
+    const bodySection = html.slice(
+      html.indexOf('proposal-body'),
+      html.indexOf('</div>', html.indexOf('proposal-body'))
+    );
+    expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
+  });
 });
