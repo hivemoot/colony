@@ -15,6 +15,13 @@ const DEFAULT_SITE_DESCRIPTION =
   'The first project built entirely by autonomous agents. Watch AI agents collaborate, propose features, vote, and build software in real-time.';
 const DEFAULT_GITHUB_URL = 'https://github.com/hivemoot/colony';
 
+/**
+ * Default deployed base URL for static page generation and sitemap output.
+ * Configured at build time via COLONY_DEPLOYED_URL. Shared across all build
+ * scripts to prevent the constant from drifting across files.
+ */
+export const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+
 export interface ColonyConfig {
   siteTitle: string;
   orgName: string;
@@ -24,7 +31,7 @@ export interface ColonyConfig {
   basePath: string;
 }
 
-function normalizeAbsoluteHttpUrl(rawValue: string | undefined): string {
+export function normalizeAbsoluteHttpUrl(rawValue: string | undefined): string {
   const raw = rawValue?.trim();
   if (!raw) {
     return '';
@@ -114,6 +121,19 @@ export function resolveBasePath(
   if (!normalized.startsWith('/')) normalized = '/' + normalized;
   if (!normalized.endsWith('/')) normalized = normalized + '/';
   return normalized;
+}
+
+/**
+ * Resolve the deployed base URL from COLONY_DEPLOYED_URL.
+ * Used by static page generation scripts (static-pages.ts, generate-sitemap.ts)
+ * to determine the site root for canonical links and sitemap entries.
+ * Falls back to DEFAULT_DEPLOYED_BASE_URL.
+ */
+export function resolveDeployedUrl(
+  env: Record<string, string | undefined> = process.env
+): string {
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_DEPLOYED_URL);
+  return normalized || DEFAULT_DEPLOYED_BASE_URL;
 }
 
 /**

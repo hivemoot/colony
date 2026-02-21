@@ -11,35 +11,9 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
+import { resolveDeployedUrl } from './colony-config';
 
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-
-function resolveDeployedBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const configuredUrl = env.COLONY_DEPLOYED_URL?.trim();
-  if (!configuredUrl) {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-
-  try {
-    const parsed = new URL(configuredUrl);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    if (parsed.username || parsed.password) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    parsed.search = '';
-    parsed.hash = '';
-
-    return parsed.toString().replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-}
-
-const BASE_URL = resolveDeployedBaseUrl();
+const BASE_URL = resolveDeployedUrl();
 
 /** Derive the path prefix (e.g. "/colony") from BASE_URL for internal links. */
 const BASE_PATH = ((): string => {
