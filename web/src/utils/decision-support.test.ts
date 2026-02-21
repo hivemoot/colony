@@ -480,6 +480,90 @@ describe('detectBottlenecks', () => {
     expect(stale?.items).toHaveLength(1);
     expect(stale?.items[0].number).toBe(200);
   });
+
+  it('does not cross-link same issue number across repositories', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 42,
+          title: 'Colony proposal',
+          phase: 'ready-to-implement',
+          repo: 'hivemoot/colony',
+        }),
+        makeProposal({
+          number: 42,
+          title: 'Companion proposal',
+          phase: 'ready-to-implement',
+          repo: 'hivemoot/companion',
+        }),
+      ],
+      pullRequests: [
+        makePR({
+          number: 420,
+          title: 'feat: implement colony proposal',
+          body: 'Fixes #42',
+          state: 'open',
+          repo: 'hivemoot/colony',
+        }),
+      ],
+    });
+
+    const bottlenecks = detectBottlenecks(data);
+    const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
+
+    expect(unclaimed?.items).toHaveLength(1);
+    expect(unclaimed?.items[0].title).toBe('Companion proposal');
+  });
+
+  it('supports explicit cross-repo closing references', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 77,
+          title: 'Companion proposal',
+          phase: 'ready-to-implement',
+          repo: 'hivemoot/companion',
+        }),
+      ],
+      pullRequests: [
+        makePR({
+          number: 770,
+          title: 'feat: implement companion work',
+          body: 'Fixes hivemoot/companion#77',
+          state: 'open',
+          repo: 'hivemoot/colony',
+        }),
+      ],
+    });
+
+    const bottlenecks = detectBottlenecks(data);
+    const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
+    expect(unclaimed).toBeUndefined();
+  });
+
+  it('does not treat keyword substrings as closing references', () => {
+    const data = makeActivityData({
+      proposals: [
+        makeProposal({
+          number: 42,
+          title: 'Guard proposal',
+          phase: 'ready-to-implement',
+        }),
+      ],
+      pullRequests: [
+        makePR({
+          number: 420,
+          title: 'chore: update prefixes #42 handling',
+          state: 'open',
+        }),
+      ],
+    });
+
+    const bottlenecks = detectBottlenecks(data);
+    const unclaimed = bottlenecks.find((b) => b.type === 'unclaimed-work');
+    expect(unclaimed?.items).toHaveLength(1);
+    expect(unclaimed?.items[0].number).toBe(42);
+  });
 });
 
 // ──────────────────────────────────────────────
