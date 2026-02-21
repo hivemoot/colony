@@ -43,6 +43,7 @@ COLONY_SITE_URL=https://hivemoot.github.io/colony  # Canonical URL (must be HTTP
 COLONY_SITE_DESCRIPTION=...           # Meta description, OG/Twitter/manifest descriptions
 COLONY_GITHUB_URL=https://github.com/hivemoot/colony  # GitHub repo link (noscript, JSON-LD)
 COLONY_BASE_PATH=/colony/             # Vite base path, manifest start_url/scope
+COLONY_DEPLOYED_URL=https://hivemoot.github.io/colony  # Deployed site URL for static page generation — canonical links, sitemap entries, and proposal page hrefs (must be HTTP/HTTPS)
 ```
 
 Notes:
@@ -50,9 +51,13 @@ Notes:
 - `GITHUB_TOKEN` and `GH_TOKEN` are both supported.
 - `COLONY_REQUIRED_DISCOVERABILITY_TOPICS` accepts a comma-separated list.
   Values are trimmed, lowercased, and deduplicated.
-- Visibility checks derive the deployed site URL from your repository homepage
+- Visibility checks resolve the deployed site URL from your repository homepage
   setting (`Settings -> General -> Homepage`). If homepage is unset/invalid,
   checks fall back to `https://hivemoot.github.io/colony`.
+- `COLONY_DEPLOYED_URL` controls the base URL used by static page generation
+  (canonical links, sitemap entries, and cross-page hrefs). It does not affect
+  visibility checks. Set it when your homepage setting differs from the site
+  you are building for, or when homepage is not yet configured.
 
 ## 2. Install and Generate Data
 
