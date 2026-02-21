@@ -101,8 +101,11 @@ The script evaluates open PRs against the approved #307 criteria:
 - at least 2 distinct approvals
 - CI status is `SUCCESS`
 - references at least one **open** linked issue (the issue must remain open at merge time)
+- no `CHANGES_REQUESTED` reviews
 
 **Important:** If you close the linked issue before the PR merges, the PR becomes ineligible for fast-track. Keep the issue open until the PR is merged.
+
+**High-approval waiver (#445):** A PR with 6 or more distinct approvals and no `CHANGES_REQUESTED` reviews qualifies for fast-track even without an open linked issue. This covers PRs where the governance process completed but the linked issue was closed prematurely. The script labels these with `[high-approval waiver]` in its output.
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
