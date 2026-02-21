@@ -7,7 +7,8 @@
  *
  * Security model:
  * - `escapeHtml` escapes all raw text before any pattern substitution.
- * - `sanitizeUrl` restricts link href values to http:, https:, and mailto:.
+ * - `sanitizeUrl` restricts link href values to http:, https:, and mailto:,
+ *   and rejects credential-bearing URLs (user:pass@host).
  * - The rendered HTML is safe for `dangerouslySetInnerHTML` when the input
  *   flows through this pipeline (build-time data from generate-data.ts).
  */
@@ -27,12 +28,15 @@ export function escapeHtml(str: string): string {
 
 /**
  * Restrict a URL to safe protocols. Returns '#' for javascript:, data:,
- * relative paths, or any unparseable value.
+ * relative paths, credential-bearing URLs, or any unparseable value.
  */
 export function sanitizeUrl(url: string): string {
   try {
     const parsed = new URL(url.trim());
     if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+      return '#';
+    }
+    if (parsed.username || parsed.password) {
       return '#';
     }
     return parsed.href;

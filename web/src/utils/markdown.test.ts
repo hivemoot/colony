@@ -59,6 +59,14 @@ describe('sanitizeUrl', () => {
   it('returns # for relative path', () => {
     expect(sanitizeUrl('/relative/path')).toBe('#');
   });
+
+  it('blocks credential-bearing URLs with username and password', () => {
+    expect(sanitizeUrl('https://user:pass@example.com')).toBe('#');
+  });
+
+  it('blocks credential-bearing URLs with username only', () => {
+    expect(sanitizeUrl('https://token@example.com')).toBe('#');
+  });
 });
 
 describe('renderMarkdown', () => {
