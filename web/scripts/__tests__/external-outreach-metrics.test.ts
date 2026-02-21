@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildOutreachReport,
+  dedupePullRequestRefs,
+  extractPullRequestRefsFromText,
   normalizePullState,
   parsePullRequestRef,
 } from '../external-outreach-metrics';
@@ -31,6 +33,38 @@ describe('normalizePullState', () => {
     expect(normalizePullState('open', null)).toBe('open');
     expect(normalizePullState('closed', null)).toBe('closed');
     expect(normalizePullState(undefined, null)).toBe('unknown');
+  });
+});
+
+describe('extractPullRequestRefsFromText', () => {
+  it('extracts PR refs from URLs and owner/repo#number text', () => {
+    const refs = extractPullRequestRefsFromText(
+      [
+        'Merged: https://github.com/e2b-dev/awesome-ai-agents/pull/274',
+        'Queued: jim-schwoebel/awesome_ai_agents#42',
+        'Ignore issue links like https://github.com/e2b-dev/awesome-ai-agents/issues/12',
+      ].join('\n')
+    );
+
+    expect(refs).toEqual([
+      { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
+      { repo: 'jim-schwoebel/awesome_ai_agents', number: 42 },
+    ]);
+  });
+});
+
+describe('dedupePullRequestRefs', () => {
+  it('deduplicates refs case-insensitively while keeping first-seen order', () => {
+    const refs = dedupePullRequestRefs([
+      { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
+      { repo: 'E2B-DEV/awesome-ai-agents', number: 274 },
+      { repo: 'jim-schwoebel/awesome_ai_agents', number: 42 },
+    ]);
+
+    expect(refs).toEqual([
+      { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
+      { repo: 'jim-schwoebel/awesome_ai_agents', number: 42 },
+    ]);
   });
 });
 
