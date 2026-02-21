@@ -331,6 +331,73 @@ describe('generateStaticPages', () => {
     expect(html).toContain('href="https://github.com/hivemoot"');
   });
 
+  it('renders paragraph and list blocks separately in markdown body', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 62,
+          title: 'Markdown list separation test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Some text.\n\n- item 1\n- item 2\n\nMore text.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '62', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('<p style="margin: 0.75rem 0;">Some text.</p>');
+    expect(html).toContain(
+      '<ul style="margin: 1rem 0; padding-left: 1.5rem;"><li style="margin: 0.375rem 0; padding-left: 0.5rem;">item 1</li>'
+    );
+    expect(html).toContain('<p style="margin: 0.75rem 0;">More text.</p>');
+    expect(html).not.toMatch(/<p[^>]*>[^<]*<li/i);
+  });
+
+  it('renders list items with leading horizontal whitespace', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 63,
+          title: 'Markdown leading whitespace list test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Intro.\n\n - item 1\n\t- item 2',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '63', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain(
+      '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">item 1</li>'
+    );
+    expect(html).toContain(
+      '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">item 2</li>'
+    );
+    expect(html).not.toMatch(/<p[^>]*>[^<]*<li/i);
+  });
+
   it('does not render proposal body block when body is missing', () => {
     const data = minimalActivityData({
       proposals: [
