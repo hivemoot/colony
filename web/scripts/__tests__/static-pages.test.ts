@@ -393,6 +393,35 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('alert(1)');
   });
 
+  it('blocks credential-bearing http links in markdown body', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 59,
+          title: 'Credential URL sanitization test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Secret [link](https://user:pass@example.com/path).',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '59', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('href="#"');
+    expect(html).not.toContain('user:pass@example.com');
+  });
+
   it('keeps link-label HTML escaped in markdown body', () => {
     const data = minimalActivityData({
       proposals: [
