@@ -671,6 +671,24 @@ async function runChecks(): Promise<CheckResult[]> {
     details: freshnessDetails,
   });
 
+  // SPA deep link check: verify that a non-root path returns the SPA shell
+  const deepLinkPath = `${baseUrl}/health-check`;
+  const deepLinkRes = await fetchWithTimeout(deepLinkPath);
+  const deepLinkHtml =
+    deepLinkRes?.status === 200 ? await deepLinkRes.text() : '';
+  const spaShellPattern = /<div\b[^>]*\bid=["']root["'][^>]*>/i;
+  const hasSpaShell =
+    deepLinkRes?.status === 200 && spaShellPattern.test(deepLinkHtml);
+  results.push({
+    label: 'SPA deep links resolve (404.html fallback)',
+    ok: hasSpaShell,
+    details: hasSpaShell
+      ? `GET ${deepLinkPath} returned SPA shell`
+      : deepLinkRes
+        ? `GET ${deepLinkPath} returned ${deepLinkRes.status} without SPA shell`
+        : `GET ${deepLinkPath} failed or timed out`,
+  });
+
   return results;
 }
 
