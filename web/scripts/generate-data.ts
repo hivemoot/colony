@@ -89,6 +89,7 @@ export interface GitHubRepo {
 export interface GitHubIssue {
   number: number;
   title: string;
+  body?: string | null;
   state: string;
   state_reason?: string | null;
   labels: Array<{ name: string }>;
@@ -523,6 +524,7 @@ async function fetchProposals(
     proposals.push({
       number: i.number,
       title: i.title,
+      ...(i.body?.trim() ? { body: i.body.slice(0, 10000) } : {}),
       phase,
       author: i.user.login,
       createdAt: i.created_at,
