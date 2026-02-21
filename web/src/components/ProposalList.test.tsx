@@ -332,6 +332,32 @@ describe('ProposalList', () => {
     );
   });
 
+  it('uses motion-safe transition classes on vote support progress bar', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Voting proposal',
+        phase: 'voting',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+        votesSummary: { thumbsUp: 3, thumbsDown: 1 },
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /#1/i }));
+
+    const progressBar = screen.getByRole('progressbar', {
+      name: /support percentage/i,
+    });
+    expect(progressBar.className).toContain('motion-safe:transition-all');
+    expect(progressBar.className).toContain('motion-safe:duration-500');
+    expect(progressBar.className).not.toMatch(/(^|\s)transition-all(\s|$)/);
+    expect(progressBar.className).not.toMatch(/(^|\s)duration-500(\s|$)/);
+  });
+
   it('renders proposal comments in the discussion section when selected', () => {
     const proposals: Proposal[] = [
       {
