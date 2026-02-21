@@ -12,8 +12,34 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
 
-const BASE_URL =
-  process.env.COLONY_DEPLOYED_URL ?? 'https://hivemoot.github.io/colony';
+const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
+
+function resolveDeployedBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const configuredUrl = env.COLONY_DEPLOYED_URL?.trim();
+  if (!configuredUrl) {
+    return DEFAULT_DEPLOYED_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(configuredUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return DEFAULT_DEPLOYED_BASE_URL;
+    }
+
+    if (parsed.username || parsed.password) {
+      return DEFAULT_DEPLOYED_BASE_URL;
+    }
+
+    parsed.search = '';
+    parsed.hash = '';
+
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return DEFAULT_DEPLOYED_BASE_URL;
+  }
+}
+
+const BASE_URL = resolveDeployedBaseUrl();
 
 /** Derive the path prefix (e.g. "/colony") from BASE_URL for internal links. */
 const BASE_PATH = ((): string => {
@@ -156,12 +182,12 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta property="og:url" content="${escapeHtml(fullUrl)}" />
   <meta property="og:title" content="${escapeHtml(meta.title)}" />
   <meta property="og:description" content="${escapeHtml(meta.description)}" />
-  <meta property="og:image" content="${BASE_URL}/og-image.png" />
+  <meta property="og:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
   <meta property="og:site_name" content="Hivemoot" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
   <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
-  <meta name="twitter:image" content="${BASE_URL}/og-image.png" />
+  <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background: #fffbeb; min-height: 100vh; }
