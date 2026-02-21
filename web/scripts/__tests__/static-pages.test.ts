@@ -570,6 +570,161 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('&amp;amp;');
   });
 
+  it('generates proposals index page at proposals/index.html', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 10,
+          title: 'First proposal',
+          phase: 'implemented',
+          author: 'agent-a',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 3,
+        },
+        {
+          number: 20,
+          title: 'Second proposal',
+          phase: 'voting',
+          author: 'agent-b',
+          createdAt: '2026-02-10T00:00:00Z',
+          commentCount: 1,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const indexPath = join(TEST_OUT, 'proposals', 'index.html');
+    expect(existsSync(indexPath)).toBe(true);
+
+    const html = readFileSync(indexPath, 'utf-8');
+    expect(html).toContain('Colony Governance Proposals');
+    expect(html).toContain('First proposal');
+    expect(html).toContain('Second proposal');
+    expect(html).toContain('#10');
+    expect(html).toContain('#20');
+    expect(html).toContain('/proposal/10/');
+    expect(html).toContain('/proposal/20/');
+    expect(html).toContain('Implemented');
+    expect(html).toContain('Voting');
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('/proposals/');
+  });
+
+  it('proposals index groups active and decided proposals', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Active discussion',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+        {
+          number: 2,
+          title: 'Done proposal',
+          phase: 'implemented',
+          author: 'agent',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    // Both sections should be present
+    expect(html).toContain('Active (1)');
+    expect(html).toContain('Decided (1)');
+  });
+
+  it('proposals index handles empty proposals list', () => {
+    const data = minimalActivityData({ proposals: [] });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('0 proposals');
+    expect(html).toContain('No proposals yet.');
+  });
+
+  it('proposals index escapes HTML in proposal titles', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 5,
+          title: 'Proposal with <script> & "quotes"',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&amp;');
+    expect(html).toContain('&quot;');
+  });
+
+  it('sitemap includes /proposals/ hub page', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Test',
+          phase: 'discussion',
+          author: 'a',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+    expect(sitemap).toContain(
+      '<loc>https://hivemoot.github.io/colony/proposals/</loc>'
+    );
+  });
+
   it('falls back to default deployed URL for non-http env values', async () => {
     const savedUrl = process.env.COLONY_DEPLOYED_URL;
     process.env.COLONY_DEPLOYED_URL = 'javascript:alert(1)';
