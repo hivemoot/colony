@@ -141,7 +141,11 @@ function renderMarkdown(md: string): string {
       '<code style="padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace;">$1</code>'
     )
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, rawUrl) => {
-      const safeUrl = sanitizeUrl(rawUrl);
+      // rawUrl has been HTML-escaped by the outer escapeHtml call. Reverse
+      // &amp; → & so that sanitizeUrl receives a valid URL (& is common in
+      // query strings; the other entities escapeHtml produces — &lt; &gt;
+      // &quot; &#39; — don't appear in valid URLs).
+      const safeUrl = sanitizeUrl(rawUrl.replace(/&amp;/g, '&'));
       // Link label text is already escaped by the top-level escapeHtml call.
       return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
     })

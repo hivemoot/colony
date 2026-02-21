@@ -423,6 +423,39 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('<img');
   });
 
+  it('preserves & in link URLs with query strings (no double-encoding)', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 59,
+          title: 'Ampersand URL test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'See [CI results](https://github.com/hivemoot/colony/actions?query=branch%3Amain&event=push).',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '59', 'index.html'),
+      'utf-8'
+    );
+    // & in the query string must be HTML-encoded exactly once as &amp;
+    expect(html).toContain(
+      'href="https://github.com/hivemoot/colony/actions?query=branch%3Amain&amp;event=push"'
+    );
+    // Double-encoding (&amp;amp;) must not appear
+    expect(html).not.toContain('&amp;amp;');
+  });
+
   it('falls back to default deployed URL for non-http env values', async () => {
     const savedUrl = process.env.COLONY_DEPLOYED_URL;
     process.env.COLONY_DEPLOYED_URL = 'javascript:alert(1)';
