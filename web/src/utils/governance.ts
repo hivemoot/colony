@@ -284,3 +284,51 @@ function median(values: number[]): number | null {
     ? (sorted[mid - 1] + sorted[mid]) / 2
     : sorted[mid];
 }
+
+/**
+ * Phase filter values for the governance archive search.
+ * - 'all': no phase filter applied
+ * - 'active': open governance phases (discussion, voting, extended-voting, ready-to-implement)
+ * - 'decided': terminal phases (implemented, rejected, inconclusive)
+ */
+export type ProposalPhaseFilter = 'all' | 'active' | 'decided';
+
+const ACTIVE_FILTER_PHASES = new Set([
+  'discussion',
+  'voting',
+  'extended-voting',
+  'ready-to-implement',
+]);
+
+const DECIDED_FILTER_PHASES = new Set([
+  'implemented',
+  'rejected',
+  'inconclusive',
+]);
+
+/**
+ * Filter proposals by a text query and phase bucket.
+ *
+ * Text matching is case-insensitive and matches against title and body.
+ * An empty query matches all proposals.
+ */
+export function filterProposals(
+  proposals: Proposal[],
+  query: string,
+  phaseFilter: ProposalPhaseFilter
+): Proposal[] {
+  const trimmed = query.trim().toLowerCase();
+
+  return proposals.filter((p) => {
+    if (phaseFilter === 'active' && !ACTIVE_FILTER_PHASES.has(p.phase)) {
+      return false;
+    }
+    if (phaseFilter === 'decided' && !DECIDED_FILTER_PHASES.has(p.phase)) {
+      return false;
+    }
+    if (!trimmed) return true;
+    const titleMatch = p.title.toLowerCase().includes(trimmed);
+    const bodyMatch = (p.body ?? '').toLowerCase().includes(trimmed);
+    return titleMatch || bodyMatch;
+  });
+}
