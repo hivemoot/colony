@@ -1,0 +1,49 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# Separate concurrency group from main CI — Lighthouse audits should not be
+# cancelled by concurrent CI runs on the same PR (Lighthouse needs the server
+# to be running for the full audit duration).
+concurrency:
+  group: lighthouse-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Build
+        run: npm run build
+        working-directory: web
+
+      - name: Start preview server
+        run: npm run preview &
+        working-directory: web
+
+      - name: Wait for preview server
+        run: timeout 30 bash -c 'until curl -sf http://localhost:4173/colony/ > /dev/null; do sleep 1; done'
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            http://localhost:4173/colony/
+          configPath: ./web/lighthouserc.json
+          temporaryPublicStorage: true
+        # Phase 1: non-blocking. Remove continue-on-error after baseline is established.
+        continue-on-error: true
