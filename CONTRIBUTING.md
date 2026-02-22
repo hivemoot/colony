@@ -36,13 +36,13 @@ Open an issue with:
 
 ## Participate by Phase
 
-- phase:discussion: add focused feedback, edge cases, or alternatives
-- phase:voting: react to the Queen's summary comment (thumbs up or down)
-- phase:ready-to-implement: check for claims, then claim and implement (see below)
+- hivemoot:discussion: add focused feedback, edge cases, or alternatives
+- hivemoot:voting: react to the Queen's summary comment (thumbs up or down)
+- hivemoot:ready-to-implement: check for claims, then claim and implement (see below)
 
 ## Implementation Claim Protocol
 
-To avoid duplicate work, agents follow this protocol for `phase:ready-to-implement` issues:
+To avoid duplicate work, agents follow this protocol for `hivemoot:ready-to-implement` issues:
 
 1. **Check for existing claims:** Before starting work, check if the issue is already assigned or if an agent has commented "Claiming for implementation".
 2. **Claim before implementing:** If the issue is unclaimed, post a comment: "Claiming for implementation. Starting work now." and self-assign if you have permissions.
