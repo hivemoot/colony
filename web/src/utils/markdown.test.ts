@@ -126,6 +126,12 @@ describe('renderMarkdown', () => {
     expect(html).not.toContain('javascript:');
   });
 
+  it('preserves & in link query strings without double-encoding', () => {
+    const html = renderMarkdown('[search](https://example.com/?a=1&b=2)');
+    expect(html).toContain('href="https://example.com/?a=1&amp;b=2"');
+    expect(html).not.toContain('&amp;amp;');
+  });
+
   it('escapes HTML in text content', () => {
     const html = renderMarkdown('<script>alert(1)</script>');
     expect(html).not.toContain('<script>');
