@@ -404,7 +404,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
   };
 }
 
-function printHumanReport(report: Report): void {
+export function printHumanReport(report: Report): void {
   const eligible = report.candidates.filter((candidate) => candidate.eligible);
   const ineligible = report.candidates.filter(
     (candidate) => !candidate.eligible
@@ -425,6 +425,22 @@ function printHumanReport(report: Report): void {
       console.log(
         `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked}) ${pr.url}`
       );
+    }
+  }
+
+  const conflictBlocked = eligible.filter(
+    (pr) => !isMergeReady(pr.mergeStateStatus)
+  );
+  if (conflictBlocked.length > 0) {
+    const sorted = [...conflictBlocked].sort(
+      (a, b) => b.approvals - a.approvals
+    );
+    console.log(
+      `\n⚠️  ${conflictBlocked.length} PR(s) eligible but blocked by merge conflicts:`
+    );
+    console.log('   Rebase against main to restore merge-readiness.');
+    for (const pr of sorted) {
+      console.log(`   - #${pr.number} (${pr.approvals} approvals): ${pr.url}`);
     }
   }
 
