@@ -6,6 +6,7 @@ import {
   resolveRepository,
   resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
+  resolveRepositoryHomepage,
   updateSitemapLastmod,
   mapCommits,
   mapIssues,
@@ -166,6 +167,22 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('resolveRepositoryHomepage', () => {
+  it('accepts and normalizes https homepage URLs', () => {
+    expect(
+      resolveRepositoryHomepage('https://colony.example.org/path/?utm=1#frag')
+    ).toBe('https://colony.example.org/path');
+  });
+
+  it('rejects insecure and local homepage URLs', () => {
+    expect(resolveRepositoryHomepage('http://colony.example.org')).toBe('');
+    expect(resolveRepositoryHomepage('https://localhost:4173')).toBe('');
+    expect(resolveRepositoryHomepage('https://127.0.0.1:8443')).toBe('');
+    expect(resolveRepositoryHomepage('https://[::1]/')).toBe('');
+    expect(resolveRepositoryHomepage('https://[2001:db8::1]/')).toBe('');
   });
 });
 
@@ -972,6 +989,45 @@ describe('buildExternalVisibility', () => {
     expect(visibility.checks.find((c) => c.id === 'has-homepage')?.ok).toBe(
       false
     );
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  it('uses fallback deployed URL when homepage is invalid', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'http://127.0.0.1:4173/dashboard',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    expect(visibility.checks.find((c) => c.id === 'has-homepage')?.ok).toBe(
+      false
+    );
+
+    const rootCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-root-reachable'
+    );
+    expect(rootCheck?.details).toContain(
+      `Fallback URL used: ${fallbackBaseUrl}`
+    );
+
     expect(globalThis.fetch).toHaveBeenCalledWith(
       fallbackBaseUrl,
       expect.objectContaining({ signal: expect.any(AbortSignal) })

@@ -146,7 +146,7 @@ function renderMarkdown(md: string): string {
       return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
     })
     .replace(
-      /^\s*- (.+$)/gim,
+      /^[ \t]*- (.+$)/gim,
       '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
     )
     .split('\n\n')
@@ -271,7 +271,7 @@ function proposalPage(proposal: Proposal): string {
           <div class="stat-label">Support</div>
         </div>
       </div>
-      <div class="vote-bar" aria-label="${pct}% support">
+      <div class="vote-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct}% support">
         <div class="vote-fill" style="width: ${pct}%;"></div>
       </div>
     </div>`;

@@ -24,6 +24,30 @@ export interface ColonyConfig {
   basePath: string;
 }
 
+function normalizeAbsoluteHttpUrl(rawValue: string | undefined): string {
+  const raw = rawValue?.trim();
+  if (!raw) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return '';
+    }
+
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Resolve the site title from COLONY_SITE_TITLE.
  * Falls back to "Colony".
@@ -51,19 +75,8 @@ export function resolveOrgName(
 export function resolveSiteUrl(
   env: Record<string, string | undefined> = process.env
 ): string {
-  const raw = env.COLONY_SITE_URL?.trim();
-  if (!raw) return DEFAULT_SITE_URL;
-
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return DEFAULT_SITE_URL;
-    }
-    // Remove trailing slash for consistent usage
-    return raw.replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_SITE_URL;
-  }
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_SITE_URL);
+  return normalized || DEFAULT_SITE_URL;
 }
 
 /**
@@ -83,18 +96,8 @@ export function resolveSiteDescription(
 export function resolveGitHubUrl(
   env: Record<string, string | undefined> = process.env
 ): string {
-  const raw = env.COLONY_GITHUB_URL?.trim();
-  if (!raw) return DEFAULT_GITHUB_URL;
-
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return DEFAULT_GITHUB_URL;
-    }
-    return raw.replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_GITHUB_URL;
-  }
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_GITHUB_URL);
+  return normalized || DEFAULT_GITHUB_URL;
 }
 
 /**
