@@ -1,0 +1,40 @@
+name: Fast-track auto-merge
+
+on:
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+
+concurrency:
+  group: fast-track-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run fast-track merge
+        run: npm run fast-track-candidates -- --merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,11 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
   countDistinctApprovals,
   evaluateEligibility,
   hasAllowedPrefix,
   isMergeReady,
+  mergeCandidates,
   normalizeMergeStateStatus,
 } from '../fast-track-candidates';
+
+const { mockExecFileSync } = vi.hoisted(() => ({
+  mockExecFileSync: vi
+    .fn<Parameters<typeof import('node:child_process').execFileSync>, string>()
+    .mockReturnValue(''),
+}));
+
+vi.mock('node:child_process', async (importOriginal) => {
+  const mod = await importOriginal<
+    { default: unknown } & typeof import('node:child_process')
+  >();
+  return {
+    ...mod,
+    default: { ...(mod.default as object), execFileSync: mockExecFileSync },
+    execFileSync: mockExecFileSync,
+  };
+});
 
 describe('hasAllowedPrefix', () => {
   it('accepts approved fast-track prefixes', () => {
@@ -143,5 +161,145 @@ describe('evaluateEligibility', () => {
     expect(result.reasons).toContain(
       'must reference at least one OPEN linked issue'
     );
+  });
+});
+
+describe('mergeCandidates', () => {
+  const makeReport = (
+    candidates: Parameters<typeof mergeCandidates>[0]['candidates']
+  ): Parameters<typeof mergeCandidates>[0] => ({
+    generatedAt: '2026-02-22T00:00:00Z',
+    repo: 'hivemoot/colony',
+    allowedPrefixes: [
+      'fix:',
+      'docs:',
+      'chore:',
+      'test:',
+      'a11y:',
+      'polish:',
+    ] as const,
+    summary: {
+      totalOpenPrs: candidates.length,
+      eligiblePrs: candidates.filter((c) => c.eligible).length,
+      mergeReadyEligiblePrs: candidates.filter(
+        (c) => c.eligible && c.mergeStateStatus === 'CLEAN'
+      ).length,
+    },
+    candidates,
+  });
+
+  beforeEach(() => {
+    mockExecFileSync.mockClear();
+  });
+
+  it('exits silently with no gh calls when no eligible+CLEAN candidates', () => {
+    mergeCandidates(makeReport([]));
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('does not merge eligible PRs that are not CLEAN', () => {
+    const report = makeReport([
+      {
+        number: 200,
+        title: 'fix: improve logging',
+        url: 'https://github.com/hivemoot/colony/pull/200',
+        mergeStateStatus: 'DIRTY',
+        eligible: true,
+        reasons: [],
+        approvals: 2,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [100],
+      },
+    ]);
+    mergeCandidates(report);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('merges eligible CLEAN PRs and posts an audit comment', () => {
+    const report = makeReport([
+      {
+        number: 201,
+        title: 'fix: correct sitemap priority',
+        url: 'https://github.com/hivemoot/colony/pull/201',
+        mergeStateStatus: 'CLEAN',
+        eligible: true,
+        reasons: [],
+        approvals: 3,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [101],
+      },
+    ]);
+    mergeCandidates(report);
+
+    // First call: gh pr merge --squash
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      'gh',
+      ['pr', 'merge', '--squash', '--repo', 'hivemoot/colony', '201'],
+      expect.objectContaining({ encoding: 'utf8' })
+    );
+
+    // Second call: gh pr comment (audit trail)
+    const commentCall = mockExecFileSync.mock.calls[1];
+    expect(commentCall[0]).toBe('gh');
+    expect(commentCall[1]).toContain('comment');
+    expect(commentCall[1]).toContain('201');
+    const bodyArg = commentCall[1][
+      commentCall[1].indexOf('--body') + 1
+    ] as string;
+    expect(bodyArg).toMatch(/Fast-track auto-merge/);
+    expect(bodyArg).toMatch(/#101/);
+  });
+
+  it('posts a diagnostic comment and continues when merge fails', () => {
+    mockExecFileSync
+      .mockImplementationOnce(() => {
+        throw new Error('branch protection');
+      })
+      .mockReturnValue('');
+
+    const report = makeReport([
+      {
+        number: 202,
+        title: 'docs: update contributing guide',
+        url: 'https://github.com/hivemoot/colony/pull/202',
+        mergeStateStatus: 'CLEAN',
+        eligible: true,
+        reasons: [],
+        approvals: 2,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [102],
+      },
+    ]);
+
+    expect(() => mergeCandidates(report)).not.toThrow();
+
+    // First call was the failed merge attempt
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('merge');
+
+    // Second call should be the diagnostic comment
+    const diagCall = mockExecFileSync.mock.calls[1];
+    expect(diagCall[1]).toContain('comment');
+    const diagBody = diagCall[1][diagCall[1].indexOf('--body') + 1] as string;
+    expect(diagBody).toMatch(/auto-merge attempted but failed/);
+  });
+
+  it('skips ineligible PRs even when CLEAN', () => {
+    const report = makeReport([
+      {
+        number: 203,
+        title: 'feat: add new feature',
+        url: 'https://github.com/hivemoot/colony/pull/203',
+        mergeStateStatus: 'CLEAN',
+        eligible: false,
+        reasons: [
+          'title prefix must be one of: fix:, test:, docs:, chore:, a11y:, polish:',
+        ],
+        approvals: 2,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [],
+      },
+    ]);
+    mergeCandidates(report);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
   });
 });

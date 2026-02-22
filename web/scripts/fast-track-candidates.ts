@@ -84,6 +84,7 @@ interface CliOptions {
   repo: string;
   limit: number;
   json: boolean;
+  merge: boolean;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -91,11 +92,17 @@ function parseArgs(argv: string[]): CliOptions {
     repo: DEFAULT_REPO,
     limit: DEFAULT_LIMIT,
     json: false,
+    merge: false,
   };
 
   for (const arg of argv) {
     if (arg === '--json') {
       options.json = true;
+      continue;
+    }
+
+    if (arg === '--merge') {
+      options.merge = true;
       continue;
     }
 
@@ -123,7 +130,7 @@ function parseArgs(argv: string[]): CliOptions {
 
 function printHelp(): void {
   console.log(
-    'Usage: npm run fast-track-candidates -- [--repo=owner/name] [--limit=200] [--json]'
+    'Usage: npm run fast-track-candidates -- [--repo=owner/name] [--limit=200] [--json] [--merge]'
   );
 }
 
@@ -449,10 +456,86 @@ function printHumanReport(report: Report): void {
   }
 }
 
+export function mergeCandidates(report: Report): void {
+  const mergeReady = report.candidates.filter(
+    (c) => c.eligible && isMergeReady(c.mergeStateStatus)
+  );
+
+  if (mergeReady.length === 0) {
+    return;
+  }
+
+  console.log(`Merging ${mergeReady.length} fast-track-eligible PR(s)...`);
+
+  for (const pr of mergeReady) {
+    console.log(`Merging PR #${pr.number}: ${pr.title}`);
+    try {
+      execFileSync(
+        'gh',
+        ['pr', 'merge', '--squash', '--repo', report.repo, String(pr.number)],
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+
+      const linked =
+        pr.linkedOpenIssues.map((n) => `#${n}`).join(', ') || 'none';
+      const body = `Fast-track auto-merge: ${pr.approvals} approval(s), CI ${pr.ciState}, linked issues: ${linked}. Merged via governance fast-track ([#307](https://github.com/hivemoot/colony/issues/307)).`;
+
+      try {
+        execFileSync(
+          'gh',
+          [
+            'pr',
+            'comment',
+            String(pr.number),
+            '--repo',
+            report.repo,
+            '--body',
+            body,
+          ],
+          { encoding: 'utf8', stdio: 'pipe' }
+        );
+      } catch {
+        console.error(
+          `PR #${pr.number} merged but could not post audit comment.`
+        );
+      }
+
+      console.log(`PR #${pr.number} merged successfully.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`Failed to merge PR #${pr.number}: ${message}`);
+
+      try {
+        const failBody = `Fast-track auto-merge attempted but failed for PR #${pr.number}. Branch protection rules or a conflict may have prevented the merge. Manual merge required.`;
+        execFileSync(
+          'gh',
+          [
+            'pr',
+            'comment',
+            String(pr.number),
+            '--repo',
+            report.repo,
+            '--body',
+            failBody,
+          ],
+          { encoding: 'utf8', stdio: 'pipe' }
+        );
+      } catch {
+        console.error(`Could not post diagnostic comment on PR #${pr.number}.`);
+      }
+    }
+  }
+}
+
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
   const prs = loadPullRequests(options.repo, options.limit);
   const report = buildReport(prs, options.repo);
+
+  if (options.merge) {
+    mergeCandidates(report);
+    return;
+  }
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
