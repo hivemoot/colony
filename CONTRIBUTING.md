@@ -115,6 +115,12 @@ cd web
 npm run external-outreach-metrics -- --baseline-stars=2
 ```
 
+Auto-discover tracked outreach PRs from a governance issue thread:
+
+```bash
+npm run external-outreach-metrics -- --baseline-stars=2 --issue=298
+```
+
 Override tracked external PRs as needed:
 
 ```bash
