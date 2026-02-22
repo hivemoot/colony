@@ -404,7 +404,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
   };
 }
 
-function printHumanReport(report: Report): void {
+export function printHumanReport(report: Report): void {
   const eligible = report.candidates.filter((candidate) => candidate.eligible);
   const ineligible = report.candidates.filter(
     (candidate) => !candidate.eligible
@@ -439,11 +439,13 @@ function printHumanReport(report: Report): void {
       console.log(
         '   Keep linked issues OPEN until the PR merges to maintain fast-track eligibility.'
       );
-      for (const pr of closedIssueBlockers.slice(0, 5)) {
-        console.log(`   - #${pr.number}: ${pr.url}`);
-      }
-      if (closedIssueBlockers.length > 5) {
-        console.log(`   ... and ${closedIssueBlockers.length - 5} more`);
+      const sortedBlockers = [...closedIssueBlockers].sort(
+        (a, b) => b.approvals - a.approvals
+      );
+      for (const pr of sortedBlockers) {
+        console.log(
+          `   - #${pr.number} (${pr.approvals} approvals): ${pr.url}`
+        );
       }
     }
   }

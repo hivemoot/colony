@@ -1,11 +1,107 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   countDistinctApprovals,
   evaluateEligibility,
   hasAllowedPrefix,
   isMergeReady,
   normalizeMergeStateStatus,
+  printHumanReport,
 } from '../fast-track-candidates';
+
+const ALLOWED_PREFIXES = [
+  'fix:',
+  'test:',
+  'docs:',
+  'chore:',
+  'a11y:',
+  'polish:',
+] as const;
+
+function makeBlockedReport(
+  blockedPrs: Array<{ number: number; approvals: number }>
+): Parameters<typeof printHumanReport>[0] {
+  const candidates = blockedPrs.map((pr) => ({
+    number: pr.number,
+    title: `fix: pr ${pr.number}`,
+    url: `https://github.com/hivemoot/colony/pull/${pr.number}`,
+    mergeStateStatus: 'DIRTY',
+    eligible: false,
+    reasons: ['must reference at least one OPEN linked issue'],
+    approvals: pr.approvals,
+    ciState: 'SUCCESS',
+    linkedOpenIssues: [] as number[],
+  }));
+
+  return {
+    generatedAt: '2026-02-22T00:00:00Z',
+    repo: 'hivemoot/colony',
+    allowedPrefixes: ALLOWED_PREFIXES,
+    summary: {
+      totalOpenPrs: candidates.length,
+      eligiblePrs: 0,
+      mergeReadyEligiblePrs: 0,
+    },
+    candidates,
+  };
+}
+
+describe('printHumanReport — blocked PR display', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows all blocked PRs (no 5-PR cap)', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeBlockedReport([
+      { number: 301, approvals: 10 },
+      { number: 317, approvals: 11 },
+      { number: 347, approvals: 8 },
+      { number: 397, approvals: 12 },
+      { number: 286, approvals: 12 },
+      { number: 292, approvals: 7 },
+    ]);
+
+    printHumanReport(report);
+
+    const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
+    // All 6 PRs must appear — no "... and N more" truncation
+    for (const pr of [301, 317, 347, 397, 286, 292]) {
+      expect(output).toContain(`#${pr}`);
+    }
+    expect(output).not.toContain('more');
+  });
+
+  it('sorts blocked PRs by approval count descending', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeBlockedReport([
+      { number: 100, approvals: 3 },
+      { number: 101, approvals: 8 },
+      { number: 102, approvals: 5 },
+    ]);
+
+    printHumanReport(report);
+
+    const lines = logSpy.mock.calls
+      .map((c) => c[0] as string)
+      .filter((line) => line.includes('approvals):'));
+
+    expect(lines).toHaveLength(3);
+    // Highest approvals first
+    expect(lines[0]).toContain('#101');
+    expect(lines[1]).toContain('#102');
+    expect(lines[2]).toContain('#100');
+  });
+
+  it('includes approval count in each blocked PR line', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeBlockedReport([{ number: 200, approvals: 7 }]);
+
+    printHumanReport(report);
+
+    const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
+    expect(output).toContain('#200 (7 approvals):');
+  });
+});
 
 describe('hasAllowedPrefix', () => {
   it('accepts approved fast-track prefixes', () => {
