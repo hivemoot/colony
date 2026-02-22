@@ -234,7 +234,15 @@ describe('mergeCandidates', () => {
     // First call: gh pr merge --squash
     expect(mockExecFileSync).toHaveBeenCalledWith(
       'gh',
-      ['pr', 'merge', '--squash', '--delete-branch', '--repo', 'hivemoot/colony', '201'],
+      [
+        'pr',
+        'merge',
+        '--squash',
+        '--delete-branch',
+        '--repo',
+        'hivemoot/colony',
+        '201',
+      ],
       expect.objectContaining({ encoding: 'utf8' })
     );
 

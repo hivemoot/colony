@@ -472,7 +472,15 @@ export function mergeCandidates(report: Report): void {
     try {
       execFileSync(
         'gh',
-        ['pr', 'merge', '--squash', '--delete-branch', '--repo', report.repo, String(pr.number)],
+        [
+          'pr',
+          'merge',
+          '--squash',
+          '--delete-branch',
+          '--repo',
+          report.repo,
+          String(pr.number),
+        ],
         { encoding: 'utf8', stdio: 'pipe' }
       );
 
