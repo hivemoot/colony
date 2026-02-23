@@ -356,7 +356,7 @@ function agentPage(agent: AgentStats): string {
   const meta: PageMeta = {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
-    canonicalPath: `/agent/${agent.login}/`,
+    canonicalPath: `/agent/${encodeURIComponent(agent.login)}/`,
   };
 
   const content = `
@@ -435,7 +435,7 @@ function generateSitemap(
   for (const a of agents) {
     urls += `
   <url>
-    <loc>${BASE_URL}/agent/${a.login}/</loc>
+    <loc>${BASE_URL}/agent/${encodeURIComponent(a.login)}/</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.5</priority>
