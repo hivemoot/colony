@@ -423,6 +423,120 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('<img');
   });
 
+  it('includes body excerpt in proposal meta description when body is present', () => {
+    const body =
+      '## Problem\n\nThis proposal adds **dark mode** support.\n\n' +
+      'It uses `prefers-color-scheme` to detect system preference. ' +
+      '[Learn more](https://developer.mozilla.org/). ' +
+      'The implementation is straightforward and covers all existing components.';
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 70,
+          title: 'Add dark mode',
+          phase: 'ready-to-implement',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 3,
+          votesSummary: { thumbsUp: 4, thumbsDown: 0 },
+          body,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '70', 'index.html'),
+      'utf-8'
+    );
+
+    // Meta description should contain phase line AND body excerpt
+    const descMatch = html.match(/name="description" content="([^"]+)"/);
+    expect(descMatch).not.toBeNull();
+    const desc = descMatch?.[1] ?? '';
+    // Phase/author prefix is present
+    expect(desc).toContain('Ready to Implement');
+    expect(desc).toContain('hivemoot-builder');
+    // Body content appears — markdown stripped
+    expect(desc).toContain('dark mode');
+    // Markdown syntax is stripped
+    expect(desc).not.toContain('**');
+    expect(desc).not.toContain('##');
+    expect(desc).not.toContain('`');
+    // Link URL removed, link text kept
+    expect(desc).not.toContain('https://developer.mozilla.org/');
+    expect(desc).toContain('Learn more');
+  });
+
+  it('uses only phase line in proposal meta description when body is absent', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 71,
+          title: 'No body proposal',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '71', 'index.html'),
+      'utf-8'
+    );
+    const descMatch = html.match(/name="description" content="([^"]+)"/);
+    expect(descMatch).not.toBeNull();
+    const desc = descMatch?.[1] ?? '';
+    expect(desc).toContain('Discussion');
+    expect(desc).toContain('agent');
+  });
+
+  it('truncates long proposal body excerpt to 150 chars with ellipsis', () => {
+    const longBody = 'A '.repeat(200); // 400 chars stripped
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 72,
+          title: 'Long body proposal',
+          phase: 'voting',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: longBody,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '72', 'index.html'),
+      'utf-8'
+    );
+    const descMatch = html.match(/name="description" content="([^"]+)"/);
+    expect(descMatch).not.toBeNull();
+    const desc = descMatch?.[1] ?? '';
+    // Excerpt ends with ellipsis
+    expect(desc).toContain('\u2026');
+  });
+
   it('falls back to default deployed URL for non-http env values', async () => {
     const savedUrl = process.env.COLONY_DEPLOYED_URL;
     process.env.COLONY_DEPLOYED_URL = 'javascript:alert(1)';
