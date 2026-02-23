@@ -6,6 +6,7 @@ import {
   buildDecisionSnapshot,
   getProposalHash,
 } from '../utils/decision-explorer';
+import { renderMarkdown } from '../utils/markdown';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -294,6 +295,20 @@ export function ProposalList({
 
           <div className="grid gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
+              {selectedProposal.body && (
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                    Proposal
+                  </h4>
+                  <div
+                    className="proposal-body text-sm text-amber-900 dark:text-neutral-200 leading-relaxed"
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdown(selectedProposal.body),
+                    }}
+                  />
+                </div>
+              )}
+
               <div>
                 <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
                   Timeline
