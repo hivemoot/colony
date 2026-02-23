@@ -488,6 +488,80 @@ function printHumanReport(report: Report): void {
   }
 }
 
+export interface PreflightResult {
+  ok: boolean;
+  reason?: string;
+}
+
+export function preflightCheck(
+  prNumber: number,
+  repo: string
+): PreflightResult {
+  let output: string;
+  try {
+    output = execFileSync(
+      'gh',
+      [
+        'pr',
+        'view',
+        String(prNumber),
+        '--repo',
+        repo,
+        '--json',
+        'mergeStateStatus,reviewDecision,statusCheckRollup',
+      ],
+      { encoding: 'utf8', stdio: 'pipe' }
+    ) as string;
+  } catch (err) {
+    return {
+      ok: false,
+      reason: `pre-merge check error: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  let fresh: {
+    mergeStateStatus?: string;
+    reviewDecision?: string | null;
+    statusCheckRollup?: StatusCheckNode[] | null;
+  };
+  try {
+    fresh = JSON.parse(output);
+  } catch {
+    return { ok: false, reason: 'pre-merge check returned unparseable output' };
+  }
+
+  if (fresh.mergeStateStatus?.trim().toUpperCase() !== 'CLEAN') {
+    return {
+      ok: false,
+      reason: `mergeStateStatus is now ${fresh.mergeStateStatus ?? 'unknown'} (was CLEAN)`,
+    };
+  }
+
+  if (fresh.reviewDecision?.trim().toUpperCase() === 'CHANGES_REQUESTED') {
+    return { ok: false, reason: 'new CHANGES_REQUESTED review detected' };
+  }
+
+  for (const check of fresh.statusCheckRollup ?? []) {
+    const status = check.status?.trim().toUpperCase() || 'UNKNOWN';
+    const conclusion = check.conclusion?.trim().toUpperCase() || 'UNKNOWN';
+    if (status !== 'COMPLETED') {
+      return { ok: false, reason: 'CI checks are no longer complete' };
+    }
+    if (
+      conclusion !== 'SUCCESS' &&
+      conclusion !== 'SKIPPED' &&
+      conclusion !== 'NEUTRAL'
+    ) {
+      return {
+        ok: false,
+        reason: `CI check has non-passing conclusion: ${check.conclusion ?? 'null'}`,
+      };
+    }
+  }
+
+  return { ok: true };
+}
+
 export function mergeCandidates(report: Report): void {
   const mergeReady = report.candidates.filter(
     (c) => c.eligible && isMergeReady(c.mergeStateStatus)
@@ -500,6 +574,14 @@ export function mergeCandidates(report: Report): void {
   console.log(`Merging ${mergeReady.length} fast-track-eligible PR(s)...`);
 
   for (const pr of mergeReady) {
+    const preflight = preflightCheck(pr.number, report.repo);
+    if (!preflight.ok) {
+      console.log(
+        `Pre-merge check failed for PR #${pr.number}: ${preflight.reason}. Skipping.`
+      );
+      continue;
+    }
+
     console.log(`Merging PR #${pr.number}: ${pr.title}`);
     try {
       execFileSync(

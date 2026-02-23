@@ -8,6 +8,7 @@ import {
   isMergeReady,
   mergeCandidates,
   normalizeMergeStateStatus,
+  preflightCheck,
 } from '../fast-track-candidates';
 
 const { mockExecFileSync } = vi.hoisted(() => ({
@@ -310,6 +311,16 @@ describe('mergeCandidates', () => {
   });
 
   it('merges eligible CLEAN PRs and posts an audit comment', () => {
+    // First call: preflight gh pr view
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    );
+    // Subsequent calls (merge, comment) return '' by default
+
     const report = makeReport([
       {
         number: 201,
@@ -325,7 +336,12 @@ describe('mergeCandidates', () => {
     ]);
     mergeCandidates(report);
 
-    // First call: gh pr merge --squash
+    // First call: preflight gh pr view
+    expect(mockExecFileSync.mock.calls[0][0]).toBe('gh');
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('view');
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('201');
+
+    // Second call: gh pr merge --squash
     expect(mockExecFileSync).toHaveBeenCalledWith(
       'gh',
       [
@@ -340,8 +356,8 @@ describe('mergeCandidates', () => {
       expect.objectContaining({ encoding: 'utf8' })
     );
 
-    // Second call: gh pr comment (audit trail)
-    const commentCall = mockExecFileSync.mock.calls[1];
+    // Third call: gh pr comment (audit trail)
+    const commentCall = mockExecFileSync.mock.calls[2];
     expect(commentCall[0]).toBe('gh');
     expect(commentCall[1]).toContain('comment');
     expect(commentCall[1]).toContain('201');
@@ -354,6 +370,13 @@ describe('mergeCandidates', () => {
 
   it('posts a diagnostic comment and continues when merge fails', () => {
     mockExecFileSync
+      .mockReturnValueOnce(
+        JSON.stringify({
+          mergeStateStatus: 'CLEAN',
+          reviewDecision: 'APPROVED',
+          statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        })
+      )
       .mockImplementationOnce(() => {
         throw new Error('branch protection');
       })
@@ -375,11 +398,12 @@ describe('mergeCandidates', () => {
 
     expect(() => mergeCandidates(report)).not.toThrow();
 
-    // First call was the failed merge attempt
-    expect(mockExecFileSync.mock.calls[0][1]).toContain('merge');
+    // First call was preflight, second was the failed merge attempt
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('view');
+    expect(mockExecFileSync.mock.calls[1][1]).toContain('merge');
 
-    // Second call should be the diagnostic comment
-    const diagCall = mockExecFileSync.mock.calls[1];
+    // Third call should be the diagnostic comment
+    const diagCall = mockExecFileSync.mock.calls[2];
     expect(diagCall[1]).toContain('comment');
     const diagBody = diagCall[1][diagCall[1].indexOf('--body') + 1] as string;
     expect(diagBody).toMatch(/auto-merge attempted but failed/);
@@ -403,5 +427,174 @@ describe('mergeCandidates', () => {
     ]);
     mergeCandidates(report);
     expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('skips merge when preflight detects stale mergeStateStatus', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'BLOCKED',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    );
+
+    const report = makeReport([
+      {
+        number: 210,
+        title: 'fix: correct timing issue',
+        url: 'https://github.com/hivemoot/colony/pull/210',
+        mergeStateStatus: 'CLEAN',
+        eligible: true,
+        reasons: [],
+        approvals: 3,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [110],
+        highApprovalWaiver: false,
+      },
+    ]);
+    mergeCandidates(report);
+
+    // Only the preflight gh pr view call — no merge call
+    expect(mockExecFileSync).toHaveBeenCalledOnce();
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('view');
+  });
+
+  it('skips merge when preflight detects new CHANGES_REQUESTED review', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'CHANGES_REQUESTED',
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    );
+
+    const report = makeReport([
+      {
+        number: 211,
+        title: 'docs: update contributing guide',
+        url: 'https://github.com/hivemoot/colony/pull/211',
+        mergeStateStatus: 'CLEAN',
+        eligible: true,
+        reasons: [],
+        approvals: 3,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [111],
+        highApprovalWaiver: false,
+      },
+    ]);
+    mergeCandidates(report);
+
+    // Only the preflight gh pr view call — no merge call
+    expect(mockExecFileSync).toHaveBeenCalledOnce();
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('view');
+  });
+
+  it('skips merge when preflight detects CI regression', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'FAILURE' }],
+      })
+    );
+
+    const report = makeReport([
+      {
+        number: 212,
+        title: 'fix: address CI flake',
+        url: 'https://github.com/hivemoot/colony/pull/212',
+        mergeStateStatus: 'CLEAN',
+        eligible: true,
+        reasons: [],
+        approvals: 2,
+        ciState: 'SUCCESS',
+        linkedOpenIssues: [112],
+        highApprovalWaiver: false,
+      },
+    ]);
+    mergeCandidates(report);
+
+    // Only the preflight gh pr view call — no merge call
+    expect(mockExecFileSync).toHaveBeenCalledOnce();
+    expect(mockExecFileSync.mock.calls[0][1]).toContain('view');
+  });
+});
+
+describe('preflightCheck', () => {
+  beforeEach(() => {
+    mockExecFileSync.mockClear();
+  });
+
+  it('returns ok when all checks pass', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    );
+    const result = preflightCheck(301, 'hivemoot/colony');
+    expect(result.ok).toBe(true);
+    expect(result.reason).toBeUndefined();
+  });
+
+  it('returns ok when statusCheckRollup is empty', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [],
+      })
+    );
+    const result = preflightCheck(302, 'hivemoot/colony');
+    expect(result.ok).toBe(true);
+  });
+
+  it('fails when mergeStateStatus is not CLEAN', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'DIRTY',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [],
+      })
+    );
+    const result = preflightCheck(303, 'hivemoot/colony');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/DIRTY/);
+  });
+
+  it('fails when reviewDecision is CHANGES_REQUESTED', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'CHANGES_REQUESTED',
+        statusCheckRollup: [],
+      })
+    );
+    const result = preflightCheck(304, 'hivemoot/colony');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/CHANGES_REQUESTED/);
+  });
+
+  it('fails when a CI check has failed conclusion', () => {
+    mockExecFileSync.mockReturnValueOnce(
+      JSON.stringify({
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: 'APPROVED',
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'FAILURE' }],
+      })
+    );
+    const result = preflightCheck(305, 'hivemoot/colony');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/FAILURE/);
+  });
+
+  it('fails when gh pr view throws', () => {
+    mockExecFileSync.mockImplementationOnce(() => {
+      throw new Error('network error');
+    });
+    const result = preflightCheck(306, 'hivemoot/colony');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/network error/);
   });
 });
