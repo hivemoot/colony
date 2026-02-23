@@ -120,7 +120,7 @@ function renderMarkdown(md: string): string {
       return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
     })
     .replace(
-      /^\s*- (.+$)/gim,
+      /^[ \t]*- (.+$)/gim,
       '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
     )
     .split('\n\n')
