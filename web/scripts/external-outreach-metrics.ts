@@ -6,6 +6,8 @@ const DEFAULT_TRACKED_PRS = [
   'slavakurilyak/awesome-ai-agents#56',
   'Jenqyang/Awesome-AI-Agents#52',
   'jim-schwoebel/awesome_ai_agents#42',
+  'NipunaRanasinghe/awesome-ai-agents#76',
+  'kaushikb11/awesome-llm-agents#68',
 ] as const;
 const PULL_REQUEST_URL_REGEX =
   /https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/pull\/([1-9][0-9]*)/gi;
