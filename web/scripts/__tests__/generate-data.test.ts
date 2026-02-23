@@ -184,6 +184,23 @@ describe('resolveRepositoryHomepage', () => {
     expect(resolveRepositoryHomepage('https://[::1]/')).toBe('');
     expect(resolveRepositoryHomepage('https://[2001:db8::1]/')).toBe('');
   });
+
+  it('rejects credential-bearing homepage URLs', () => {
+    expect(
+      resolveRepositoryHomepage('https://user:secret@example.com/colony/')
+    ).toBe('');
+    expect(resolveRepositoryHomepage('https://user@example.com/colony/')).toBe(
+      ''
+    );
+  });
+
+  it('rejects malformed URL strings', () => {
+    expect(resolveRepositoryHomepage('https//missing-colon.example.com')).toBe(
+      ''
+    );
+    expect(resolveRepositoryHomepage('not-a-url')).toBe('');
+    expect(resolveRepositoryHomepage('')).toBe('');
+  });
 });
 
 describe('resolveRequiredDiscoverabilityTopics', () => {
