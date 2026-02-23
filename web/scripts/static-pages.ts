@@ -11,35 +11,9 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
+import { resolveDeployedUrl } from './colony-config';
 
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-
-function resolveDeployedBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const configuredUrl = env.COLONY_DEPLOYED_URL?.trim();
-  if (!configuredUrl) {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-
-  try {
-    const parsed = new URL(configuredUrl);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    if (parsed.username || parsed.password) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    parsed.search = '';
-    parsed.hash = '';
-
-    return parsed.toString().replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-}
-
-const BASE_URL = resolveDeployedBaseUrl();
+const BASE_URL = resolveDeployedUrl();
 
 /** Derive the path prefix (e.g. "/colony") from BASE_URL for internal links. */
 const BASE_PATH = ((): string => {
@@ -94,6 +68,36 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Strip markdown syntax from a string, returning plain text suitable for use
+ * in meta description attributes.
+ */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '') // fenced code blocks
+    .replace(/`[^`]+`/g, '') // inline code
+    .replace(/^\s*#{1,6}\s+/gm, '') // headings
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1') // bold+italic
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+    .replace(/\*(.+?)\*/g, '$1') // italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text
+    .replace(/^\s*[-*]\s+/gm, '') // bullet markers
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Return a plain-text excerpt of at most `maxLen` characters from a markdown
+ * body, appending an ellipsis when the text was truncated. Returns an empty
+ * string when body is absent.
+ */
+function bodyExcerpt(body: string | undefined, maxLen = 150): string {
+  if (!body) return '';
+  const text = stripMarkdown(body);
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen).trimEnd() + '\u2026';
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', {
@@ -146,7 +150,7 @@ function renderMarkdown(md: string): string {
       return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
     })
     .replace(
-      /^\s*- (.+$)/gim,
+      /^[ \t]*- (.+$)/gim,
       '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
     )
     .split('\n\n')
@@ -240,9 +244,11 @@ function proposalPage(proposal: Proposal): string {
   const phaseColor = PHASE_COLORS[proposal.phase] ?? '#6b7280';
   const repo = proposal.repo ?? 'hivemoot/colony';
 
+  const phaseLine = `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments.${proposal.votesSummary ? ` Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`;
+  const excerpt = bodyExcerpt(proposal.body);
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
-    description: `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments. ${proposal.votesSummary ? `Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`,
+    description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
     canonicalPath: `/proposal/${proposal.number}/`,
   };
 
