@@ -3,6 +3,7 @@ import {
   buildRepositoryApiUrl,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
+  normalizeHttpsUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
   resolveVisibilityUserAgent,
@@ -58,11 +59,43 @@ describe('resolveRepositoryHomepage', () => {
     );
     expect(resolveRepositoryHomepage('https://127.0.0.1:8443')).toBe('');
     expect(resolveRepositoryHomepage('https://[::1]/')).toBe('');
+    expect(resolveRepositoryHomepage('https://user@colony.example.org')).toBe(
+      ''
+    );
     expect(
       resolveRepositoryHomepage('https://user:pass@colony.example.org')
     ).toBe('');
     expect(resolveRepositoryHomepage('not-a-url')).toBe('');
     expect(resolveRepositoryHomepage('   ')).toBe('');
+  });
+});
+
+describe('normalizeHttpsUrl', () => {
+  it('accepts absolute https URLs', () => {
+    expect(normalizeHttpsUrl('https://colony.example.org/og-image.png')).toBe(
+      'https://colony.example.org/og-image.png'
+    );
+  });
+
+  it('resolves relative paths against a base URL', () => {
+    expect(
+      normalizeHttpsUrl('icons/icon-192.png', 'https://colony.example.org/app/')
+    ).toBe('https://colony.example.org/app/icons/icon-192.png');
+  });
+
+  it('rejects non-https, data, and invalid URLs', () => {
+    expect(normalizeHttpsUrl('http://colony.example.org/image.png')).toBe('');
+    expect(normalizeHttpsUrl('data:image/png;base64,abcd')).toBe('');
+    expect(normalizeHttpsUrl('not-a-url')).toBe('');
+  });
+
+  it('rejects credential-bearing URLs', () => {
+    expect(
+      normalizeHttpsUrl('https://user:pass@colony.example.org/image.png')
+    ).toBe('');
+    expect(
+      normalizeHttpsUrl('/icon.png', 'https://user@colony.example.org/')
+    ).toBe('');
   });
 });
 

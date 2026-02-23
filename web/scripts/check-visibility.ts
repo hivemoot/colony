@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { evaluateGeneratedAtFreshness } from './freshness';
+import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
 import {
   resolveRepository,
   resolveRepositoryHomepage,
@@ -15,7 +16,6 @@ const ROOT_DIR = join(SCRIPT_DIR, '..');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 
 interface CheckResult {
@@ -76,13 +76,30 @@ function normalizeUrlForMatch(value: string): string {
   return value.replace(/\/+$/, '').toLowerCase();
 }
 
-function getAbsoluteHttpsUrl(rawValue: string): string {
+export function normalizeHttpsUrl(rawValue: string, baseUrl?: string): string {
+  const trimmed = rawValue.trim();
+  if (!trimmed || trimmed.toLowerCase().startsWith('data:')) {
+    return '';
+  }
+
   try {
-    const parsed = new URL(rawValue);
-    return parsed.protocol === 'https:' ? parsed.toString() : '';
+    const parsed = baseUrl ? new URL(trimmed, baseUrl) : new URL(trimmed);
+    if (parsed.protocol !== 'https:') {
+      return '';
+    }
+
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    return parsed.toString();
   } catch {
     return '';
   }
+}
+
+function getAbsoluteHttpsUrl(rawValue: string): string {
+  return normalizeHttpsUrl(rawValue);
 }
 
 export function isValidOpenGraphImageType(rawValue: string): boolean {
@@ -95,17 +112,7 @@ export function hasTwitterImageAltText(rawValue: string): boolean {
 }
 
 function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
-  const trimmed = rawValue.trim();
-  if (!trimmed || trimmed.startsWith('data:')) {
-    return '';
-  }
-
-  try {
-    const parsed = new URL(trimmed, `${baseUrl}/`);
-    return parsed.protocol === 'https:' ? parsed.toString() : '';
-  } catch {
-    return '';
-  }
+  return normalizeHttpsUrl(rawValue, `${baseUrl}/`);
 }
 
 function iconHasRequiredSize(
@@ -591,14 +598,7 @@ async function runChecks(): Promise<CheckResult[]> {
   });
 
   const faviconRaw = extractFileBackedFaviconHref(deployedRootHtml);
-  let faviconUrl = '';
-  if (faviconRaw) {
-    try {
-      faviconUrl = new URL(faviconRaw, `${baseUrl}/`).toString();
-    } catch {
-      faviconUrl = '';
-    }
-  }
+  const faviconUrl = faviconRaw ? resolveHttpsUrl(faviconRaw, baseUrl) : '';
   const faviconRes = faviconUrl ? await fetchWithTimeout(faviconUrl) : null;
   const hasDeployedFavicon = faviconRes?.status === 200;
   results.push({
