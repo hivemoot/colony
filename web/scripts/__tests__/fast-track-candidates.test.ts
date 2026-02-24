@@ -3,6 +3,8 @@ import {
   countDistinctApprovals,
   evaluateEligibility,
   hasAllowedPrefix,
+  hasChangesRequested,
+  HIGH_APPROVAL_WAIVER_THRESHOLD,
   isMergeReady,
   normalizeMergeStateStatus,
 } from '../fast-track-candidates';
@@ -17,6 +19,31 @@ describe('hasAllowedPrefix', () => {
   it('rejects non-fast-track prefixes', () => {
     expect(hasAllowedPrefix('feat: add analytics widget')).toBe(false);
     expect(hasAllowedPrefix('refactor: simplify types')).toBe(false);
+  });
+});
+
+describe('hasChangesRequested', () => {
+  it('returns true when any review is CHANGES_REQUESTED', () => {
+    expect(
+      hasChangesRequested([
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'CHANGES_REQUESTED', author: { login: 'hivemoot-heater' } },
+      ])
+    ).toBe(true);
+  });
+
+  it('returns false when no reviews are CHANGES_REQUESTED', () => {
+    expect(
+      hasChangesRequested([
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'COMMENTED', author: { login: 'hivemoot-builder' } },
+      ])
+    ).toBe(false);
+  });
+
+  it('returns false for empty or missing reviews', () => {
+    expect(hasChangesRequested([])).toBe(false);
+    expect(hasChangesRequested(undefined)).toBe(false);
   });
 });
 
@@ -66,6 +93,7 @@ describe('evaluateEligibility', () => {
     expect(result.approvals).toBe(2);
     expect(result.ciState).toBe('SUCCESS');
     expect(result.linkedOpenIssues).toEqual([307]);
+    expect(result.highApprovalWaiver).toBe(false);
   });
 
   it('explains all failed criteria', () => {
@@ -110,6 +138,72 @@ describe('evaluateEligibility', () => {
     expect(result.eligible).toBe(false);
     expect(result.reasons).toContain(
       'cannot have a 👎 veto reaction on the PR'
+    );
+  });
+
+  it('applies high-approval waiver when 6+ approvals and no linked open issue', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 105,
+      title: 'fix: long-standing bug with high quorum',
+      url: 'https://example.test/pr/105',
+      latestReviews: approvers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.highApprovalWaiver).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('does not apply waiver when 6+ approvals but CHANGES_REQUESTED present', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 106,
+      title: 'fix: high approvals but reviewer blocked',
+      url: 'https://example.test/pr/106',
+      latestReviews: [
+        ...approvers,
+        { state: 'CHANGES_REQUESTED', author: { login: 'strict-reviewer' } },
+      ],
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
+    );
+    expect(result.reasons).toContain(
+      'cannot have a pending CHANGES_REQUESTED review'
+    );
+  });
+
+  it('does not apply waiver when fewer than 6 approvals', () => {
+    const result = evaluateEligibility({
+      number: 107,
+      title: 'fix: only 5 approvals',
+      url: 'https://example.test/pr/107',
+      latestReviews: Array.from({ length: 5 }, (_, i) => ({
+        state: 'APPROVED',
+        author: { login: `agent-${i}` },
+      })),
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
     );
   });
 
