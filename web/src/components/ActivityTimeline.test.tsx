@@ -160,6 +160,25 @@ describe('ActivityTimeline', () => {
     expect(link.className).toContain('motion-safe:transition-colors');
   });
 
+  it('sanitizes unsafe event URLs before rendering links', () => {
+    const events: ActivityEvent[] = [
+      {
+        id: 'comment-1',
+        type: 'comment',
+        summary: 'Commented',
+        title: 'Unsafe event URL',
+        url: 'javascript:alert(1)',
+        actor: 'worker',
+        createdAt: '2026-02-05T10:00:00Z',
+      },
+    ];
+
+    render(<ActivityTimeline events={events} />);
+
+    const link = screen.getByRole('link', { name: 'Unsafe event URL' });
+    expect(link).toHaveAttribute('href', '#');
+  });
+
   it('includes focus ring offset on event links', () => {
     const events: ActivityEvent[] = [
       {

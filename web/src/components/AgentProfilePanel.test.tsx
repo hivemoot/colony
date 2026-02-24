@@ -286,6 +286,30 @@ describe('AgentProfilePanel', () => {
     expect(screen.queryByText('Other agent commit')).not.toBeInTheDocument();
   });
 
+  it('sanitizes unsafe recent activity URLs', () => {
+    render(
+      <AgentProfilePanel
+        data={makeData()}
+        events={[
+          {
+            id: 'unsafe-1',
+            type: 'comment',
+            summary: 'Unsafe activity link',
+            title: 'Unsafe',
+            actor: 'builder',
+            createdAt: '2026-02-07T10:00:00Z',
+            url: 'javascript:alert(1)',
+          },
+        ]}
+        agentLogin="builder"
+        onClose={vi.fn()}
+      />
+    );
+
+    const link = screen.getByRole('link', { name: 'Unsafe activity link' });
+    expect(link).toHaveAttribute('href', '#');
+  });
+
   it('renders avatar with accessible alt text', () => {
     render(
       <AgentProfilePanel

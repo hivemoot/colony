@@ -1,6 +1,7 @@
 import type { Comment } from '../types/activity';
 import { formatTimeAgo } from '../utils/time';
 import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
+import { sanitizeUrl } from '../utils/markdown';
 
 function formatCommentAction(type: Comment['type']): string {
   switch (type) {
@@ -39,7 +40,7 @@ export function CommentList({
       {comments.map((comment) => (
         <li key={`${comment.type}-${comment.id}`} className="text-sm">
           <a
-            href={comment.url}
+            href={sanitizeUrl(comment.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="group block bg-amber-50/30 dark:bg-neutral-800/30 rounded p-2.5 border border-amber-100/50 dark:border-neutral-700/50 hover:border-amber-300 dark:hover:border-neutral-500 motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"

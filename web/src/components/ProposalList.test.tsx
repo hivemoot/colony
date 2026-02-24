@@ -458,6 +458,45 @@ describe('ProposalList', () => {
     );
   });
 
+  it('sanitizes unsafe proposal discussion comment URLs', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 9,
+        title: 'Unsafe discussion URL',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 901,
+        issueOrPrNumber: 9,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'Unsafe URL payload',
+        createdAt: '2026-02-05T09:30:00Z',
+        url: 'javascript:alert(1)',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#9/i }));
+    expect(
+      screen.getByRole('link', { name: /view on github/i })
+    ).toHaveAttribute('href', '#');
+  });
+
   it('clamps long discussion comments and supports expand/collapse', () => {
     const proposals: Proposal[] = [
       {
