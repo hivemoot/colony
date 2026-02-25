@@ -803,6 +803,143 @@ describe('generateStaticPages', () => {
     expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
   });
 
+  it('includes DiscussionForumPosting JSON-LD in proposal pages', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 80,
+          title: 'Test JSON-LD proposal',
+          phase: 'voting',
+          author: 'hivemoot-forager',
+          createdAt: '2026-02-21T10:00:00Z',
+          commentCount: 7,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '80', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('DiscussionForumPosting');
+    expect(html).toContain('https://schema.org');
+    expect(html).toContain('hivemoot-forager');
+    expect(html).toContain('"commentCount":7');
+    expect(html).toContain('"datePublished":"2026-02-21T10:00:00Z"');
+  });
+
+  it('includes ProfilePage JSON-LD in agent pages', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot-builder',
+          commits: 10,
+          pullRequestsMerged: 5,
+          issuesOpened: 3,
+          reviews: 8,
+          comments: 12,
+          lastActiveAt: '2026-02-14T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'agent', 'hivemoot-builder', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('ProfilePage');
+    expect(html).toContain('https://schema.org');
+    expect(html).toContain('hivemoot-builder');
+  });
+
+  it('unicode-escapes < > & in JSON-LD to prevent script injection', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 81,
+          title: 'A & B <test> "proposal"',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-21T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '81', 'index.html'),
+      'utf-8'
+    );
+    // The JSON-LD script block must not contain raw < > & inside string values
+    // Extract the JSON-LD script content
+    const ldMatch = html.match(
+      /<script type="application\/ld\+json">([^<]*)<\/script>/
+    );
+    expect(ldMatch).not.toBeNull();
+    const ldContent = ldMatch?.[1] ?? '';
+    expect(ldContent).not.toContain('</script>');
+    // Angle brackets and ampersands are unicode-escaped
+    expect(ldContent).toContain('\\u003c');
+    expect(ldContent).toContain('\\u003e');
+    expect(ldContent).toContain('\\u0026');
+  });
+
+  it('percent-encodes bot login names in JSON-LD author URLs', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 82,
+          title: 'Bot authored proposal',
+          phase: 'discussion',
+          author: 'hivemoot[bot]',
+          createdAt: '2026-02-21T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '82', 'index.html'),
+      'utf-8'
+    );
+    // Extract the JSON-LD script block and verify the author URL is encoded
+    const ldMatch = html.match(
+      /<script type="application\/ld\+json">([^<]*)<\/script>/
+    );
+    expect(ldMatch).not.toBeNull();
+    const ldContent = ldMatch?.[1] ?? '';
+    // The author URL must percent-encode [ and ] as %5B/%5D
+    expect(ldContent).toContain('hivemoot%5Bbot%5D');
+    // The raw unencoded form must not appear inside a URL value
+    expect(ldContent).not.toContain('github.com/hivemoot[bot]');
+  });
+
   it('renders markdown list items with leading spaces and tabs', () => {
     const data = minimalActivityData({
       proposals: [

@@ -35,6 +35,25 @@ interface PageMeta {
   title: string;
   description: string;
   canonicalPath: string;
+  jsonLd?: object;
+}
+
+/**
+ * Serialize a JSON-LD object as a safe inline <script> tag.
+ *
+ * JSON.stringify is safe for embedding in HTML <script> blocks as long as
+ * the characters `<`, `>`, and `&` are unicode-escaped so that the browser's
+ * HTML parser never sees a closing `</script>` sequence or an entity that
+ * could confuse surrounding markup. This is the pattern recommended by
+ * Google's Search Central documentation.
+ */
+function jsonLdTag(data: object): string {
+  const json = JSON.stringify(data).replace(/[<>&]/g, (c) => {
+    if (c === '<') return '\\u003c';
+    if (c === '>') return '\\u003e';
+    return '\\u0026';
+  });
+  return `<script type="application/ld+json">${json}</script>`;
 }
 
 // -- Phase display helpers --
@@ -196,6 +215,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
   <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
   <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
+  ${meta.jsonLd ? jsonLdTag(meta.jsonLd) : ''}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background: #fffbeb; min-height: 100vh; }
@@ -250,10 +270,24 @@ function proposalPage(proposal: Proposal): string {
 
   const phaseLine = `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments.${proposal.votesSummary ? ` Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`;
   const excerpt = bodyExcerpt(proposal.body);
+  const canonicalPath = `/proposal/${proposal.number}/`;
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
     description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
-    canonicalPath: `/proposal/${proposal.number}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'DiscussionForumPosting',
+      headline: proposal.title,
+      url: `${BASE_URL}${canonicalPath}`,
+      datePublished: proposal.createdAt,
+      author: {
+        '@type': 'Person',
+        name: proposal.author,
+        url: `https://github.com/${encodeURIComponent(proposal.author)}`,
+      },
+      commentCount: proposal.commentCount,
+    },
   };
 
   let votesHtml = '';
@@ -357,10 +391,22 @@ function proposalPage(proposal: Proposal): string {
 }
 
 function agentPage(agent: AgentStats): string {
+  const canonicalPath = `/agent/${agent.login}/`;
   const meta: PageMeta = {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
-    canonicalPath: `/agent/${agent.login}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: `${agent.login} | Colony Agents`,
+      url: `${BASE_URL}${canonicalPath}`,
+      mainEntity: {
+        '@type': 'Person',
+        name: agent.login,
+        url: `https://github.com/${encodeURIComponent(agent.login)}`,
+      },
+    },
   };
 
   const content = `
