@@ -6,6 +6,7 @@ import {
   computeAgentRoles,
   computeTopProposers,
   computeThroughput,
+  filterProposals,
 } from './governance';
 
 function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
@@ -602,5 +603,91 @@ describe('computeThroughput', () => {
     const result = computeThroughput(proposals);
     expect(result.activeCount).toBe(2);
     expect(result.resolvedCount).toBe(2);
+  });
+});
+
+describe('filterProposals', () => {
+  function p(
+    number: number,
+    title: string,
+    phase: Proposal['phase'],
+    body?: string
+  ): Proposal {
+    return makeProposal({ number, title, phase, body });
+  }
+
+  const proposals = [
+    p(1, 'Add benchmarking panel', 'implemented'),
+    p(2, 'Proposal detail view', 'discussion'),
+    p(3, 'Searchable archive', 'ready-to-implement', 'Improve discoverability'),
+    p(4, 'External outreach', 'voting'),
+    p(5, 'Dark mode', 'rejected'),
+    p(6, 'Heatmap feature', 'inconclusive'),
+  ];
+
+  it('returns all proposals when query is empty and filter is all', () => {
+    expect(filterProposals(proposals, '', 'all')).toHaveLength(6);
+  });
+
+  it('filters by text query (case-insensitive title match)', () => {
+    const result = filterProposals(proposals, 'benchmarking', 'all');
+    expect(result).toHaveLength(1);
+    expect(result[0].number).toBe(1);
+  });
+
+  it('filters by text query matching body', () => {
+    const result = filterProposals(proposals, 'discoverability', 'all');
+    expect(result).toHaveLength(1);
+    expect(result[0].number).toBe(3);
+  });
+
+  it('is case-insensitive', () => {
+    const result = filterProposals(proposals, 'BENCHMARKING', 'all');
+    expect(result).toHaveLength(1);
+  });
+
+  it('returns empty when query matches nothing', () => {
+    expect(filterProposals(proposals, 'xyzzy', 'all')).toHaveLength(0);
+  });
+
+  it('filters active phases (discussion, voting, extended-voting, ready-to-implement)', () => {
+    const result = filterProposals(proposals, '', 'active');
+    const phases = result.map((p) => p.phase);
+    expect(phases).toContain('discussion');
+    expect(phases).toContain('voting');
+    expect(phases).toContain('ready-to-implement');
+    expect(phases).not.toContain('implemented');
+    expect(phases).not.toContain('rejected');
+    expect(phases).not.toContain('inconclusive');
+  });
+
+  it('filters decided phases (implemented, rejected, inconclusive)', () => {
+    const result = filterProposals(proposals, '', 'decided');
+    const phases = result.map((p) => p.phase);
+    expect(phases).toContain('implemented');
+    expect(phases).toContain('rejected');
+    expect(phases).toContain('inconclusive');
+    expect(phases).not.toContain('discussion');
+    expect(phases).not.toContain('voting');
+    expect(phases).not.toContain('ready-to-implement');
+  });
+
+  it('combines text query and phase filter', () => {
+    // 'archive' matches proposal #3 (ready-to-implement = active)
+    const result = filterProposals(proposals, 'archive', 'active');
+    expect(result).toHaveLength(1);
+    expect(result[0].number).toBe(3);
+  });
+
+  it('returns empty when text matches but phase filter excludes', () => {
+    // 'benchmarking' matches #1 (implemented = decided), but active filter excludes it
+    const result = filterProposals(proposals, 'benchmarking', 'active');
+    expect(result).toHaveLength(0);
+  });
+
+  it('treats undefined body as empty string (no crash)', () => {
+    const noBody = [p(10, 'Titled only', 'discussion')];
+    const result = filterProposals(noBody, 'bodytext', 'all');
+    expect(result).toHaveLength(0);
   });
 });
