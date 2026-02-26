@@ -133,4 +133,30 @@ describe('GovernanceOps', () => {
       screen.getByText(/no open governance incidents detected/i)
     ).toBeInTheDocument();
   });
+
+  it('sanitizes unsafe incident source URLs', () => {
+    render(
+      <GovernanceOps
+        data={{
+          ...mockData,
+          governanceIncidents: [
+            {
+              id: 'incident-unsafe',
+              category: 'automation-failure',
+              severity: 'high',
+              title: 'Unsafe link incident',
+              detectedAt: '2026-02-11T11:30:00Z',
+              sourceUrl: 'javascript:alert(1)',
+              status: 'open',
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByRole('link', { name: /source/i })).toHaveAttribute(
+      'href',
+      '#'
+    );
+  });
 });
