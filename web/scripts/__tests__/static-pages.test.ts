@@ -1024,4 +1024,68 @@ describe('generateStaticPages', () => {
     );
     expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
   });
+
+  it('percent-encodes agent login names with brackets in sitemap <loc>', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot[bot]',
+          commits: 10,
+          pullRequestsMerged: 5,
+          issuesOpened: 3,
+          reviews: 8,
+          comments: 20,
+          lastActiveAt: '2026-02-21T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+    // Brackets must be percent-encoded — RFC 3986 disallows bare [ ] in paths
+    expect(sitemap).toContain(
+      '<loc>https://hivemoot.github.io/colony/agent/hivemoot%5Bbot%5D/</loc>'
+    );
+    expect(sitemap).not.toContain('/agent/hivemoot[bot]/');
+  });
+
+  it('percent-encodes agent login in canonical URL on agent page', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot[bot]',
+          commits: 1,
+          pullRequestsMerged: 0,
+          issuesOpened: 0,
+          reviews: 0,
+          comments: 0,
+          lastActiveAt: '2026-02-21T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'agent', 'hivemoot[bot]', 'index.html'),
+      'utf-8'
+    );
+    // Canonical URL must use percent-encoding
+    expect(html).toContain('/agent/hivemoot%5Bbot%5D/');
+    // Raw brackets must not appear in href/canonical attributes
+    expect(html).not.toMatch(
+      /(?:href|content)="[^"]*\/agent\/hivemoot\[bot\]\//
+    );
+    // Display name (in text content) still shows the raw login
+    expect(html).toContain('hivemoot[bot]');
+  });
 });
