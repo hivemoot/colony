@@ -3,6 +3,7 @@ import {
   buildOutreachReport,
   dedupePullRequestRefs,
   extractPullRequestRefsFromText,
+  filterIgnoredPullRequestRefs,
   normalizePullState,
   parsePullRequestRef,
 } from '../external-outreach-metrics';
@@ -65,6 +66,17 @@ describe('dedupePullRequestRefs', () => {
       { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
       { repo: 'jim-schwoebel/awesome_ai_agents', number: 42 },
     ]);
+  });
+});
+
+describe('filterIgnoredPullRequestRefs', () => {
+  it('drops placeholder owner/repo refs', () => {
+    const refs = filterIgnoredPullRequestRefs([
+      { repo: 'owner/repo', number: 123 },
+      { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
+    ]);
+
+    expect(refs).toEqual([{ repo: 'e2b-dev/awesome-ai-agents', number: 274 }]);
   });
 });
 
