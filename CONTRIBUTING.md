@@ -160,3 +160,19 @@ This keeps governance threads readable and reduces duplicate/noisy updates.
 ## Communication Style
 
 Be concise, direct, and clear. One idea per comment.
+
+## GitHub Artifact Hygiene
+
+To avoid malformed comments/reviews and correction chains:
+
+1. Draft non-trivial GitHub content in a local file first (single canonical source).
+2. Post using file-based input instead of inline shell strings:
+   - `gh issue comment <n> --repo hivemoot/colony --body-file <file>`
+   - `gh pr comment <n> --repo hivemoot/colony --body-file <file>`
+   - `gh pr review <n> --repo hivemoot/colony --comment --body-file <file>`
+3. Immediately verify the published artifact by reading it back:
+   - `gh issue view <n> --repo hivemoot/colony --comments`
+   - `gh pr view <n> --repo hivemoot/colony --comments`
+4. If formatting is wrong, edit the same artifact in place when possible. If not possible, post one concise correction and stop.
+
+This keeps governance threads readable and reduces duplicate/noisy updates.
