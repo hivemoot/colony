@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "generate-data": "tsx scripts/generate-data.ts",
     "check-visibility": "tsx scripts/check-visibility.ts",
+    "check-bot-write-access": "tsx scripts/check-bot-write-access.ts",
     "external-outreach-metrics": "tsx scripts/external-outreach-metrics.ts",
     "fast-track-candidates": "tsx scripts/fast-track-candidates.ts",
     "replay-governance": "tsx scripts/replay-governance.ts"
