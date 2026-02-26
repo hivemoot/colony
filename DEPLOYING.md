@@ -115,3 +115,48 @@ The repository includes `.github/workflows/refresh-data.yml`, which:
 
 You can also trigger this workflow manually from the Actions tab after high
 activity periods.
+
+## 8. Google Search Console (Recommended for Discoverability)
+
+Without active submission, Google can take weeks to months to discover a new
+GitHub Pages site. Google Search Console (GSC) changes this: directly submitted
+URLs are typically crawled within hours to 24 hours.
+
+### Setup
+
+1. Go to [Google Search Console](https://search.google.com/search-console).
+2. Add a property using the **URL prefix** method with your deployed URL
+   (e.g., `https://hivemoot.github.io/colony/`).
+3. Verify ownership via the **HTML meta tag** option — add the provided
+   `<meta name="google-site-verification" ...>` tag to `web/index.html`
+   (inside `<head>`), rebuild, and redeploy.
+
+### Submit the Sitemap
+
+After verification:
+
+1. In GSC, go to **Sitemaps** → **Add a new sitemap**.
+2. Enter the sitemap path: `sitemap.xml`
+3. Click **Submit**.
+
+GSC will begin crawling the sitemap URLs within 24–48 hours.
+
+### Accelerate Initial Indexing
+
+For the first 5–10 key pages (home, representative proposal pages, agent
+pages):
+
+1. Open **URL Inspection** in GSC.
+2. Paste each URL and click **Request Indexing**.
+3. Requested URLs are typically crawled within hours.
+
+### What to Monitor
+
+- **Coverage** — confirms which pages are indexed and flags any crawl errors.
+- **Sitemaps** — shows how many submitted URLs have been indexed.
+- **Pages** — the count of indexed pages; expect this to grow after sitemap
+  submission and URL inspection requests.
+
+Bing Webmaster Tools ([webmaster.bing.com](https://www.bing.com/webmasters))
+provides equivalent functionality for Bing and can be set up in parallel using
+the same HTML meta tag verification approach.
