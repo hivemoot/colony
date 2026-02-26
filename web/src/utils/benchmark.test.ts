@@ -27,7 +27,7 @@ function makeData(overrides: Partial<ActivityData> = {}): ActivityData {
 describe('computeBenchmarkMetrics', () => {
   it('always returns three comparisons', () => {
     const result = computeBenchmarkMetrics(makeData());
-    expect(result.comparisons).toHaveLength(3);
+    expect(result.comparisons).toHaveLength(4);
   });
 
   it('returns unknown verdict when no merged PRs exist', () => {
@@ -102,6 +102,72 @@ describe('computeBenchmarkMetrics', () => {
       (c) => c.id === 'weekly-throughput-per-contributor'
     );
     expect(throughput?.verdict).toBe('unknown');
+  });
+
+  it('includes approval-to-merge comparison', () => {
+    const result = computeBenchmarkMetrics(makeData());
+    const a2m = result.comparisons.find((c) => c.id === 'approval-to-merge');
+    expect(a2m).toBeDefined();
+    expect(a2m?.unit).toBe('hours');
+  });
+
+  it('returns unknown approval-to-merge verdict when no firstApprovalAt data', () => {
+    const now = new Date('2026-02-20T12:00:00Z').getTime();
+    const prs = Array.from({ length: 5 }, (_, i) => ({
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      state: 'merged' as const,
+      author: 'agent-x',
+      createdAt: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
+      mergedAt: new Date(now - i * 60 * 1000).toISOString(),
+      closedAt: new Date(now - i * 60 * 1000).toISOString(),
+      // no firstApprovalAt
+    }));
+    const result = computeBenchmarkMetrics(makeData({ pullRequests: prs }));
+    const a2m = result.comparisons.find((c) => c.id === 'approval-to-merge');
+    expect(a2m?.verdict).toBe('unknown');
+    expect(a2m?.colonyValue).toBeNull();
+  });
+
+  it('reports much-slower approval-to-merge when latency greatly exceeds baseline', () => {
+    // Baseline is 4h; a 200h wait is 50× → much-slower
+    const now = new Date('2026-02-20T12:00:00Z').getTime();
+    const prs = Array.from({ length: 10 }, (_, i) => ({
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      state: 'merged' as const,
+      author: 'agent-x',
+      createdAt: new Date(now - 250 * 60 * 60 * 1000).toISOString(),
+      firstApprovalAt: new Date(now - 200 * 60 * 60 * 1000).toISOString(),
+      mergedAt: new Date(now - i * 60 * 1000).toISOString(),
+      closedAt: new Date(now - i * 60 * 1000).toISOString(),
+    }));
+    const result = computeBenchmarkMetrics(makeData({ pullRequests: prs }));
+    const a2m = result.comparisons.find((c) => c.id === 'approval-to-merge');
+    expect(a2m?.verdict).toBe('much-slower');
+    expect(a2m?.ratio).not.toBeNull();
+    expect(a2m?.ratio ?? 0).toBeGreaterThan(2);
+  });
+
+  it('reports much-faster approval-to-merge when latency is well below baseline', () => {
+    // Baseline is 4h; a 0.5h wait = ratio 0.125 → much-faster
+    const now = new Date('2026-02-20T12:00:00Z').getTime();
+    const prs = Array.from({ length: 10 }, (_, i) => ({
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      state: 'merged' as const,
+      author: 'agent-x',
+      createdAt: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
+      firstApprovalAt: new Date(
+        now - 0.5 * 60 * 60 * 1000 - i * 60 * 1000
+      ).toISOString(),
+      mergedAt: new Date(now - i * 60 * 1000).toISOString(),
+      closedAt: new Date(now - i * 60 * 1000).toISOString(),
+    }));
+    const result = computeBenchmarkMetrics(makeData({ pullRequests: prs }));
+    const a2m = result.comparisons.find((c) => c.id === 'approval-to-merge');
+    expect(a2m?.verdict).toBe('much-faster');
+    expect(a2m?.ratio ?? Infinity).toBeLessThan(0.25);
   });
 
   it('returns correct mergedPrCount and implementedProposalCount', () => {
