@@ -6,7 +6,7 @@ import {
   buildDecisionSnapshot,
   getProposalHash,
 } from '../utils/decision-explorer';
-import { renderMarkdown } from '../utils/markdown';
+import { renderMarkdown, sanitizeUrl } from '../utils/markdown';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -398,7 +398,7 @@ export function ProposalList({
                                 ·
                               </span>
                               <a
-                                href={comment.url}
+                                href={sanitizeUrl(comment.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
