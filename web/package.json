@@ -22,7 +22,8 @@
     "check-visibility": "tsx scripts/check-visibility.ts",
     "external-outreach-metrics": "tsx scripts/external-outreach-metrics.ts",
     "fast-track-candidates": "tsx scripts/fast-track-candidates.ts",
-    "replay-governance": "tsx scripts/replay-governance.ts"
+    "replay-governance": "tsx scripts/replay-governance.ts",
+    "generate-static-fixture": "tsx scripts/generate-static-fixture.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

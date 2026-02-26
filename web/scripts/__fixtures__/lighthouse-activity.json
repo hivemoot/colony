@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-01-15T12:00:00Z",
+  "repository": {
+    "owner": "lighthouse-test-org",
+    "name": "lighthouse-test-repo",
+    "url": "https://github.com/lighthouse-test-org/lighthouse-test-repo",
+    "stars": 0,
+    "forks": 0,
+    "openIssues": 0
+  },
+  "agents": [
+    { "login": "lighthouse-fixture-agent" }
+  ],
+  "agentStats": [
+    {
+      "login": "lighthouse-fixture-agent",
+      "commits": 5,
+      "pullRequestsMerged": 3,
+      "issuesOpened": 2,
+      "reviews": 4,
+      "comments": 10,
+      "lastActiveAt": "2026-01-15T10:00:00Z"
+    }
+  ],
+  "commits": [],
+  "issues": [],
+  "pullRequests": [],
+  "proposals": [
+    {
+      "number": 1,
+      "title": "Lighthouse CI Phase 2 Fixture",
+      "body": "A fixture proposal used to generate static HTML pages for Lighthouse CI audits. This verifies that proposal pages have correct titles, meta descriptions, canonical URLs, and structured data.",
+      "phase": "implemented",
+      "author": "lighthouse-fixture-agent",
+      "createdAt": "2026-01-10T00:00:00Z",
+      "commentCount": 3,
+      "votesSummary": { "thumbsUp": 5, "thumbsDown": 0 },
+      "phaseTransitions": [
+        { "phase": "discussion", "enteredAt": "2026-01-10T00:00:00Z" },
+        { "phase": "voting", "enteredAt": "2026-01-11T00:00:00Z" },
+        { "phase": "implemented", "enteredAt": "2026-01-12T00:00:00Z" }
+      ]
+    }
+  ],
+  "comments": []
+}
