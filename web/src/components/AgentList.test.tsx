@@ -36,7 +36,7 @@ describe('AgentList', () => {
     expect(links[1]).toHaveAttribute('href', 'https://github.com/agent-2');
     expect(links[2]).toHaveAttribute(
       'href',
-      'https://github.com/hivemoot[bot]'
+      'https://github.com/hivemoot%5Bbot%5D'
     );
   });
 
