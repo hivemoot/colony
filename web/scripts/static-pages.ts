@@ -113,6 +113,9 @@ function sanitizeUrl(url: string): string {
     if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
       return '#';
     }
+    if (parsed.username || parsed.password) {
+      return '#';
+    }
     return parsed.href;
   } catch {
     return '#';
