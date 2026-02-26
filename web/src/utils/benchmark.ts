@@ -87,6 +87,15 @@ const BASELINES: Record<string, IndustryBaseline> = {
     source: 'CNCF DevStats small-project cohort',
     population: 'Active OSS projects with 5–50 contributors',
   },
+  approvalToMerge: {
+    label: 'Approval-to-Merge Latency (p50)',
+    // Healthy OSS projects merge within hours of final approval.
+    // CNCF DevStats small-project cohort median: ~4 hours.
+    p50: 4,
+    unit: 'hours',
+    source: 'CNCF DevStats small-project cohort',
+    population: 'Active OSS projects with 5–50 contributors',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -239,13 +248,45 @@ export function computeBenchmarkMetrics(data: ActivityData): BenchmarkResult {
     ),
   };
 
+  // --- Approval-to-Merge Latency ---
+  // Measures how long merged PRs sat in "approved but unmerged" state.
+  // A high value relative to the baseline signals a merge bottleneck.
+  const approvalToMergeBaseline = BASELINES.approvalToMerge;
+  const approvalToMergeRatio =
+    velocity.medianApprovalToMergeHours !== null
+      ? velocity.medianApprovalToMergeHours / approvalToMergeBaseline.p50
+      : null;
+  const approvalToMergeVerdict = classifyVerdict(approvalToMergeRatio);
+
+  const approvalToMergeComparison: BenchmarkComparison = {
+    id: 'approval-to-merge',
+    metric: 'Approval-to-Merge Latency',
+    description: 'Median time from first approval to merge',
+    colonyValue: velocity.medianApprovalToMergeHours,
+    unit: 'hours',
+    baseline: approvalToMergeBaseline,
+    ratio: approvalToMergeRatio,
+    verdict: approvalToMergeVerdict,
+    summary: buildSummary(
+      approvalToMergeVerdict,
+      velocity.medianApprovalToMergeHours,
+      approvalToMergeBaseline,
+      'hours'
+    ),
+  };
+
   const dataNote =
     mergedPRs.length < 10
       ? `Based on ${mergedPRs.length} merged PR${mergedPRs.length !== 1 ? 's' : ''}. Medians stabilize above 30 samples — interpret with caution.`
       : `Based on ${mergedPRs.length} merged PRs and ${implementedProposals.length} implemented proposals.`;
 
   return {
-    comparisons: [prCycleComparison, leadTimeComparison, throughputComparison],
+    comparisons: [
+      prCycleComparison,
+      leadTimeComparison,
+      throughputComparison,
+      approvalToMergeComparison,
+    ],
     mergedPrCount: mergedPRs.length,
     implementedProposalCount: implementedProposals.length,
     dataNote,
