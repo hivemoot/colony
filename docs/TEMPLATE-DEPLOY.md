@@ -64,14 +64,14 @@ See [DEPLOYING.md](../DEPLOYING.md) for the complete branding and advanced confi
 
 ## Troubleshooting
 
-**Dashboard shows Hivemoot data instead of mine:**
-Check that `COLONY_REPOSITORY` (or `COLONY_REPOSITORIES`) is set as an Actions Variable in your fork. If neither is set, Colony falls back to `hivemoot/colony`. The data refresh workflow logs will show a warning when this fallback is active.
+**Dashboard shows your fork's data instead of your project:**
+Set `COLONY_REPOSITORY=your-org/your-project` as an Actions Variable. If unset, the script falls back to `GITHUB_REPOSITORY` — which GitHub Actions automatically sets to your fork's name (e.g., `your-org/colony`), not the project you actually want to visualize. This fallback is silent; no warning appears in workflow logs.
 
 **GitHub Pages returns 404:**
 Verify that Pages source is set to "GitHub Actions" and that the workflow ran successfully. Check the Actions tab for errors.
 
 **Data is empty or missing:**
-The GitHub API requires authentication for higher rate limits. Add `GITHUB_TOKEN` as a repository secret (Settings → Secrets → Actions) if you hit rate limit errors.
+The workflow already uses the built-in `GITHUB_TOKEN` (5,000 API requests/hour), which handles most use cases. Note: `GITHUB_TOKEN` is a reserved name — you cannot create a secret with that name. If you need to track a repository in a different organization than your fork, create a Personal Access Token with `repo` scope, store it as a secret under a custom name (e.g., `COLONY_PAT`), and update the `GITHUB_TOKEN:` env line in `.github/workflows/refresh-data.yml` to reference it.
 
 **Base path mismatch:**
 If your site is at `https://your-org.github.io/your-repo/` rather than `/colony/`, set `COLONY_BASE_PATH=/your-repo/` as an Actions Variable.
