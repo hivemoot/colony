@@ -62,6 +62,8 @@ const ROBOTS_PATH = join(ROOT_DIR, 'web', 'public', 'robots.txt');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
+const DEFAULT_GOVERNANCE_BOT_LOGIN = 'hivemoot';
+const DEFAULT_GOVERNANCE_METADATA_MARKER = 'hivemoot-metadata';
 export const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
@@ -300,6 +302,28 @@ function parseOwnerRepo(
   }
 
   return { owner, repo };
+}
+
+/**
+ * Resolve the governance bot login used to identify voting comments.
+ * Reads GOVERNANCE_BOT_LOGIN env var, falling back to the default.
+ */
+export function resolveGovernanceBotLogin(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  return env.GOVERNANCE_BOT_LOGIN?.trim() || DEFAULT_GOVERNANCE_BOT_LOGIN;
+}
+
+/**
+ * Resolve the governance metadata marker embedded in bot comment HTML.
+ * Reads GOVERNANCE_METADATA_MARKER env var, falling back to the default.
+ */
+export function resolveGovernanceMetadataMarker(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  return (
+    env.GOVERNANCE_METADATA_MARKER?.trim() || DEFAULT_GOVERNANCE_METADATA_MARKER
+  );
 }
 
 export function mapCommits(
@@ -625,6 +649,9 @@ async function fetchProposals(
   const votingProposals = proposals.filter((p) =>
     votablePhases.includes(p.phase)
   );
+  const botLogin = resolveGovernanceBotLogin();
+  const botLoginApp = `${botLogin}[bot]`;
+  const metadataMarker = resolveGovernanceMetadataMarker();
 
   await Promise.all(
     votingProposals.map(async (proposal) => {
@@ -634,9 +661,9 @@ async function fetchProposals(
         );
         const votingComment = comments.find(
           (c) =>
-            (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
+            (c.user.login === botLoginApp || c.user.login === botLogin) &&
             (c.body.includes('React to THIS comment to vote') ||
-              (c.body.includes('hivemoot-metadata') &&
+              (c.body.includes(metadataMarker) &&
                 c.body.includes('"type":"voting"')))
         );
         if (votingComment && votingComment.reactions) {
