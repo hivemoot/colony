@@ -60,8 +60,13 @@ const STALE_HOURS = 24;
 export function detectBottlenecks(data: ActivityData): Bottleneck[] {
   const bottlenecks: Bottleneck[] = [];
   const now = new Date(data.generatedAt);
+  const defaultRepo = getDefaultRepoTag(data);
 
-  const unclaimed = findUnclaimedWork(data.proposals, data.pullRequests);
+  const unclaimed = findUnclaimedWork(
+    data.proposals,
+    data.pullRequests,
+    defaultRepo
+  );
   if (unclaimed.length > 0) {
     bottlenecks.push({
       type: 'unclaimed-work',
@@ -81,7 +86,8 @@ export function detectBottlenecks(data: ActivityData): Bottleneck[] {
 
   const competing = findCompetingImplementations(
     data.proposals,
-    data.pullRequests
+    data.pullRequests,
+    defaultRepo
   );
   if (competing.length > 0) {
     bottlenecks.push({
@@ -91,7 +97,11 @@ export function detectBottlenecks(data: ActivityData): Bottleneck[] {
     });
   }
 
-  const gaps = findTraceabilityGaps(data.proposals, data.pullRequests);
+  const gaps = findTraceabilityGaps(
+    data.proposals,
+    data.pullRequests,
+    defaultRepo
+  );
   if (gaps.length > 0) {
     bottlenecks.push({
       type: 'traceability-gap',
@@ -199,28 +209,33 @@ export function suggestActions(
  * Build a map of issue numbers referenced by PRs.
  *
  * Scans PR titles for closing keywords: Fixes #N, Closes #N, Resolves #N.
- * Returns Map<issueNumber, PullRequest[]>
+ * Returns Map<repo#issueNumber, PullRequest[]>
  */
 function buildPRToIssueMap(
   pullRequests: PullRequest[],
+  defaultRepo: string,
   onlyOpen = true
-): Map<number, PullRequest[]> {
-  const map = new Map<number, PullRequest[]>();
-  const pattern = /(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
+): Map<string, PullRequest[]> {
+  const map = new Map<string, PullRequest[]>();
+  const pattern =
+    /\b(?:fix(?:es)?|close[sd]?|resolve[sd]?)\b\s+(?:([a-z0-9_.-]+\/[a-z0-9_.-]+))?#(\d+)/gi;
 
   for (const pr of pullRequests) {
     if (onlyOpen && pr.state !== 'open') continue;
+    const prRepo = resolveRepoTag(pr.repo, defaultRepo);
 
     // Scan both title and body for closing keywords
     const searchArea = `${pr.title} ${pr.body ?? ''}`;
     let match;
     pattern.lastIndex = 0;
     while ((match = pattern.exec(searchArea)) !== null) {
-      const issueNum = parseInt(match[1], 10);
-      const existing = map.get(issueNum) ?? [];
+      const targetRepo = resolveRepoTag(match[1], prRepo);
+      const issueNum = parseInt(match[2], 10);
+      const key = issueKey(targetRepo, issueNum);
+      const existing = map.get(key) ?? [];
       if (!existing.some((p) => p.number === pr.number)) {
         existing.push(pr);
-        map.set(issueNum, existing);
+        map.set(key, existing);
       }
     }
   }
@@ -231,15 +246,18 @@ function buildPRToIssueMap(
 /** Find ready-to-implement proposals with no linked open PR. */
 function findUnclaimedWork(
   proposals: Proposal[],
-  pullRequests: PullRequest[]
+  pullRequests: PullRequest[],
+  defaultRepo: string
 ): BottleneckItem[] {
-  const prMap = buildPRToIssueMap(pullRequests, true);
+  const prMap = buildPRToIssueMap(pullRequests, defaultRepo, true);
   const readyProposals = proposals.filter(
     (p) => p.phase === 'ready-to-implement'
   );
 
   return readyProposals
-    .filter((p) => !prMap.has(p.number))
+    .filter(
+      (p) => !prMap.has(issueKey(resolveRepoTag(p.repo, defaultRepo), p.number))
+    )
     .map((p) => ({ number: p.number, title: p.title }));
 }
 
@@ -293,13 +311,15 @@ function findStalledDiscussions(
 /** Find proposals with multiple open PRs (competing implementations). */
 function findCompetingImplementations(
   proposals: Proposal[],
-  pullRequests: PullRequest[]
+  pullRequests: PullRequest[],
+  defaultRepo: string
 ): BottleneckItem[] {
-  const prMap = buildPRToIssueMap(pullRequests, true);
+  const prMap = buildPRToIssueMap(pullRequests, defaultRepo, true);
   const items: BottleneckItem[] = [];
 
   for (const p of proposals) {
-    const prs = prMap.get(p.number);
+    const proposalKey = issueKey(resolveRepoTag(p.repo, defaultRepo), p.number);
+    const prs = prMap.get(proposalKey);
     if (prs && prs.length >= 2) {
       const prNumbers = prs.map((pr) => `#${pr.number}`).join(', ');
       items.push({
@@ -316,14 +336,19 @@ function findCompetingImplementations(
 /** Find implemented proposals with no linked merged PR. */
 function findTraceabilityGaps(
   proposals: Proposal[],
-  pullRequests: PullRequest[]
+  pullRequests: PullRequest[],
+  defaultRepo: string
 ): BottleneckItem[] {
-  const prMap = buildPRToIssueMap(pullRequests, false);
+  const prMap = buildPRToIssueMap(pullRequests, defaultRepo, false);
   const implemented = proposals.filter((p) => p.phase === 'implemented');
 
   return implemented
     .filter((p) => {
-      const prs = prMap.get(p.number) ?? [];
+      const proposalKey = issueKey(
+        resolveRepoTag(p.repo, defaultRepo),
+        p.number
+      );
+      const prs = prMap.get(proposalKey) ?? [];
       return !prs.some((pr) => pr.state === 'merged');
     })
     .map((p) => ({
@@ -375,4 +400,21 @@ function findStalePRs(
   }
 
   return items;
+}
+
+function getDefaultRepoTag(data: ActivityData): string {
+  return `${data.repository.owner}/${data.repository.name}`.toLowerCase();
+}
+
+function resolveRepoTag(
+  repo: string | undefined,
+  fallbackRepo: string
+): string {
+  return repo && repo.trim().length > 0
+    ? repo.trim().toLowerCase()
+    : fallbackRepo;
+}
+
+function issueKey(repo: string, issueNumber: number): string {
+  return `${repo}#${issueNumber}`;
 }
