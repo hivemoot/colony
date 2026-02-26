@@ -943,3 +943,95 @@ describe('ProposalList', () => {
     ).toBe('proposal-hivemoot-hivemoot-3');
   });
 });
+
+describe('ProposalList search and filter', () => {
+  const repoUrl = 'https://github.com/hivemoot/colony';
+
+  const proposals: Proposal[] = [
+    {
+      number: 1,
+      title: 'Add benchmarking panel',
+      phase: 'implemented',
+      author: 'builder',
+      createdAt: '2026-01-01T00:00:00Z',
+      commentCount: 5,
+    },
+    {
+      number: 2,
+      title: 'Proposal detail view',
+      phase: 'discussion',
+      author: 'nurse',
+      createdAt: '2026-01-02T00:00:00Z',
+      commentCount: 3,
+    },
+    {
+      number: 3,
+      title: 'External outreach',
+      phase: 'voting',
+      author: 'scout',
+      createdAt: '2026-01-03T00:00:00Z',
+      commentCount: 2,
+    },
+  ];
+
+  beforeEach(() => {
+    window.location.hash = '';
+    window.history.replaceState(null, '', window.location.pathname);
+  });
+
+  it('renders search input and phase filter buttons', () => {
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    expect(
+      screen.getByRole('searchbox', { name: /search proposals/i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^all$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^active$/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^decided$/i })
+    ).toBeInTheDocument();
+  });
+
+  it('filters proposals by search query', () => {
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    const input = screen.getByRole('searchbox', { name: /search proposals/i });
+    fireEvent.change(input, { target: { value: 'benchmarking' } });
+    expect(screen.getByText('Add benchmarking panel')).toBeInTheDocument();
+    expect(screen.queryByText('Proposal detail view')).not.toBeInTheDocument();
+  });
+
+  it('shows no-match message when search yields nothing', () => {
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    const input = screen.getByRole('searchbox', { name: /search proposals/i });
+    fireEvent.change(input, { target: { value: 'xyzzy' } });
+    expect(screen.getByText(/no proposals match/i)).toBeInTheDocument();
+  });
+
+  it('filters by Active phase', () => {
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /^active$/i }));
+    // discussion and voting are active; implemented is decided
+    expect(screen.getByText('Proposal detail view')).toBeInTheDocument();
+    expect(screen.getByText('External outreach')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Add benchmarking panel')
+    ).not.toBeInTheDocument();
+  });
+
+  it('filters by Decided phase', () => {
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /^decided$/i }));
+    expect(screen.getByText('Add benchmarking panel')).toBeInTheDocument();
+    expect(screen.queryByText('Proposal detail view')).not.toBeInTheDocument();
+    expect(screen.queryByText('External outreach')).not.toBeInTheDocument();
+  });
+
+  it('All button resets phase filter', () => {
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+    fireEvent.click(screen.getByRole('button', { name: /^decided$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^all$/i }));
+    expect(screen.getByText('Proposal detail view')).toBeInTheDocument();
+    expect(screen.getByText('Add benchmarking panel')).toBeInTheDocument();
+  });
+});

@@ -7,6 +7,7 @@ import {
   getProposalHash,
 } from '../utils/decision-explorer';
 import { renderMarkdown } from '../utils/markdown';
+import { filterProposals, type ProposalPhaseFilter } from '../utils/governance';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -14,6 +15,41 @@ interface ProposalListProps {
   comments?: Comment[];
   repoUrl: string;
   filteredAgent?: string | null;
+}
+
+function readSearchParams(): {
+  query: string;
+  phaseFilter: ProposalPhaseFilter;
+} {
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get('q') ?? '';
+  const filter = params.get('filter') ?? 'all';
+  const phaseFilter: ProposalPhaseFilter =
+    filter === 'active' || filter === 'decided' ? filter : 'all';
+  return { query: q, phaseFilter };
+}
+
+function updateSearchParams(
+  query: string,
+  phaseFilter: ProposalPhaseFilter
+): void {
+  const params = new URLSearchParams(window.location.search);
+  if (query) {
+    params.set('q', query);
+  } else {
+    params.delete('q');
+  }
+  if (phaseFilter !== 'all') {
+    params.set('filter', phaseFilter);
+  } else {
+    params.delete('filter');
+  }
+  const search = params.toString();
+  const newUrl =
+    window.location.pathname +
+    (search ? `?${search}` : '') +
+    window.location.hash;
+  window.history.replaceState(null, '', newUrl);
 }
 
 function findProposalByHash(
@@ -24,6 +60,15 @@ function findProposalByHash(
   const fragment = hash.slice(1);
   return proposals.find((p) => getProposalHash(p) === fragment) ?? null;
 }
+
+const PHASE_FILTER_OPTIONS: Array<{
+  value: ProposalPhaseFilter;
+  label: string;
+}> = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'decided', label: 'Decided' },
+];
 
 export function ProposalList({
   proposals,
@@ -40,6 +85,12 @@ export function ProposalList({
       const match = findProposalByHash(window.location.hash, []);
       return match ? getProposalIdentity(match) : null;
     }
+  );
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => readSearchParams().query
+  );
+  const [phaseFilter, setPhaseFilter] = useState<ProposalPhaseFilter>(
+    () => readSearchParams().phaseFilter
   );
   const detailRef = useRef<HTMLElement>(null);
 
@@ -141,6 +192,28 @@ export function ProposalList({
     return [...unique.entries()].sort((a, b) => b[1].count - a[1].count);
   }, [proposalComments]);
 
+  const visibleProposals = useMemo(
+    () => filterProposals(proposals, searchQuery, phaseFilter),
+    [proposals, searchQuery, phaseFilter]
+  );
+
+  const handleQueryChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const q = e.target.value;
+      setSearchQuery(q);
+      updateSearchParams(q, phaseFilter);
+    },
+    [phaseFilter]
+  );
+
+  const handlePhaseFilterChange = useCallback(
+    (next: ProposalPhaseFilter): void => {
+      setPhaseFilter(next);
+      updateSearchParams(searchQuery, next);
+    },
+    [searchQuery]
+  );
+
   if (proposals.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
@@ -153,8 +226,44 @@ export function ProposalList({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={handleQueryChange}
+          placeholder="Search proposals…"
+          aria-label="Search proposals"
+          className="flex-1 rounded-md border border-amber-200 dark:border-neutral-600 bg-white/60 dark:bg-neutral-800/60 px-3 py-1.5 text-sm text-amber-900 dark:text-amber-100 placeholder-amber-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-500"
+        />
+        <div
+          role="group"
+          aria-label="Filter by phase"
+          className="flex gap-1 shrink-0"
+        >
+          {PHASE_FILTER_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handlePhaseFilterChange(value)}
+              aria-pressed={phaseFilter === value}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                phaseFilter === value
+                  ? 'bg-amber-500 text-white border-amber-500 dark:bg-amber-600 dark:border-amber-600'
+                  : 'bg-white/60 dark:bg-neutral-800/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-neutral-600 hover:bg-amber-50 dark:hover:bg-neutral-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {visibleProposals.length === 0 && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 italic">
+          No proposals match your search.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
-        {proposals.map((proposal) => {
+        {visibleProposals.map((proposal) => {
           const proposalId = getProposalIdentity(proposal);
           const explorerId = getDecisionExplorerId(proposal);
           const isSelected = proposalId === effectiveSelectedId;
