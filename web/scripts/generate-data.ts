@@ -545,6 +545,64 @@ export function filterAndMapProposals(
   return proposals;
 }
 
+interface GitHubReview {
+  state: string;
+  submitted_at: string;
+}
+
+/**
+ * Fetch the timestamp of the first APPROVED review for a single PR.
+ * Returns null if no APPROVED review exists or the request fails.
+ */
+async function fetchFirstApprovalAt(
+  owner: string,
+  repo: string,
+  prNumber: number
+): Promise<string | null> {
+  try {
+    const reviews = await fetchJson<GitHubReview[]>(
+      `/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=100`
+    );
+    const approvals = reviews
+      .filter((r) => r.state === 'APPROVED')
+      .sort(
+        (a, b) =>
+          new Date(a.submitted_at).getTime() -
+          new Date(b.submitted_at).getTime()
+      );
+    return approvals.length > 0 ? approvals[0].submitted_at : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enrich the most recent merged PRs with their first approval timestamp.
+ * Capped at 20 PRs to limit additional API calls.
+ */
+export async function enrichMergedPRsWithApprovalTimes(
+  owner: string,
+  repo: string,
+  pullRequests: PullRequest[]
+): Promise<void> {
+  const MAX_ENRICHED = 20;
+  const mergedPRs = pullRequests
+    .filter(
+      (pr): pr is PullRequest & { mergedAt: string } =>
+        pr.state === 'merged' && typeof pr.mergedAt === 'string'
+    )
+    .sort(
+      (a, b) => new Date(b.mergedAt).getTime() - new Date(a.mergedAt).getTime()
+    )
+    .slice(0, MAX_ENRICHED);
+
+  await Promise.all(
+    mergedPRs.map(async (pr) => {
+      pr.firstApprovalAt = await fetchFirstApprovalAt(owner, repo, pr.number);
+    })
+  );
+}
+
 async function fetchProposals(
   owner: string,
   repo: string,
@@ -1750,6 +1808,7 @@ async function fetchRepoActivity(
     repoTag
   );
   await fetchPhaseTransitions(owner, repo, proposals);
+  await enrichMergedPRsWithApprovalTimes(owner, repo, prResult.pullRequests);
 
   const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
 
