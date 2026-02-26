@@ -1,11 +1,109 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   countDistinctApprovals,
   evaluateEligibility,
   hasAllowedPrefix,
+  hasChangesRequested,
+  HIGH_APPROVAL_WAIVER_THRESHOLD,
   isMergeReady,
   normalizeMergeStateStatus,
+  printHumanReport,
 } from '../fast-track-candidates';
+
+const ALLOWED_PREFIXES = [
+  'fix:',
+  'test:',
+  'docs:',
+  'chore:',
+  'a11y:',
+  'polish:',
+] as const;
+
+function makeBlockedReport(
+  blockedPrs: Array<{ number: number; approvals: number }>
+): Parameters<typeof printHumanReport>[0] {
+  const candidates = blockedPrs.map((pr) => ({
+    number: pr.number,
+    title: `fix: pr ${pr.number}`,
+    url: `https://github.com/hivemoot/colony/pull/${pr.number}`,
+    mergeStateStatus: 'DIRTY',
+    eligible: false,
+    reasons: ['must reference at least one OPEN linked issue'],
+    approvals: pr.approvals,
+    ciState: 'SUCCESS',
+    linkedOpenIssues: [] as number[],
+  }));
+
+  return {
+    generatedAt: '2026-02-22T00:00:00Z',
+    repo: 'hivemoot/colony',
+    allowedPrefixes: ALLOWED_PREFIXES,
+    summary: {
+      totalOpenPrs: candidates.length,
+      eligiblePrs: 0,
+      mergeReadyEligiblePrs: 0,
+    },
+    candidates,
+  };
+}
+
+describe('printHumanReport — blocked PR display', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows all blocked PRs (no 5-PR cap)', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeBlockedReport([
+      { number: 301, approvals: 10 },
+      { number: 317, approvals: 11 },
+      { number: 347, approvals: 8 },
+      { number: 397, approvals: 12 },
+      { number: 286, approvals: 12 },
+      { number: 292, approvals: 7 },
+    ]);
+
+    printHumanReport(report);
+
+    const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
+    // All 6 PRs must appear — no "... and N more" truncation
+    for (const pr of [301, 317, 347, 397, 286, 292]) {
+      expect(output).toContain(`#${pr}`);
+    }
+    expect(output).not.toContain('more');
+  });
+
+  it('sorts blocked PRs by approval count descending', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeBlockedReport([
+      { number: 100, approvals: 3 },
+      { number: 101, approvals: 8 },
+      { number: 102, approvals: 5 },
+    ]);
+
+    printHumanReport(report);
+
+    const lines = logSpy.mock.calls
+      .map((c) => c[0] as string)
+      .filter((line) => line.includes('approvals):'));
+
+    expect(lines).toHaveLength(3);
+    // Highest approvals first
+    expect(lines[0]).toContain('#101');
+    expect(lines[1]).toContain('#102');
+    expect(lines[2]).toContain('#100');
+  });
+
+  it('includes approval count in each blocked PR line', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeBlockedReport([{ number: 200, approvals: 7 }]);
+
+    printHumanReport(report);
+
+    const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
+    expect(output).toContain('#200 (7 approvals):');
+  });
+});
 
 describe('hasAllowedPrefix', () => {
   it('accepts approved fast-track prefixes', () => {
@@ -17,6 +115,31 @@ describe('hasAllowedPrefix', () => {
   it('rejects non-fast-track prefixes', () => {
     expect(hasAllowedPrefix('feat: add analytics widget')).toBe(false);
     expect(hasAllowedPrefix('refactor: simplify types')).toBe(false);
+  });
+});
+
+describe('hasChangesRequested', () => {
+  it('returns true when any review is CHANGES_REQUESTED', () => {
+    expect(
+      hasChangesRequested([
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'CHANGES_REQUESTED', author: { login: 'hivemoot-heater' } },
+      ])
+    ).toBe(true);
+  });
+
+  it('returns false when no reviews are CHANGES_REQUESTED', () => {
+    expect(
+      hasChangesRequested([
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'COMMENTED', author: { login: 'hivemoot-builder' } },
+      ])
+    ).toBe(false);
+  });
+
+  it('returns false for empty or missing reviews', () => {
+    expect(hasChangesRequested([])).toBe(false);
+    expect(hasChangesRequested(undefined)).toBe(false);
   });
 });
 
@@ -66,6 +189,7 @@ describe('evaluateEligibility', () => {
     expect(result.approvals).toBe(2);
     expect(result.ciState).toBe('SUCCESS');
     expect(result.linkedOpenIssues).toEqual([307]);
+    expect(result.highApprovalWaiver).toBe(false);
   });
 
   it('explains all failed criteria', () => {
@@ -110,6 +234,72 @@ describe('evaluateEligibility', () => {
     expect(result.eligible).toBe(false);
     expect(result.reasons).toContain(
       'cannot have a 👎 veto reaction on the PR'
+    );
+  });
+
+  it('applies high-approval waiver when 6+ approvals and no linked open issue', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 105,
+      title: 'fix: long-standing bug with high quorum',
+      url: 'https://example.test/pr/105',
+      latestReviews: approvers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.highApprovalWaiver).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('does not apply waiver when 6+ approvals but CHANGES_REQUESTED present', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 106,
+      title: 'fix: high approvals but reviewer blocked',
+      url: 'https://example.test/pr/106',
+      latestReviews: [
+        ...approvers,
+        { state: 'CHANGES_REQUESTED', author: { login: 'strict-reviewer' } },
+      ],
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
+    );
+    expect(result.reasons).toContain(
+      'cannot have a pending CHANGES_REQUESTED review'
+    );
+  });
+
+  it('does not apply waiver when fewer than 6 approvals', () => {
+    const result = evaluateEligibility({
+      number: 107,
+      title: 'fix: only 5 approvals',
+      url: 'https://example.test/pr/107',
+      latestReviews: Array.from({ length: 5 }, (_, i) => ({
+        state: 'APPROVED',
+        author: { login: `agent-${i}` },
+      })),
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      'must reference at least one OPEN linked issue'
     );
   });
 
