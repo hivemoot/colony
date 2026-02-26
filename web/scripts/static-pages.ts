@@ -11,35 +11,9 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
+import { resolveDeployedUrl } from './colony-config';
 
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-
-function resolveDeployedBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const configuredUrl = env.COLONY_DEPLOYED_URL?.trim();
-  if (!configuredUrl) {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-
-  try {
-    const parsed = new URL(configuredUrl);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    if (parsed.username || parsed.password) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    parsed.search = '';
-    parsed.hash = '';
-
-    return parsed.toString().replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-}
-
-const BASE_URL = resolveDeployedBaseUrl();
+const BASE_URL = resolveDeployedUrl();
 
 /** Derive the path prefix (e.g. "/colony") from BASE_URL for internal links. */
 const BASE_PATH = ((): string => {
@@ -94,6 +68,36 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Strip markdown syntax from a string, returning plain text suitable for use
+ * in meta description attributes.
+ */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '') // fenced code blocks
+    .replace(/`[^`]+`/g, '') // inline code
+    .replace(/^\s*#{1,6}\s+/gm, '') // headings
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1') // bold+italic
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+    .replace(/\*(.+?)\*/g, '$1') // italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text
+    .replace(/^\s*[-*]\s+/gm, '') // bullet markers
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Return a plain-text excerpt of at most `maxLen` characters from a markdown
+ * body, appending an ellipsis when the text was truncated. Returns an empty
+ * string when body is absent.
+ */
+function bodyExcerpt(body: string | undefined, maxLen = 150): string {
+  if (!body) return '';
+  const text = stripMarkdown(body);
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen).trimEnd() + '\u2026';
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', {
@@ -107,6 +111,9 @@ function sanitizeUrl(url: string): string {
   try {
     const parsed = new URL(url.trim());
     if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+      return '#';
+    }
+    if (parsed.username || parsed.password) {
       return '#';
     }
     return parsed.href;
@@ -141,12 +148,16 @@ function renderMarkdown(md: string): string {
       '<code style="padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace;">$1</code>'
     )
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, rawUrl) => {
-      const safeUrl = sanitizeUrl(rawUrl);
+      // rawUrl has been HTML-escaped by the outer escapeHtml call. Reverse
+      // &amp; → & so that sanitizeUrl receives a valid URL (& is common in
+      // query strings; the other entities escapeHtml produces — &lt; &gt;
+      // &quot; &#39; — don't appear in valid URLs).
+      const safeUrl = sanitizeUrl(rawUrl.replace(/&amp;/g, '&'));
       // Link label text is already escaped by the top-level escapeHtml call.
       return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
     })
     .replace(
-      /^\s*- (.+$)/gim,
+      /^[ \t]*- (.+$)/gim,
       '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
     )
     .split('\n\n')
@@ -240,9 +251,11 @@ function proposalPage(proposal: Proposal): string {
   const phaseColor = PHASE_COLORS[proposal.phase] ?? '#6b7280';
   const repo = proposal.repo ?? 'hivemoot/colony';
 
+  const phaseLine = `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments.${proposal.votesSummary ? ` Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`;
+  const excerpt = bodyExcerpt(proposal.body);
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
-    description: `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments. ${proposal.votesSummary ? `Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`,
+    description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
     canonicalPath: `/proposal/${proposal.number}/`,
   };
 
@@ -403,6 +416,85 @@ function agentPage(agent: AgentStats): string {
   return htmlShell(meta, content);
 }
 
+const ACTIVE_PHASES = new Set([
+  'discussion',
+  'voting',
+  'extended-voting',
+  'ready-to-implement',
+]);
+
+function proposalRow(p: Proposal): string {
+  const phaseLabel = PHASE_LABELS[p.phase] ?? p.phase;
+  const phaseColor = PHASE_COLORS[p.phase] ?? '#6b7280';
+  return `
+      <li style="display: flex; align-items: baseline; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid #e5e5e5;">
+        <span style="font-size: 0.75rem; color: #6b7280; flex-shrink: 0; min-width: 2.5rem;">#${p.number}</span>
+        <a href="${basePath()}proposal/${p.number}/" style="flex: 1; color: #b45309; text-decoration: none; font-weight: 500;">${escapeHtml(p.title)}</a>
+        <span class="badge" style="background: ${phaseColor}; flex-shrink: 0;">${escapeHtml(phaseLabel)}</span>
+      </li>`;
+}
+
+function proposalsIndexPage(proposals: Proposal[]): string {
+  const meta: PageMeta = {
+    title: 'Colony Governance Proposals | Colony',
+    description: `All ${proposals.length} governance proposals from Colony — an autonomous agent-governed open-source project.`,
+    canonicalPath: '/proposals/',
+  };
+
+  // Sort by proposal number descending (most recent first)
+  const sorted = [...proposals].sort((a, b) => b.number - a.number);
+
+  const active = sorted.filter((p) => ACTIVE_PHASES.has(p.phase));
+  const decided = sorted.filter((p) => !ACTIVE_PHASES.has(p.phase));
+
+  const activeSection =
+    active.length > 0
+      ? `
+    <h2 style="font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.5rem;">Active (${active.length})</h2>
+    <ul style="list-style: none;">
+      ${active.map(proposalRow).join('')}
+    </ul>`
+      : '';
+
+  const decidedSection =
+    decided.length > 0
+      ? `
+    <h2 style="font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.5rem;">Decided (${decided.length})</h2>
+    <ul style="list-style: none;">
+      ${decided.map(proposalRow).join('')}
+    </ul>`
+      : '';
+
+  const emptyMessage =
+    proposals.length === 0
+      ? '<p style="color: #6b7280; margin: 1.5rem 0;">No proposals yet.</p>'
+      : '';
+
+  const content = `
+    <nav class="breadcrumb">
+      <a href="${basePath()}">Colony</a> &rarr;
+      Proposals
+    </nav>
+
+    <h1>Colony Governance Proposals</h1>
+    <p class="meta">${proposals.length} proposal${proposals.length !== 1 ? 's' : ''} &mdash; governing an autonomous agent-built project</p>
+
+    ${emptyMessage}
+    ${activeSection}
+    ${decidedSection}
+
+    <a class="cta" href="${basePath()}#proposals">
+      View in dashboard &rarr;
+    </a>
+
+    <div class="footer">
+      <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
+      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+    </div>`;
+
+  return htmlShell(meta, content);
+}
+
 function generateSitemap(
   proposals: Proposal[],
   agents: AgentStats[],
@@ -414,6 +506,12 @@ function generateSitemap(
     <lastmod>${lastmod}</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${BASE_URL}/proposals/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>`;
 
   for (const p of proposals) {
@@ -476,6 +574,14 @@ export function generateStaticPages(outDir: string): void {
     agentCount++;
   }
 
+  // Generate proposals index page
+  const proposalsDir = resolve(outDir, 'proposals');
+  mkdirSync(proposalsDir, { recursive: true });
+  writeFileSync(
+    join(proposalsDir, 'index.html'),
+    proposalsIndexPage(data.proposals)
+  );
+
   // Generate expanded sitemap
   const sitemap = generateSitemap(
     data.proposals,
@@ -485,6 +591,6 @@ export function generateStaticPages(outDir: string): void {
   writeFileSync(join(outDir, 'sitemap.xml'), sitemap);
 
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, and updated sitemap.xml`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, and updated sitemap.xml`
   );
 }

@@ -393,6 +393,35 @@ describe('generateStaticPages', () => {
     expect(html).not.toContain('alert(1)');
   });
 
+  it('blocks credential-bearing http links in markdown body', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 59,
+          title: 'Credential URL sanitization test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Secret [link](https://user:pass@example.com/path).',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '59', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('href="#"');
+    expect(html).not.toContain('user:pass@example.com');
+  });
+
   it('keeps link-label HTML escaped in markdown body', () => {
     const data = minimalActivityData({
       proposals: [
@@ -421,6 +450,308 @@ describe('generateStaticPages', () => {
     expect(html).toContain('href="https://example.com/"');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(html).not.toContain('<img');
+  });
+
+  it('includes body excerpt in proposal meta description when body is present', () => {
+    const body =
+      '## Problem\n\nThis proposal adds **dark mode** support.\n\n' +
+      'It uses `prefers-color-scheme` to detect system preference. ' +
+      '[Learn more](https://developer.mozilla.org/). ' +
+      'The implementation is straightforward and covers all existing components.';
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 70,
+          title: 'Add dark mode',
+          phase: 'ready-to-implement',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 3,
+          votesSummary: { thumbsUp: 4, thumbsDown: 0 },
+          body,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '70', 'index.html'),
+      'utf-8'
+    );
+
+    // Meta description should contain phase line AND body excerpt
+    const descMatch = html.match(/name="description" content="([^"]+)"/);
+    expect(descMatch).not.toBeNull();
+    const desc = descMatch?.[1] ?? '';
+    // Phase/author prefix is present
+    expect(desc).toContain('Ready to Implement');
+    expect(desc).toContain('hivemoot-builder');
+    // Body content appears — markdown stripped
+    expect(desc).toContain('dark mode');
+    // Markdown syntax is stripped
+    expect(desc).not.toContain('**');
+    expect(desc).not.toContain('##');
+    expect(desc).not.toContain('`');
+    // Link URL removed, link text kept
+    expect(desc).not.toContain('https://developer.mozilla.org/');
+    expect(desc).toContain('Learn more');
+  });
+
+  it('uses only phase line in proposal meta description when body is absent', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 71,
+          title: 'No body proposal',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '71', 'index.html'),
+      'utf-8'
+    );
+    const descMatch = html.match(/name="description" content="([^"]+)"/);
+    expect(descMatch).not.toBeNull();
+    const desc = descMatch?.[1] ?? '';
+    expect(desc).toContain('Discussion');
+    expect(desc).toContain('agent');
+  });
+
+  it('truncates long proposal body excerpt to 150 chars with ellipsis', () => {
+    const longBody = 'A '.repeat(200); // 400 chars stripped
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 72,
+          title: 'Long body proposal',
+          phase: 'voting',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: longBody,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '72', 'index.html'),
+      'utf-8'
+    );
+    const descMatch = html.match(/name="description" content="([^"]+)"/);
+    expect(descMatch).not.toBeNull();
+    const desc = descMatch?.[1] ?? '';
+    // Excerpt ends with ellipsis
+    expect(desc).toContain('\u2026');
+  });
+
+  it('preserves & in link URLs with query strings (no double-encoding)', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 59,
+          title: 'Ampersand URL test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'See [CI results](https://github.com/hivemoot/colony/actions?query=branch%3Amain&event=push).',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '59', 'index.html'),
+      'utf-8'
+    );
+    // & in the query string must be HTML-encoded exactly once as &amp;
+    expect(html).toContain(
+      'href="https://github.com/hivemoot/colony/actions?query=branch%3Amain&amp;event=push"'
+    );
+    // Double-encoding (&amp;amp;) must not appear
+    expect(html).not.toContain('&amp;amp;');
+  });
+
+  it('generates proposals index page at proposals/index.html', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 10,
+          title: 'First proposal',
+          phase: 'implemented',
+          author: 'agent-a',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 3,
+        },
+        {
+          number: 20,
+          title: 'Second proposal',
+          phase: 'voting',
+          author: 'agent-b',
+          createdAt: '2026-02-10T00:00:00Z',
+          commentCount: 1,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const indexPath = join(TEST_OUT, 'proposals', 'index.html');
+    expect(existsSync(indexPath)).toBe(true);
+
+    const html = readFileSync(indexPath, 'utf-8');
+    expect(html).toContain('Colony Governance Proposals');
+    expect(html).toContain('First proposal');
+    expect(html).toContain('Second proposal');
+    expect(html).toContain('#10');
+    expect(html).toContain('#20');
+    expect(html).toContain('/proposal/10/');
+    expect(html).toContain('/proposal/20/');
+    expect(html).toContain('Implemented');
+    expect(html).toContain('Voting');
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('/proposals/');
+  });
+
+  it('proposals index groups active and decided proposals', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Active discussion',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+        {
+          number: 2,
+          title: 'Done proposal',
+          phase: 'implemented',
+          author: 'agent',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    // Both sections should be present
+    expect(html).toContain('Active (1)');
+    expect(html).toContain('Decided (1)');
+  });
+
+  it('proposals index handles empty proposals list', () => {
+    const data = minimalActivityData({ proposals: [] });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('0 proposals');
+    expect(html).toContain('No proposals yet.');
+  });
+
+  it('proposals index escapes HTML in proposal titles', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 5,
+          title: 'Proposal with <script> & "quotes"',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&amp;');
+    expect(html).toContain('&quot;');
+  });
+
+  it('sitemap includes /proposals/ hub page', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Test',
+          phase: 'discussion',
+          author: 'a',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+    expect(sitemap).toContain(
+      '<loc>https://hivemoot.github.io/colony/proposals/</loc>'
+    );
   });
 
   it('falls back to default deployed URL for non-http env values', async () => {
@@ -614,5 +945,83 @@ describe('generateStaticPages', () => {
       process.env.COLONY_DEPLOYED_URL = savedUrl;
     }
     vi.resetModules();
+  });
+
+  it('renders markdown lists as valid <ul><li> elements when preceded by a paragraph', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 70,
+          title: 'List rendering test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Some text.\n\n- item 1\n- item 2\n\nMore text.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '70', 'index.html'),
+      'utf-8'
+    );
+
+    // List items must be inside a <ul>, not loose inside a <p>
+    expect(html).toContain('<ul');
+    expect(html).toContain('<li');
+    expect(html).toContain('item 1');
+    expect(html).toContain('item 2');
+
+    // The list must not be wrapped in a <p> tag
+    const bodySection = html.slice(
+      html.indexOf('proposal-body'),
+      html.indexOf('</div>', html.indexOf('proposal-body'))
+    );
+    expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
+  });
+
+  it('renders markdown list items with leading spaces and tabs', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 71,
+          title: 'Indented list rendering test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+          body: 'Some text.\n\n - item 1\n\t- item 2\n\nMore text.',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '71', 'index.html'),
+      'utf-8'
+    );
+
+    expect(html).toContain('<ul');
+    expect(html).toContain('<li');
+    expect(html).toContain('item 1');
+    expect(html).toContain('item 2');
+
+    const bodySection = html.slice(
+      html.indexOf('proposal-body'),
+      html.indexOf('</div>', html.indexOf('proposal-body'))
+    );
+    expect(bodySection).not.toMatch(/<p[^>]*>[^<]*<li/);
   });
 });

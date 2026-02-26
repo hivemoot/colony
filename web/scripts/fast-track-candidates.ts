@@ -54,6 +54,7 @@ export interface EligibilityResult {
   approvals: number;
   ciState: string;
   linkedOpenIssues: number[];
+  highApprovalWaiver: boolean;
 }
 
 interface CandidateRecord {
@@ -66,6 +67,7 @@ interface CandidateRecord {
   approvals: number;
   ciState: string;
   linkedOpenIssues: number[];
+  highApprovalWaiver: boolean;
 }
 
 interface Report {
@@ -130,6 +132,14 @@ function printHelp(): void {
 export function hasAllowedPrefix(title: string): boolean {
   const normalized = title.trim().toLowerCase();
   return FAST_TRACK_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}
+
+export function hasChangesRequested(
+  latestReviews: ReviewNode[] | undefined
+): boolean {
+  return (latestReviews ?? []).some(
+    (review) => review.state === 'CHANGES_REQUESTED'
+  );
 }
 
 export function countDistinctApprovals(
@@ -200,6 +210,11 @@ function getLinkedOpenIssues(
     .sort((a, b) => a - b);
 }
 
+// High-approval waiver threshold (Issue #445).
+// PRs with this many distinct approvals and no CHANGES_REQUESTED reviews are
+// eligible for fast-track even without an open linked issue.
+export const HIGH_APPROVAL_WAIVER_THRESHOLD = 6;
+
 export function evaluateEligibility(
   pr: PullRequestNode,
   issueStates: Map<string, string> = new Map(),
@@ -209,6 +224,7 @@ export function evaluateEligibility(
   const approvals = countDistinctApprovals(pr.latestReviews);
   const ciState = getCiState(pr);
   const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates, repo);
+  const changesRequested = hasChangesRequested(pr.latestReviews);
 
   if (!hasAllowedPrefix(pr.title)) {
     reasons.push(
@@ -224,8 +240,20 @@ export function evaluateEligibility(
     reasons.push(`CI checks must be SUCCESS (found ${ciState})`);
   }
 
-  if (linkedOpenIssues.length === 0) {
+  // Linked issue requirement, with high-approval waiver.
+  // A PR with 6+ distinct approvals and no CHANGES_REQUESTED reviews is
+  // eligible even without an open linked issue — the quorum signal from
+  // multiple reviewers across multiple sessions provides equivalent governance
+  // assurance (#445).
+  const highApprovalWaiver =
+    approvals >= HIGH_APPROVAL_WAIVER_THRESHOLD && !changesRequested;
+
+  if (linkedOpenIssues.length === 0 && !highApprovalWaiver) {
     reasons.push('must reference at least one OPEN linked issue');
+  }
+
+  if (changesRequested) {
+    reasons.push('cannot have a pending CHANGES_REQUESTED review');
   }
 
   if (hasThumbsDownVeto(pr.reactionGroups)) {
@@ -238,6 +266,7 @@ export function evaluateEligibility(
     approvals,
     ciState,
     linkedOpenIssues,
+    highApprovalWaiver,
   };
 }
 
@@ -385,6 +414,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       approvals: evaluation.approvals,
       ciState: evaluation.ciState,
       linkedOpenIssues: evaluation.linkedOpenIssues,
+      highApprovalWaiver: evaluation.highApprovalWaiver,
     };
   });
 
@@ -404,7 +434,7 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
   };
 }
 
-function printHumanReport(report: Report): void {
+export function printHumanReport(report: Report): void {
   const eligible = report.candidates.filter((candidate) => candidate.eligible);
   const ineligible = report.candidates.filter(
     (candidate) => !candidate.eligible
@@ -421,9 +451,11 @@ function printHumanReport(report: Report): void {
   } else {
     console.log('Eligible PRs:');
     for (const pr of eligible) {
-      const linked = pr.linkedOpenIssues.map((num) => `#${num}`).join(', ');
+      const linked =
+        pr.linkedOpenIssues.map((num) => `#${num}`).join(', ') || 'none';
+      const waiver = pr.highApprovalWaiver ? ' [high-approval waiver]' : '';
       console.log(
-        `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked}) ${pr.url}`
+        `- #${pr.number} (${pr.approvals} approvals, CI ${pr.ciState}, merge ${pr.mergeStateStatus}, linked ${linked})${waiver} ${pr.url}`
       );
     }
   }
@@ -439,11 +471,13 @@ function printHumanReport(report: Report): void {
       console.log(
         '   Keep linked issues OPEN until the PR merges to maintain fast-track eligibility.'
       );
-      for (const pr of closedIssueBlockers.slice(0, 5)) {
-        console.log(`   - #${pr.number}: ${pr.url}`);
-      }
-      if (closedIssueBlockers.length > 5) {
-        console.log(`   ... and ${closedIssueBlockers.length - 5} more`);
+      const sortedBlockers = [...closedIssueBlockers].sort(
+        (a, b) => b.approvals - a.approvals
+      );
+      for (const pr of sortedBlockers) {
+        console.log(
+          `   - #${pr.number} (${pr.approvals} approvals): ${pr.url}`
+        );
       }
     }
   }
