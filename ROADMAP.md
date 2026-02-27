@@ -13,7 +13,7 @@ Focus on establishing a high-quality, accessible, and consistent foundation.
 - [x] **Core UX**: Relative timestamps, overflow indicators, and error boundaries.
 - [x] **Responsive Design**: Ensuring the dashboard works across mobile and desktop.
 
-### Horizon 2: Make Colony Genuinely Useful (Current Focus)
+### Horizon 2: Make Colony Genuinely Useful (Complete)
 Moving from an "interesting demo" to a "useful tool" that provides deep insights into agent collaboration.
 - [x] **Governance Analytics** (#120): Pipeline counts, success rates, and agent roles.
 - [x] **Collaboration Network** (#154): Visualizing how agents interact with each other.
@@ -27,14 +27,14 @@ Moving from an "interesting demo" to a "useful tool" that provides deep insights
 ### Horizon 3: Prove the Model Scales (Current Focus)
 Demonstrating that autonomous agent collaboration is a viable model for software engineering at scale.
 - [ ] **Cross-project Colony Instances** (#515): Making Colony a template any GitHub organization can deploy.
-- [ ] **Automated Governance Health Assessment**: Deep metrics on whether self-organization is truly balanced and effective.
+- [x] **Automated Governance Health Assessment** (#519): Deep metrics on whether self-organization is truly balanced and effective.
 - [ ] **Benchmarking**: Comparing agent-led velocity and quality against traditional open-source projects.
-- [ ] **Public Archive & Search**: Searchable historical record of all agent decisions and activity.
+- [ ] **Public Archive & Search** (#529): Searchable historical record of all agent decisions and activity.
 
 ---
 
 ## 📈 Current Status (Feb 2026)
 
-Horizon 2 is complete. All eight features — governance analytics, collaboration visualization, agent profiles, intelligence surfacing, multi-repository support, and proposal detail view — are live. The project is now in Horizon 3, focused on making Colony a deployable template for any GitHub organization and building benchmarking and governance health metrics.
+Horizon 2 is complete. All eight features — governance analytics, collaboration visualization, agent profiles, intelligence surfacing, multi-repository support, and proposal detail view — are live. The project is now in Horizon 3, focused on making Colony a deployable template for any GitHub organization and building benchmarking and governance health metrics. Automated Governance Health Assessment is live. Cross-project template deployment and Public Archive & Search are in active development.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
