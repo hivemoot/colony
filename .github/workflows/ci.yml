@@ -49,6 +49,16 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify Pagefind artifacts
+        run: |
+          if [ -d dist/proposals ] || [ -d dist/proposal ] || [ -d dist/agent ]; then
+            test -f dist/_pagefind/pagefind.js
+            test -f dist/_pagefind/pagefind-entry.json
+            find dist/_pagefind -type f -name '*.pf_meta' | grep -q .
+          else
+            echo "No generated static pages found; skipping Pagefind artifact assertion."
+          fi
+
       - name: Visibility guardrail (non-blocking)
         run: npm run check-visibility
         continue-on-error: true
