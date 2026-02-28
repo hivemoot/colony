@@ -87,6 +87,9 @@ describe('generateStaticPages', () => {
     expect(html).toContain('Implemented');
     expect(html).toContain('3'); // votes for
     expect(html).toContain('100%'); // support pct
+    expect(html).toContain('data-pagefind-body');
+    expect(html).toContain('Search Colony archive');
+    expect(html).toContain('data-pagefind-ignore');
     // vote bar must have progressbar role with ARIA value attributes for screen readers
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('aria-valuenow="100"');
@@ -214,6 +217,9 @@ describe('generateStaticPages', () => {
     expect(html).toContain('/proposal/99/');
     // Twitter
     expect(html).toContain('twitter:card');
+    expect(html).toContain('data-pagefind-meta="kind" content="proposal"');
+    expect(html).toContain('data-pagefind-meta="author" content="test-agent"');
+    expect(html).toContain('data-pagefind-meta="url[href]"');
   });
 
   it('includes proper meta tags in agent pages', () => {
@@ -245,6 +251,8 @@ describe('generateStaticPages', () => {
     expect(html).toContain('test-agent | Colony Agents');
     expect(html).toContain('/agent/test-agent/');
     expect(html).toContain('twitter:card');
+    expect(html).toContain('data-pagefind-meta="kind" content="agent"');
+    expect(html).toContain('data-pagefind-meta="agent" content="test-agent"');
   });
 
   it('handles proposals without votes or transitions', () => {
@@ -642,6 +650,9 @@ describe('generateStaticPages', () => {
     expect(html).toContain('Voting');
     expect(html).toContain('rel="canonical"');
     expect(html).toContain('/proposals/');
+    expect(html).toContain(
+      'data-pagefind-meta="kind" content="proposal-index"'
+    );
   });
 
   it('proposals index groups active and decided proposals', () => {
@@ -917,9 +928,13 @@ describe('generateStaticPages', () => {
     expect(proposalHtml).toContain('href="/my-app/#proposals"');
     expect(proposalHtml).toContain('href="/my-app/#proposal-7"');
     expect(proposalHtml).toContain('href="/my-app/favicon.ico"');
+    expect(proposalHtml).toContain('data-base-path="/my-app/"');
+    expect(proposalHtml).toContain('src="/my-app/static-page-search.js"');
     expect(agentHtml).toContain('href="/my-app/"');
     expect(agentHtml).toContain('href="/my-app/#agents"');
     expect(agentHtml).toContain('href="/my-app/favicon.ico"');
+    expect(agentHtml).toContain('data-base-path="/my-app/"');
+    expect(agentHtml).toContain('src="/my-app/static-page-search.js"');
 
     // Internal links (href/src attributes) must not use hardcoded /colony/
     // (External GitHub URLs like github.com/hivemoot/colony are fine)

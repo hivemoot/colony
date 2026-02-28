@@ -35,6 +35,7 @@ interface PageMeta {
   title: string;
   description: string;
   canonicalPath: string;
+  pagefindMeta?: Record<string, string>;
 }
 
 // -- Phase display helpers --
@@ -66,6 +67,19 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function renderPagefindMeta(meta: Record<string, string> | undefined): string {
+  if (!meta) {
+    return '';
+  }
+
+  return Object.entries(meta)
+    .map(
+      ([name, value]) =>
+        `  <meta data-pagefind-meta="${escapeHtml(name)}" content="${escapeHtml(value)}" />`
+    )
+    .join('\n');
 }
 
 /**
@@ -179,6 +193,8 @@ function renderMarkdown(md: string): string {
 
 function htmlShell(meta: PageMeta, content: string): string {
   const fullUrl = `${BASE_URL}${meta.canonicalPath}`;
+  const pagefindMetaTags = renderPagefindMeta(meta.pagefindMeta);
+  const pagefindMetaBlock = pagefindMetaTags ? `${pagefindMetaTags}\n` : '';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -186,7 +202,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(meta.title)}</title>
   <meta name="description" content="${escapeHtml(meta.description)}" />
-  <link rel="canonical" href="${escapeHtml(fullUrl)}" />
+${pagefindMetaBlock}  <link data-pagefind-meta="url[href]" rel="canonical" href="${escapeHtml(fullUrl)}" />
   <link rel="icon" href="${basePath()}favicon.ico" sizes="any" />
   <link rel="apple-touch-icon" sizes="180x180" href="${basePath()}apple-touch-icon.png" />
   <meta property="og:type" content="website" />
@@ -236,12 +252,45 @@ function htmlShell(meta: PageMeta, content: string): string {
     .cta:hover { background: #92400e; }
     .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e5e5e5; font-size: 0.75rem; color: #6b7280; text-align: center; }
     @media (prefers-color-scheme: dark) { .footer { border-color: #404040; } }
+    .search-panel { margin-bottom: 1.25rem; border-radius: 0.5rem; border: 1px solid #e5e5e5; background: #fff; padding: 1rem; }
+    @media (prefers-color-scheme: dark) { .search-panel { background: #262626; border-color: #404040; } }
+    .search-label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .search-input { width: 100%; border: 1px solid #d4d4d4; border-radius: 0.375rem; padding: 0.625rem 0.75rem; font-size: 0.9375rem; }
+    .search-input:focus { outline: 2px solid #b45309; outline-offset: 2px; border-color: #b45309; }
+    @media (prefers-color-scheme: dark) { .search-input { background: #171717; border-color: #525252; color: #e5e5e5; } }
+    .search-status { margin-top: 0.5rem; font-size: 0.8125rem; color: #6b7280; min-height: 1.1rem; }
+    .search-results { margin-top: 0.75rem; list-style: none; display: grid; gap: 0.625rem; }
+    .search-result { border-top: 1px solid #e5e5e5; padding-top: 0.625rem; }
+    .search-result:first-child { border-top: 0; padding-top: 0; }
+    @media (prefers-color-scheme: dark) { .search-result { border-color: #404040; } }
+    .search-result-link { color: #b45309; text-decoration: none; font-weight: 600; }
+    .search-result-link:hover { text-decoration: underline; }
+    @media (prefers-color-scheme: dark) { .search-result-link { color: #fcd34d; } }
+    .search-result-meta { margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280; }
+    .search-result-snippet { margin-top: 0.25rem; font-size: 0.8125rem; color: #4b5563; }
+    @media (prefers-color-scheme: dark) { .search-result-snippet { color: #a3a3a3; } }
   </style>
 </head>
 <body>
-  <main class="container">
+  <main class="container" data-pagefind-body>
+    <section class="search-panel" data-pagefind-ignore data-base-path="${basePath()}">
+      <label class="search-label" for="archive-search-input">Search Colony archive</label>
+      <input
+        id="archive-search-input"
+        class="search-input"
+        type="search"
+        placeholder="Search proposals, decisions, and agents"
+        autocomplete="off"
+      />
+      <p id="archive-search-status" class="search-status" aria-live="polite"></p>
+      <ul id="archive-search-results" class="search-results"></ul>
+      <noscript>
+        <p class="search-status">Search requires JavaScript. You can still browse this page manually.</p>
+      </noscript>
+    </section>
     ${content}
   </main>
+  <script src="${basePath()}static-page-search.js" defer></script>
 </body>
 </html>`;
 }
@@ -257,6 +306,13 @@ function proposalPage(proposal: Proposal): string {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
     description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
     canonicalPath: `/proposal/${proposal.number}/`,
+    pagefindMeta: {
+      kind: 'proposal',
+      proposal: String(proposal.number),
+      phase: phaseLabel,
+      author: proposal.author,
+      title: `Proposal #${proposal.number}: ${proposal.title}`,
+    },
   };
 
   let votesHtml = '';
@@ -317,7 +373,7 @@ function proposalPage(proposal: Proposal): string {
   }
 
   const content = `
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" data-pagefind-ignore>
       <a href="${basePath()}">Colony</a> &rarr;
       <a href="${basePath()}#proposals">Proposals</a> &rarr;
       #${proposal.number}
@@ -351,7 +407,7 @@ function proposalPage(proposal: Proposal): string {
       View in dashboard &rarr;
     </a>
 
-    <div class="footer">
+    <div class="footer" data-pagefind-ignore>
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
       <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
     </div>`;
@@ -364,10 +420,17 @@ function agentPage(agent: AgentStats): string {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
     canonicalPath: `/agent/${encodeURIComponent(agent.login)}/`,
+    pagefindMeta: {
+      kind: 'agent',
+      agent: agent.login,
+      title: `${agent.login} | Colony Agents`,
+      commits: String(agent.commits),
+      reviews: String(agent.reviews),
+    },
   };
 
   const content = `
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" data-pagefind-ignore>
       <a href="${basePath()}">Colony</a> &rarr;
       <a href="${basePath()}#agents">Agents</a> &rarr;
       ${escapeHtml(agent.login)}
@@ -408,7 +471,7 @@ function agentPage(agent: AgentStats): string {
       View in dashboard &rarr;
     </a>
 
-    <div class="footer">
+    <div class="footer" data-pagefind-ignore>
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
       <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
     </div>`;
@@ -439,6 +502,11 @@ function proposalsIndexPage(proposals: Proposal[]): string {
     title: 'Colony Governance Proposals | Colony',
     description: `All ${proposals.length} governance proposals from Colony — an autonomous agent-governed open-source project.`,
     canonicalPath: '/proposals/',
+    pagefindMeta: {
+      kind: 'proposal-index',
+      title: 'Colony Governance Proposals',
+      proposals: String(proposals.length),
+    },
   };
 
   // Sort by proposal number descending (most recent first)
@@ -471,7 +539,7 @@ function proposalsIndexPage(proposals: Proposal[]): string {
       : '';
 
   const content = `
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" data-pagefind-ignore>
       <a href="${basePath()}">Colony</a> &rarr;
       Proposals
     </nav>
@@ -487,7 +555,7 @@ function proposalsIndexPage(proposals: Proposal[]): string {
       View in dashboard &rarr;
     </a>
 
-    <div class="footer">
+    <div class="footer" data-pagefind-ignore>
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
       <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
     </div>`;
