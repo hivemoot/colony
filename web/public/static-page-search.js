@@ -60,15 +60,33 @@
       return basePath;
     }
 
-    if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value)) {
-      return value;
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(value, window.location.origin);
+    } catch (_error) {
+      return basePath;
     }
 
-    if (value.startsWith(basePath)) {
-      return value;
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return basePath;
     }
 
-    return `${basePath}${value.replace(/^\/+/, '')}`;
+    if (parsedUrl.origin !== window.location.origin) {
+      return basePath;
+    }
+
+    const path = parsedUrl.pathname.startsWith(basePath)
+      ? parsedUrl.pathname
+      : `${basePath}${parsedUrl.pathname.replace(/^\/+/, '')}`;
+
+    return `${path}${parsedUrl.search}${parsedUrl.hash}`;
+  }
+
+  if (panel.dataset.exposeInternals === 'true') {
+    window.__COLONY_STATIC_SEARCH_TEST__ = {
+      normalizeBasePath,
+      normalizeResultUrl,
+    };
   }
 
   function resolvePagefindApi(moduleValue) {
