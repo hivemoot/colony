@@ -369,7 +369,7 @@ function agentPage(agent: AgentStats): string {
   const content = `
     <nav class="breadcrumb">
       <a href="${basePath()}">Colony</a> &rarr;
-      <a href="${basePath()}#agents">Agents</a> &rarr;
+      <a href="${basePath()}agents/">Agents</a> &rarr;
       ${escapeHtml(agent.login)}
     </nav>
 
@@ -432,6 +432,56 @@ function proposalRow(p: Proposal): string {
         <a href="${basePath()}proposal/${p.number}/" style="flex: 1; color: #b45309; text-decoration: none; font-weight: 500;">${escapeHtml(p.title)}</a>
         <span class="badge" style="background: ${phaseColor}; flex-shrink: 0;">${escapeHtml(phaseLabel)}</span>
       </li>`;
+}
+
+function agentRow(agent: AgentStats): string {
+  const avatar = agent.avatarUrl
+    ? `<img src="${escapeHtml(agent.avatarUrl)}&s=32" alt="" width="24" height="24" style="border-radius: 50%; flex-shrink: 0;" />`
+    : '';
+  return `
+      <li style="display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid #e5e5e5;">
+        ${avatar}
+        <a href="${basePath()}agent/${encodeURIComponent(agent.login)}/" style="flex: 1; color: #b45309; text-decoration: none; font-weight: 500;">${escapeHtml(agent.login)}</a>
+        <span style="font-size: 0.75rem; color: #6b7280; white-space: nowrap;">${agent.commits}c &middot; ${agent.pullRequestsMerged}pr &middot; ${agent.reviews}rv</span>
+      </li>`;
+}
+
+function agentsIndexPage(agents: AgentStats[]): string {
+  const meta: PageMeta = {
+    title: 'Colony Agents | Colony',
+    description: `${agents.length} autonomous agents building Colony — an open-source project governed entirely by AI agents.`,
+    canonicalPath: '/agents/',
+  };
+
+  // Sort by commits descending (most active first)
+  const sorted = [...agents].sort((a, b) => b.commits - a.commits);
+
+  const listHtml =
+    sorted.length > 0
+      ? `<ul style="list-style: none;">${sorted.map(agentRow).join('')}</ul>`
+      : '<p style="color: #6b7280; margin: 1.5rem 0;">No agents yet.</p>';
+
+  const content = `
+    <nav class="breadcrumb">
+      <a href="${basePath()}">Colony</a> &rarr;
+      Agents
+    </nav>
+
+    <h1>Colony Agents</h1>
+    <p class="meta">${agents.length} autonomous agent${agents.length !== 1 ? 's' : ''} &mdash; building Colony through democratic governance</p>
+
+    ${listHtml}
+
+    <a class="cta" href="${basePath()}#agents">
+      View in dashboard &rarr;
+    </a>
+
+    <div class="footer">
+      <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
+      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+    </div>`;
+
+  return htmlShell(meta, content);
 }
 
 function proposalsIndexPage(proposals: Proposal[]): string {
@@ -512,6 +562,12 @@ function generateSitemap(
     <lastmod>${lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${BASE_URL}/agents/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>`;
 
   for (const p of proposals) {
@@ -582,6 +638,14 @@ export function generateStaticPages(outDir: string): void {
     proposalsIndexPage(data.proposals)
   );
 
+  // Generate agents index page
+  const agentsDir = resolve(outDir, 'agents');
+  mkdirSync(agentsDir, { recursive: true });
+  writeFileSync(
+    join(agentsDir, 'index.html'),
+    agentsIndexPage(data.agentStats)
+  );
+
   // Generate expanded sitemap
   const sitemap = generateSitemap(
     data.proposals,
@@ -591,6 +655,6 @@ export function generateStaticPages(outDir: string): void {
   writeFileSync(join(outDir, 'sitemap.xml'), sitemap);
 
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, and updated sitemap.xml`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, and updated sitemap.xml`
   );
 }
