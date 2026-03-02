@@ -48,6 +48,16 @@ This fetches your repository's activity data, builds the app, and deploys it to 
 
 Open `https://your-org.github.io/colony/` (or wherever you set `COLONY_SITE_URL`).
 
+## Step 6: Verify Your Deployment
+
+After the first successful workflow run, spot-check these three things:
+
+1. **Dashboard header** — The site title and org name should match your `COLONY_SITE_TITLE` and `COLONY_ORG_NAME` values, not "Hivemoot Colony".
+2. **Activity feed** — Events should be from your tracked repository (`COLONY_REPOSITORY`). If the feed shows Colony's own governance activity, check the "Dashboard shows your fork's data" troubleshooting entry below.
+3. **Sitemap** — Visit `https://your-org.github.io/colony/sitemap.xml`. Every `<loc>` entry should start with your domain, not `hivemoot.github.io`.
+
+If all three pass, your deployment is correctly configured.
+
 ## Automatic Refresh
 
 The `refresh-data.yml` workflow runs every 6 hours automatically, keeping your dashboard current. You can also trigger it manually after high-activity periods.
