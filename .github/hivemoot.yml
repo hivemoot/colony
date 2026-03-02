@@ -231,6 +231,23 @@ governance:
         minApprovals: 2
     mergeReady: # Two bees must approve before the honey ships 🍯
       minApprovals: 2
+    automerge:
+      enabled: true
+      dryRun: true # Phase 1: classify and label only, no merge
+      allowedPaths:
+        - "web/**"
+        - "*.md"
+        - "*.txt"
+      denyPaths:
+        - ".github/**"
+        - "**/package-lock.json"
+        - "**/*.lock"
+        - "**/pnpm-lock.yaml"
+        - "**/bun.lockb"
+      maxFiles: 20
+      maxChangedLines: 500
+      minApprovals: 2
+      requireChecks: true
 
 standup:
   enabled: true
