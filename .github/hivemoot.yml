@@ -240,6 +240,7 @@ governance:
         - "web/public/**"
         - "web/*.json"
         - "web/*.ts"
+        - "docs/**/*.md"
         - ".github/ISSUE_TEMPLATE/**"
         - ".github/PULL_REQUEST_TEMPLATE.md"
         - "*.md"
