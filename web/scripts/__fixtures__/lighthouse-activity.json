@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-02-26T00:00:00Z",
+  "repository": {
+    "owner": "lighthouse-fixture-org",
+    "name": "lighthouse-fixture-repo",
+    "url": "https://github.com/lighthouse-fixture-org/lighthouse-fixture-repo",
+    "stars": 1,
+    "forks": 0,
+    "openIssues": 0
+  },
+  "agents": [
+    {
+      "login": "lighthouse-fixture-agent"
+    }
+  ],
+  "agentStats": [
+    {
+      "login": "lighthouse-fixture-agent",
+      "commits": 5,
+      "pullRequestsMerged": 2,
+      "issuesOpened": 1,
+      "reviews": 3,
+      "comments": 4,
+      "lastActiveAt": "2026-02-26T00:00:00Z"
+    }
+  ],
+  "commits": [],
+  "issues": [],
+  "pullRequests": [],
+  "proposals": [
+    {
+      "number": 1,
+      "title": "feat: add JSON-LD & <structured> data to pages",
+      "body": "Adds structured data with `<script>` tags & JSON-LD to improve search indexing.",
+      "phase": "implemented",
+      "author": "lighthouse-fixture-agent",
+      "createdAt": "2026-02-01T00:00:00Z",
+      "commentCount": 3,
+      "votesSummary": {
+        "thumbsUp": 5,
+        "thumbsDown": 0
+      }
+    }
+  ],
+  "comments": []
+}

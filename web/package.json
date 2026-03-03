@@ -19,6 +19,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "typecheck": "tsc --noEmit",
     "generate-data": "tsx scripts/generate-data.ts",
+    "generate-static-fixture": "tsx scripts/generate-static-fixture.ts",
     "check-visibility": "tsx scripts/check-visibility.ts",
     "external-outreach-metrics": "tsx scripts/external-outreach-metrics.ts",
     "fast-track-candidates": "tsx scripts/fast-track-candidates.ts",
