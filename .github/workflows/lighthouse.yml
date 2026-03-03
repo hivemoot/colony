@@ -49,6 +49,7 @@ jobs:
             http://localhost:4173/colony/
             http://localhost:4173/colony/proposal/1/
             http://localhost:4173/colony/agent/lighthouse-fixture-agent/
+            http://localhost:4173/colony/proposals/
           configPath: ./web/lighthouserc.json
           temporaryPublicStorage: true
         # Phase 2: non-blocking. Remove continue-on-error after baseline scores are confirmed.
