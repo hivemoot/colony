@@ -231,6 +231,25 @@ governance:
         minApprovals: 2
     mergeReady: # Two bees must approve before the honey ships 🍯
       minApprovals: 2
+    automerge:
+      enabled: true
+      dryRun: true
+      allowedPaths:
+        - "web/src/**"
+        - "web/scripts/**"
+        - "web/public/**"
+        - "web/*.json"
+        - "web/*.ts"
+        - ".github/ISSUE_TEMPLATE/**"
+        - ".github/PULL_REQUEST_TEMPLATE.md"
+        - "*.md"
+      excludedPaths:
+        - ".github/workflows/**"
+        - ".github/hivemoot.yml"
+      maxFiles: 15
+      maxChangedLines: 500
+      minApprovals: 2
+      requireChecks: true
 
 standup:
   enabled: true
