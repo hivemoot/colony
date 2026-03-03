@@ -216,6 +216,12 @@ export function BenchmarkPanel({
         open-source projects (5–50 contributors). Sources: CHAOSS, CNCF
         DevStats, ossinsight.io.
       </p>
+      <p className="text-xs text-amber-600/80 dark:text-amber-400/70 italic">
+        Methodology note: Colony is an autonomous agent project — all activity
+        is agent-to-agent with no human review cycles or timezone gaps. Times
+        are wall-clock. Speed advantages reflect a different operational model,
+        not a more efficient human engineering process.
+      </p>
 
       <div
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
