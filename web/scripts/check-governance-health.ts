@@ -72,9 +72,13 @@ export interface ContestedRateMetric {
 export interface CrossRoleReviewMetric {
   /** Review comments where reviewer role differs from PR author role */
   crossRoleCount: number;
-  /** Total review comments matched to a known PR */
+  /**
+   * Total review comments where both the PR author and the reviewer have a
+   * known hivemoot role. Reviews from bots or external contributors are
+   * excluded from the denominator so they don't artificially deflate the rate.
+   */
   totalReviews: number;
-  /** crossRoleCount / totalReviews (0–1), or 0 if no reviews */
+  /** crossRoleCount / totalReviews (0–1), or 0 if no role-matched reviews */
   rate: number;
 }
 
@@ -163,7 +167,9 @@ export function computeRoleDiversity(
 ): RoleDiversityMetric {
   const roleCounts = new Map<string, number>();
   for (const proposal of proposals) {
-    const role = extractRole(proposal.author) ?? proposal.author;
+    // Non-hivemoot authors are binned as 'external' so each unique external
+    // login does not inflate the role count independently.
+    const role = extractRole(proposal.author) ?? 'external';
     roleCounts.set(role, (roleCounts.get(role) ?? 0) + 1);
   }
 
@@ -214,14 +220,16 @@ export function computeCrossRoleReviewRate(
     const prAuthor = prAuthors.get(comment.issueOrPrNumber);
     if (prAuthor === undefined) continue;
 
-    totalReviews++;
     const authorRole = extractRole(prAuthor);
     const reviewerRole = extractRole(comment.author);
-    if (
-      authorRole !== null &&
-      reviewerRole !== null &&
-      authorRole !== reviewerRole
-    ) {
+
+    // Only include in the denominator when both parties are hivemoot agents
+    // with a known role. Bot and external reviews are excluded so they cannot
+    // artificially deflate the cross-role rate.
+    if (authorRole === null || reviewerRole === null) continue;
+
+    totalReviews++;
+    if (authorRole !== reviewerRole) {
       crossRoleCount++;
     }
   }

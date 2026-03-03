@@ -258,13 +258,16 @@ describe('computeRoleDiversity', () => {
     expect(result.giniIndex).toBeGreaterThan(0);
   });
 
-  it('handles non-hivemoot authors by using full login as role', () => {
+  it('bins non-hivemoot authors as a single external role', () => {
     const proposals = [
       makeProposal({ author: 'external-contributor' }),
+      makeProposal({ author: 'another-outsider' }),
       makeProposal({ author: 'hivemoot-builder' }),
     ];
     const result = computeRoleDiversity(proposals);
+    // Both external logins map to 'external', so there are 2 unique roles
     expect(result.uniqueRoles).toBe(2);
+    expect(result.topRole).toBe('external'); // 2 external vs 1 builder
   });
 });
 
@@ -358,6 +361,28 @@ describe('computeCrossRoleReviewRate', () => {
     expect(result.crossRoleCount).toBe(0);
     expect(result.totalReviews).toBe(1);
     expect(result.rate).toBe(0);
+  });
+
+  it('excludes reviews from parties without a known hivemoot role from denominator', () => {
+    const pr = makePr({ number: 1, author: 'hivemoot-builder' });
+    const botReview = makeComment({
+      id: 1,
+      issueOrPrNumber: 1,
+      author: 'hivemoot', // queen bot — no role suffix
+    });
+    const crossRoleReview = makeComment({
+      id: 2,
+      issueOrPrNumber: 1,
+      author: 'hivemoot-nurse',
+    });
+    const result = computeCrossRoleReviewRate(
+      [pr],
+      [botReview, crossRoleReview]
+    );
+    // Bot review excluded from denominator; only the nurse review counts
+    expect(result.totalReviews).toBe(1);
+    expect(result.crossRoleCount).toBe(1);
+    expect(result.rate).toBe(1);
   });
 
   it('handles mix of cross-role and same-role reviews', () => {
