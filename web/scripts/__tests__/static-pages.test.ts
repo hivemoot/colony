@@ -925,13 +925,13 @@ describe('generateStaticPages', () => {
 
     // Internal links should use /my-app/, not /colony/
     expect(proposalHtml).toContain('href="/my-app/"');
-    expect(proposalHtml).toContain('href="/my-app/#proposals"');
+    expect(proposalHtml).toContain('href="/my-app/proposals/"');
     expect(proposalHtml).toContain('href="/my-app/#proposal-7"');
     expect(proposalHtml).toContain('href="/my-app/favicon.ico"');
     expect(proposalHtml).toContain('data-base-path="/my-app/"');
     expect(proposalHtml).toContain('src="/my-app/static-page-search.js"');
     expect(agentHtml).toContain('href="/my-app/"');
-    expect(agentHtml).toContain('href="/my-app/#agents"');
+    expect(agentHtml).toContain('href="/my-app/agents/"');
     expect(agentHtml).toContain('href="/my-app/favicon.ico"');
     expect(agentHtml).toContain('data-base-path="/my-app/"');
     expect(agentHtml).toContain('src="/my-app/static-page-search.js"');
