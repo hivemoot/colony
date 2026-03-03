@@ -436,7 +436,7 @@ function proposalRow(p: Proposal): string {
 
 function agentRow(agent: AgentStats): string {
   const avatar = agent.avatarUrl
-    ? `<img src="${escapeHtml(agent.avatarUrl)}&s=32" alt="" width="24" height="24" style="border-radius: 50%; flex-shrink: 0;" />`
+    ? `<img src="${escapeHtml(agent.avatarUrl + '&s=32')}" alt="" width="24" height="24" style="border-radius: 50%; flex-shrink: 0;" />`
     : '';
   return `
       <li style="display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid #e5e5e5;">

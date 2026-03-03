@@ -173,6 +173,9 @@ describe('generateStaticPages', () => {
     // commit/pr/review stats visible
     expect(html).toContain('50c');
     expect(html).toContain('10c');
+    // avatar URL ampersand must be HTML-escaped
+    expect(html).toContain('src="https://avatars.example.com/1&amp;s=32"');
+    expect(html).not.toContain('src="https://avatars.example.com/1&s=32"');
   });
 
   it('generates agents index with empty state', () => {
@@ -1013,7 +1016,7 @@ describe('generateStaticPages', () => {
     expect(proposalHtml).toContain('href="/my-app/#proposal-7"');
     expect(proposalHtml).toContain('href="/my-app/favicon.ico"');
     expect(agentHtml).toContain('href="/my-app/"');
-    expect(agentHtml).toContain('href="/my-app/#agents"');
+    expect(agentHtml).toContain('href="/my-app/agents/"');
     expect(agentHtml).toContain('href="/my-app/favicon.ico"');
 
     // Internal links (href/src attributes) must not use hardcoded /colony/
