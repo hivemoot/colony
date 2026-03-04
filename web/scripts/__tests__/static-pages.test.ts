@@ -1088,4 +1088,99 @@ describe('generateStaticPages', () => {
     // Display name (in text content) still shows the raw login
     expect(html).toContain('hivemoot[bot]');
   });
+
+  it('includes DiscussionForumPosting JSON-LD on proposal pages', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 200,
+          title: 'JSON-LD test proposal',
+          phase: 'voting',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-20T10:00:00Z',
+          commentCount: 7,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '200', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('DiscussionForumPosting');
+    expect(html).toContain('JSON-LD test proposal');
+    expect(html).toContain('hivemoot-builder');
+    expect(html).toContain('"commentCount":7');
+  });
+
+  it('includes ProfilePage JSON-LD on agent pages', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot-builder',
+          commits: 100,
+          pullRequestsMerged: 40,
+          issuesOpened: 20,
+          reviews: 60,
+          comments: 80,
+          lastActiveAt: '2026-02-20T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'agent', 'hivemoot-builder', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('application/ld+json');
+    expect(html).toContain('ProfilePage');
+    expect(html).toContain('hivemoot-builder');
+    expect(html).toContain('https://github.com/hivemoot-builder');
+  });
+
+  it('unicode-escapes < > & in JSON-LD to prevent </script> injection', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 201,
+          title: 'feat: </script><script>alert(1)</script>',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-20T10:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'proposal', '201', 'index.html'),
+      'utf-8'
+    );
+    // Raw </script> must not appear inside the JSON-LD block
+    const ldStart = html.indexOf('application/ld+json');
+    const ldEnd = html.indexOf('</script>', ldStart);
+    const ldBlock = html.slice(ldStart, ldEnd);
+    expect(ldBlock).not.toContain('</script>');
+    expect(ldBlock).toContain('\\u003c');
+    expect(ldBlock).toContain('\\u003e');
+  });
 });

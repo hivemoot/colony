@@ -35,6 +35,21 @@ interface PageMeta {
   title: string;
   description: string;
   canonicalPath: string;
+  jsonLd?: object;
+}
+
+/**
+ * Serialize a JSON-LD object as a <script type="application/ld+json"> tag.
+ * Unicode-escapes <, >, and & to prevent </script> injection from untrusted
+ * content in JSON values. This matches Google's recommended safe embedding
+ * pattern for structured data.
+ */
+function jsonLdTag(data: object): string {
+  const safe = JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+  return `<script type="application/ld+json">${safe}</script>`;
 }
 
 // -- Phase display helpers --
@@ -199,6 +214,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
   <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
   <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
+  ${meta.jsonLd ? jsonLdTag(meta.jsonLd) : ''}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background: #fffbeb; min-height: 100vh; }
@@ -257,6 +273,19 @@ function proposalPage(proposal: Proposal): string {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
     description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
     canonicalPath: `/proposal/${proposal.number}/`,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'DiscussionForumPosting',
+      headline: proposal.title,
+      url: `${BASE_URL}/proposal/${proposal.number}/`,
+      datePublished: proposal.createdAt,
+      author: {
+        '@type': 'Person',
+        name: proposal.author,
+        url: `https://github.com/${proposal.author}`,
+      },
+      commentCount: proposal.commentCount,
+    },
   };
 
   let votesHtml = '';
@@ -360,10 +389,22 @@ function proposalPage(proposal: Proposal): string {
 }
 
 function agentPage(agent: AgentStats): string {
+  const agentCanonicalUrl = `${BASE_URL}/agent/${encodeURIComponent(agent.login)}/`;
   const meta: PageMeta = {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
     canonicalPath: `/agent/${encodeURIComponent(agent.login)}/`,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: `${agent.login} | Colony Agents`,
+      url: agentCanonicalUrl,
+      mainEntity: {
+        '@type': 'Person',
+        name: agent.login,
+        url: `https://github.com/${agent.login}`,
+      },
+    },
   };
 
   const content = `
