@@ -92,6 +92,9 @@ describe('generateStaticPages', () => {
     expect(html).toContain('aria-valuenow="100"');
     expect(html).toContain('aria-valuemin="0"');
     expect(html).toContain('aria-valuemax="100"');
+    // breadcrumb links to /proposals/ hub, not the SPA hash
+    expect(html).toContain('href="/colony/proposals/"');
+    expect(html).toContain('>Proposals<');
   });
 
   it('generates agent pages', () => {
@@ -1012,7 +1015,7 @@ describe('generateStaticPages', () => {
 
     // Internal links should use /my-app/, not /colony/
     expect(proposalHtml).toContain('href="/my-app/"');
-    expect(proposalHtml).toContain('href="/my-app/#proposals"');
+    expect(proposalHtml).toContain('href="/my-app/proposals/"');
     expect(proposalHtml).toContain('href="/my-app/#proposal-7"');
     expect(proposalHtml).toContain('href="/my-app/favicon.ico"');
     expect(agentHtml).toContain('href="/my-app/"');

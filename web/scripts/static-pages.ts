@@ -319,7 +319,7 @@ function proposalPage(proposal: Proposal): string {
   const content = `
     <nav class="breadcrumb">
       <a href="${basePath()}">Colony</a> &rarr;
-      <a href="${basePath()}#proposals">Proposals</a> &rarr;
+      <a href="${basePath()}proposals/">Proposals</a> &rarr;
       #${proposal.number}
     </nav>
 
