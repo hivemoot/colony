@@ -654,7 +654,13 @@ export function generateStaticPages(outDir: string): void {
   );
   writeFileSync(join(outDir, 'sitemap.xml'), sitemap);
 
+  // Generate robots.txt with deployment-specific sitemap URL so template
+  // deployments (issue #515) point crawlers to the correct sitemap instead
+  // of the hardcoded hivemoot URL in web/public/robots.txt.
+  const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${BASE_URL}/sitemap.xml\n`;
+  writeFileSync(join(outDir, 'robots.txt'), robotsTxt);
+
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, and updated sitemap.xml`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, and robots.txt`
   );
 }

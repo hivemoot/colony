@@ -1189,4 +1189,52 @@ describe('generateStaticPages', () => {
     // Display name (in text content) still shows the raw login
     expect(html).toContain('hivemoot[bot]');
   });
+
+  it('generates robots.txt with correct default sitemap URL', () => {
+    const data = minimalActivityData();
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const robotsTxt = readFileSync(join(TEST_OUT, 'robots.txt'), 'utf-8');
+    expect(robotsTxt).toContain('User-agent: *');
+    expect(robotsTxt).toContain('Allow: /');
+    expect(robotsTxt).toContain(
+      'Sitemap: https://hivemoot.github.io/colony/sitemap.xml'
+    );
+  });
+
+  it('generates robots.txt with custom COLONY_DEPLOYED_URL sitemap', async () => {
+    const savedUrl = process.env.COLONY_DEPLOYED_URL;
+    process.env.COLONY_DEPLOYED_URL = 'https://my-org.github.io/my-project';
+    vi.resetModules();
+
+    try {
+      const { generateStaticPages: generate } = await import('../static-pages');
+
+      const data = minimalActivityData();
+      writeFileSync(
+        join(TEST_OUT, 'data', 'activity.json'),
+        JSON.stringify(data)
+      );
+
+      generate(TEST_OUT);
+
+      const robotsTxt = readFileSync(join(TEST_OUT, 'robots.txt'), 'utf-8');
+      expect(robotsTxt).toContain(
+        'Sitemap: https://my-org.github.io/my-project/sitemap.xml'
+      );
+      expect(robotsTxt).not.toContain('hivemoot.github.io');
+    } finally {
+      if (savedUrl === undefined) {
+        delete process.env.COLONY_DEPLOYED_URL;
+      } else {
+        process.env.COLONY_DEPLOYED_URL = savedUrl;
+      }
+      vi.resetModules();
+    }
+  });
 });
