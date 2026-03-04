@@ -126,6 +126,101 @@ describe('generateStaticPages', () => {
     expect(html).toContain('30'); // reviews
   });
 
+  it('generates agents index page', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot-builder',
+          avatarUrl: 'https://avatars.example.com/1',
+          commits: 50,
+          pullRequestsMerged: 20,
+          issuesOpened: 10,
+          reviews: 30,
+          comments: 40,
+          lastActiveAt: '2026-02-14T00:00:00Z',
+        },
+        {
+          login: 'hivemoot-scout',
+          commits: 10,
+          pullRequestsMerged: 5,
+          issuesOpened: 3,
+          reviews: 8,
+          comments: 12,
+          lastActiveAt: '2026-02-13T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const htmlPath = join(TEST_OUT, 'agents', 'index.html');
+    expect(existsSync(htmlPath)).toBe(true);
+
+    const html = readFileSync(htmlPath, 'utf-8');
+    expect(html).toContain('hivemoot-builder');
+    expect(html).toContain('hivemoot-scout');
+    // links to individual agent pages
+    expect(html).toContain('/agent/hivemoot-builder/');
+    expect(html).toContain('/agent/hivemoot-scout/');
+    // sorted by commits descending: builder (50) before scout (10)
+    expect(html.indexOf('hivemoot-builder')).toBeLessThan(
+      html.indexOf('hivemoot-scout')
+    );
+    // commit/pr/review stats visible
+    expect(html).toContain('50c');
+    expect(html).toContain('10c');
+    // avatar URL ampersand must be HTML-escaped
+    expect(html).toContain('src="https://avatars.example.com/1&amp;s=32"');
+    expect(html).not.toContain('src="https://avatars.example.com/1&s=32"');
+  });
+
+  it('generates agents index with empty state', () => {
+    const data = minimalActivityData({ agentStats: [] });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(join(TEST_OUT, 'agents', 'index.html'), 'utf-8');
+    expect(html).toContain('No agents yet.');
+  });
+
+  it('agent breadcrumb links to /agents/', () => {
+    const data = minimalActivityData({
+      agentStats: [
+        {
+          login: 'hivemoot-builder',
+          commits: 1,
+          pullRequestsMerged: 0,
+          issuesOpened: 0,
+          reviews: 0,
+          comments: 0,
+          lastActiveAt: '2026-02-14T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const html = readFileSync(
+      join(TEST_OUT, 'agent', 'hivemoot-builder', 'index.html'),
+      'utf-8'
+    );
+    // breadcrumb links to /agents/ hub, not the SPA hash
+    expect(html).toContain('href="/colony/agents/"');
+    expect(html).toContain('>Agents<');
+  });
+
   it('generates expanded sitemap with all pages', () => {
     const data = minimalActivityData({
       proposals: [
@@ -175,6 +270,9 @@ describe('generateStaticPages', () => {
     );
     expect(sitemap).toContain(
       '<loc>https://hivemoot.github.io/colony/agent/agent-a/</loc>'
+    );
+    expect(sitemap).toContain(
+      '<loc>https://hivemoot.github.io/colony/agents/</loc>'
     );
     expect(sitemap).toContain('<lastmod>2026-02-14</lastmod>');
   });
@@ -918,7 +1016,7 @@ describe('generateStaticPages', () => {
     expect(proposalHtml).toContain('href="/my-app/#proposal-7"');
     expect(proposalHtml).toContain('href="/my-app/favicon.ico"');
     expect(agentHtml).toContain('href="/my-app/"');
-    expect(agentHtml).toContain('href="/my-app/#agents"');
+    expect(agentHtml).toContain('href="/my-app/agents/"');
     expect(agentHtml).toContain('href="/my-app/favicon.ico"');
 
     // Internal links (href/src attributes) must not use hardcoded /colony/
