@@ -433,7 +433,7 @@ function computeConsensusScore(proposals: Proposal[]): number {
 }
 
 /** Gini coefficient for distribution analysis. Returns 0-1. */
-function computeGini(values: number[]): number {
+export function computeGini(values: number[]): number {
   if (values.length <= 1) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const n = sorted.length;
