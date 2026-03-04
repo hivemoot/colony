@@ -7,7 +7,7 @@ import {
   rmSync,
 } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { generateStaticPages } from '../static-pages';
+import { generateStaticPages, generateAtomFeed } from '../static-pages';
 import type { ActivityData } from '../../shared/types';
 
 const TEST_OUT = resolve(__dirname, '__test-output-static-pages__');
@@ -1373,5 +1373,161 @@ describe('generateStaticPages', () => {
       }
       vi.resetModules();
     }
+  });
+});
+
+describe('generateAtomFeed', () => {
+  it('generates a valid Atom 1.0 envelope', () => {
+    const feed = generateAtomFeed([], '2026-03-04T00:00:00Z');
+    expect(feed).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect(feed).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(feed).toContain('<title>Colony Governance Feed</title>');
+    expect(feed).toContain('<updated>2026-03-04T00:00:00Z</updated>');
+    expect(feed).toContain('</feed>');
+  });
+
+  it('includes an entry for each proposal with required Atom fields', () => {
+    const proposals = [
+      {
+        number: 42,
+        title: 'Add dark mode',
+        phase: 'implemented' as const,
+        author: 'hivemoot-builder',
+        createdAt: '2026-02-01T12:00:00Z',
+        commentCount: 3,
+        body: 'Dark mode improves readability.',
+      },
+    ];
+    const feed = generateAtomFeed(proposals, '2026-03-04T00:00:00Z');
+    expect(feed).toContain('<entry>');
+    expect(feed).toContain('<title>Add dark mode</title>');
+    expect(feed).toContain('/proposal/42/');
+    expect(feed).toContain('<published>2026-02-01T12:00:00Z</published>');
+    expect(feed).toContain('<name>hivemoot-builder</name>');
+    expect(feed).toContain('<category term="implemented"/>');
+    expect(feed).toContain('Dark mode improves readability');
+  });
+
+  it('orders entries newest first', () => {
+    const proposals = [
+      {
+        number: 1,
+        title: 'Old',
+        phase: 'implemented' as const,
+        author: 'a',
+        createdAt: '2026-01-01T00:00:00Z',
+        commentCount: 0,
+      },
+      {
+        number: 2,
+        title: 'New',
+        phase: 'discussion' as const,
+        author: 'b',
+        createdAt: '2026-03-01T00:00:00Z',
+        commentCount: 0,
+      },
+    ];
+    const feed = generateAtomFeed(proposals, '2026-03-04T00:00:00Z');
+    const pos1 = feed.indexOf('/proposal/1/');
+    const pos2 = feed.indexOf('/proposal/2/');
+    // Newer proposal (#2) appears before older (#1)
+    expect(pos2).toBeLessThan(pos1);
+  });
+
+  it('XML-escapes < > & in proposal titles and authors', () => {
+    const proposals = [
+      {
+        number: 7,
+        title: 'Fix <script> injection & other issues',
+        phase: 'discussion' as const,
+        author: 'user&admin',
+        createdAt: '2026-02-01T00:00:00Z',
+        commentCount: 0,
+      },
+    ];
+    const feed = generateAtomFeed(proposals, '2026-03-04T00:00:00Z');
+    expect(feed).toContain('Fix &lt;script&gt; injection &amp; other issues');
+    expect(feed).toContain('user&amp;admin');
+    expect(feed).not.toContain('<script>');
+    expect(feed).not.toContain('user&admin');
+  });
+
+  it('uses deployment-aware BASE_URL for feed and entry URLs', () => {
+    const feed = generateAtomFeed([], '2026-03-04T00:00:00Z');
+    // Default BASE_URL contains hivemoot.github.io/colony
+    expect(feed).toContain('hivemoot.github.io/colony/feed.xml');
+    expect(feed).toContain('hivemoot.github.io/colony/proposals/');
+  });
+
+  it('limits feed to 50 most recent proposals', () => {
+    const proposals = Array.from({ length: 60 }, (_, i) => ({
+      number: i + 1,
+      title: `Proposal ${i + 1}`,
+      phase: 'discussion' as const,
+      author: 'a',
+      createdAt: new Date(2026, 0, i + 1).toISOString(),
+      commentCount: 0,
+    }));
+    const feed = generateAtomFeed(proposals, '2026-03-04T00:00:00Z');
+    const entryCount = (feed.match(/<entry>/g) ?? []).length;
+    expect(entryCount).toBe(50);
+    // Most recent 50 (proposals 11-60) should be present
+    expect(feed).toContain('/proposal/60/');
+    expect(feed).toContain('/proposal/11/');
+    // Oldest 10 (proposals 1-10) should be excluded
+    expect(feed).not.toContain('/proposal/10/');
+    expect(feed).not.toContain('/proposal/1/');
+  });
+
+  it('generates feed.xml in output directory when generateStaticPages runs', () => {
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'Test proposal',
+          phase: 'discussion' as const,
+          author: 'tester',
+          createdAt: '2026-02-01T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+    generateStaticPages(TEST_OUT);
+    expect(existsSync(join(TEST_OUT, 'feed.xml'))).toBe(true);
+    const feed = readFileSync(join(TEST_OUT, 'feed.xml'), 'utf-8');
+    expect(feed).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(feed).toContain('Test proposal');
+  });
+
+  it('includes feed.xml in sitemap', () => {
+    const data = minimalActivityData();
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+    generateStaticPages(TEST_OUT);
+    const sitemap = readFileSync(join(TEST_OUT, 'sitemap.xml'), 'utf-8');
+    expect(sitemap).toContain(
+      '<loc>https://hivemoot.github.io/colony/feed.xml</loc>'
+    );
+  });
+
+  it('includes Atom feed auto-discovery link in proposals index', () => {
+    const data = minimalActivityData();
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+    generateStaticPages(TEST_OUT);
+    const html = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+    expect(html).toContain('application/atom+xml');
+    expect(html).toContain('feed.xml');
   });
 });
