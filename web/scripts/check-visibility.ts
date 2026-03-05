@@ -341,6 +341,7 @@ async function runChecks(): Promise<CheckResult[]> {
         label: 'Deployed /proposals/ hub is reachable',
         path: 'proposals/',
       },
+      { label: 'Deployed feed.xml is reachable', path: 'feed.xml' },
     ].map(async ({ label, path }) => {
       const url = resolveDeployedPageUrl(baseUrl, path);
       const response = await fetchWithTimeout(url);
