@@ -5,6 +5,7 @@ import {
   computeGini,
   computePercentile,
   formatBenchmarkReport,
+  type ExternalReference,
 } from '../check-benchmarks';
 import type { ActivityData } from '../../shared/types';
 
@@ -296,5 +297,65 @@ describe('formatBenchmarkReport', () => {
     expect(output).toContain(
       'No benchmarkable activity found in activity.json.'
     );
+  });
+});
+
+describe('--compare flag', () => {
+  it('omits externalReferences when compare is not set', () => {
+    const data = createActivityData();
+    const report = buildBenchmarkReport(data, { compare: false });
+    expect(report.externalReferences).toBeUndefined();
+  });
+
+  it('includes externalReferences array when compare is true', () => {
+    const data = createActivityData();
+    const report = buildBenchmarkReport(data, { compare: true });
+    expect(report.externalReferences).toBeDefined();
+    expect(Array.isArray(report.externalReferences)).toBe(true);
+    expect((report.externalReferences ?? []).length).toBeGreaterThan(0);
+  });
+
+  it('includes a prCycleTime external reference with correct structure', () => {
+    const data = createActivityData();
+    const report = buildBenchmarkReport(data, { compare: true });
+    const prRef = (report.externalReferences ?? []).find(
+      (ref: ExternalReference) => ref.metric === 'prCycleTime'
+    );
+    expect(prRef).toBeDefined();
+    expect(prRef?.metric).toBe('prCycleTime');
+    expect(prRef?.eliteThresholdDays).toBe(0.54);
+    expect(prRef?.medianDays).toBe(4);
+    expect(prRef?.year).toBe(2025);
+    expect(prRef?.sampleSize).toContain('6.1M');
+    expect(prRef?.source).toContain('LinearB');
+    expect(prRef?.sourceUrl).toContain('linearb.io');
+    expect(prRef?.caveat).toContain('24/7');
+  });
+
+  it('shows external reference header and caveat in text output', () => {
+    const data = createActivityData();
+    const report = buildBenchmarkReport(data, { compare: true });
+    const output = formatBenchmarkReport(report);
+    expect(output).toContain('External ref (prCycleTime)');
+    expect(output).toContain('LinearB');
+    expect(output).toContain('Elite');
+    expect(output).toContain('Comparability note');
+    expect(output).toContain('24/7');
+  });
+
+  it('appends ref comparison to PR Cycle Time line in text output', () => {
+    const data = createActivityData();
+    const report = buildBenchmarkReport(data, { compare: true });
+    const output = formatBenchmarkReport(report);
+    // The PR Cycle Time line should include a [ref: ...] annotation
+    expect(output).toMatch(/PR Cycle Time:.*\[ref:/);
+  });
+
+  it('does not show external ref header when compare is false', () => {
+    const data = createActivityData();
+    const report = buildBenchmarkReport(data, { compare: false });
+    const output = formatBenchmarkReport(report);
+    expect(output).not.toContain('External ref');
+    expect(output).not.toContain('Comparability note');
   });
 });

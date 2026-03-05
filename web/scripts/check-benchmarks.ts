@@ -23,7 +23,54 @@ interface CliOptions {
   activityPath: string;
   windowDays: number;
   json: boolean;
+  compare: boolean;
 }
+
+/**
+ * One external benchmark reference point for a Colony metric.
+ * Only metrics with verifiable, telemetry-based external data are included.
+ */
+export interface ExternalReference {
+  metric: string;
+  /** Elite threshold in days (PR open-to-merge scope). */
+  eliteThresholdDays: number;
+  /** Industry median in days (PR open-to-merge scope). */
+  medianDays: number;
+  source: string;
+  sourceUrl: string;
+  sampleSize: string;
+  year: number;
+  caveat: string;
+}
+
+/**
+ * LinearB 2025 benchmark for PR pickup+review time — the sub-metric that
+ * maps to Colony's prCycleTime (PR open to merge).
+ *
+ * LinearB's full cycle time (26h elite, 7d median) includes coding time and
+ * deployment pipeline, which Colony does not measure. The pickup+review
+ * sub-metrics are: elite <7h pickup + <6h review ≈ 13h combined (0.54d),
+ * median ~4d in review.
+ *
+ * Sources:
+ *   LinearB "Engineering Metrics Benchmarks: What Makes Elite Teams?" (2025)
+ *   LinearB "Cycle Time Breakdown: Tactics For Reducing PR Review Time" (2025)
+ */
+const PR_CYCLE_TIME_EXTERNAL_REF: ExternalReference = {
+  metric: 'prCycleTime',
+  eliteThresholdDays: 0.54,
+  medianDays: 4,
+  source: 'LinearB 2025 Engineering Benchmarks (Pickup + Review Time)',
+  sourceUrl:
+    'https://linearb.io/blog/engineering-metrics-benchmarks-what-makes-elite-teams',
+  sampleSize: '6.1M+ pull requests',
+  year: 2025,
+  caveat:
+    'Colony agents operate 24/7 with no timezone gaps, weekends, or human review-queue latency. ' +
+    'Speed advantages reflect a different operational model, not a more efficient human engineering process. ' +
+    "LinearB's full cycle time (26h elite, 7d median) covers commit-to-deploy and is not directly comparable; " +
+    "these values use only the pickup+review sub-metrics, which match Colony's PR open-to-merge scope.",
+};
 
 export interface WindowSampleSize {
   pullRequests: number;
@@ -67,6 +114,11 @@ export interface BenchmarkReport {
   };
   windowDays: number;
   windows: WindowBenchmark[];
+  /**
+   * External reference points for Colony metrics. Only present when --compare
+   * is active and a verifiable external baseline exists for that metric.
+   */
+  externalReferences?: ExternalReference[];
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -74,11 +126,17 @@ function parseArgs(argv: string[]): CliOptions {
     activityPath: DEFAULT_ACTIVITY_PATH,
     windowDays: DEFAULT_WINDOW_DAYS,
     json: false,
+    compare: false,
   };
 
   for (const arg of argv) {
     if (arg === '--json') {
       options.json = true;
+      continue;
+    }
+
+    if (arg === '--compare') {
+      options.compare = true;
       continue;
     }
 
@@ -108,7 +166,7 @@ function parseArgs(argv: string[]): CliOptions {
 
 function printHelp(): void {
   console.log(
-    'Usage: npm run check-benchmarks -- [--activity=web/public/data/activity.json] [--window-days=30] [--json]'
+    'Usage: npm run check-benchmarks -- [--activity=web/public/data/activity.json] [--window-days=30] [--json] [--compare]'
   );
 }
 
@@ -417,7 +475,12 @@ function getContributionCountsByContributor(
 
 export function buildBenchmarkReport(
   data: ActivityData,
-  options?: { activityPath?: string; windowDays?: number; generatedAt?: Date }
+  options?: {
+    activityPath?: string;
+    windowDays?: number;
+    generatedAt?: Date;
+    compare?: boolean;
+  }
 ): BenchmarkReport {
   const windowDays = options?.windowDays ?? DEFAULT_WINDOW_DAYS;
   const timestamps = collectBenchmarkTimestamps(data);
@@ -425,7 +488,7 @@ export function buildBenchmarkReport(
     computeWindowMetrics(window, data)
   );
 
-  return {
+  const report: BenchmarkReport = {
     generatedAt: (options?.generatedAt ?? new Date()).toISOString(),
     source: {
       activityPath: options?.activityPath ?? DEFAULT_ACTIVITY_PATH,
@@ -434,9 +497,19 @@ export function buildBenchmarkReport(
     windowDays,
     windows,
   };
+
+  if (options?.compare) {
+    report.externalReferences = [PR_CYCLE_TIME_EXTERNAL_REF];
+  }
+
+  return report;
 }
 
 export function formatBenchmarkReport(report: BenchmarkReport): string {
+  const prRef = report.externalReferences?.find(
+    (ref) => ref.metric === 'prCycleTime'
+  );
+
   if (report.windows.length === 0) {
     return [
       'Colony Performance Trends',
@@ -451,15 +524,40 @@ export function formatBenchmarkReport(report: BenchmarkReport): string {
   lines.push(`  Generated: ${report.generatedAt}`);
   lines.push(`  Source: ${report.source.activityPath}`);
   lines.push(`  Window size: ${report.windowDays} days`);
+
+  if (prRef) {
+    lines.push('');
+    lines.push(
+      `  External ref (${prRef.metric}): ${prRef.source} [${prRef.sampleSize}, ${prRef.year}]`
+    );
+    lines.push(
+      `    Elite <${formatNumber(prRef.eliteThresholdDays)}d  Median ~${formatNumber(prRef.medianDays)}d`
+    );
+    lines.push('');
+    lines.push(`  ⚠  Comparability note: ${prRef.caveat}`);
+  }
+
   lines.push('');
 
   report.windows.forEach((window, index) => {
     lines.push(
       `Window: ${window.windowStart} -> ${window.windowEnd} | PRs=${window.sampleSize.pullRequests} merged=${window.sampleSize.mergedPullRequests} reviews=${window.sampleSize.reviews} proposals=${window.sampleSize.proposals}`
     );
-    lines.push(
-      `  PR Cycle Time: p50=${formatNumber(window.prCycleTime.p50Days)}d p95=${formatNumber(window.prCycleTime.p95Days)}d (n=${window.prCycleTime.sampleSize})`
-    );
+
+    const prLine =
+      `  PR Cycle Time: p50=${formatNumber(window.prCycleTime.p50Days)}d` +
+      ` p95=${formatNumber(window.prCycleTime.p95Days)}d (n=${window.prCycleTime.sampleSize})`;
+
+    if (prRef && window.prCycleTime.p50Days !== null) {
+      const vsElite =
+        window.prCycleTime.p50Days <= prRef.eliteThresholdDays
+          ? 'within elite range'
+          : `${formatNumber(window.prCycleTime.p50Days / prRef.eliteThresholdDays)}× elite threshold`;
+      lines.push(`${prLine}  [ref: ${vsElite}]`);
+    } else {
+      lines.push(prLine);
+    }
+
     lines.push(
       `  Review Density: ${formatNumber(window.reviewDensity.reviewsPerPr)} reviews/PR (reviews=${window.reviewDensity.reviewCount}, prs=${window.reviewDensity.pullRequestCount})`
     );
@@ -491,6 +589,7 @@ function run(): void {
   const report = buildBenchmarkReport(data, {
     activityPath: options.activityPath,
     windowDays: options.windowDays,
+    compare: options.compare,
   });
 
   if (options.json) {
