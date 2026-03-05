@@ -112,9 +112,22 @@ describe('hasAllowedPrefix', () => {
     expect(hasAllowedPrefix('a11y: improve focus ring')).toBe(true);
   });
 
+  it('accepts scoped Conventional Commits variants of approved prefixes', () => {
+    expect(
+      hasAllowedPrefix('a11y(web): make vote bar transitions motion-safe')
+    ).toBe(true);
+    expect(hasAllowedPrefix('fix(scope): correct behaviour')).toBe(true);
+    expect(hasAllowedPrefix('chore(deps): bump package')).toBe(true);
+  });
+
   it('rejects non-fast-track prefixes', () => {
     expect(hasAllowedPrefix('feat: add analytics widget')).toBe(false);
     expect(hasAllowedPrefix('refactor: simplify types')).toBe(false);
+  });
+
+  it('rejects scoped variants of non-fast-track prefixes', () => {
+    expect(hasAllowedPrefix('feat(ui): add analytics widget')).toBe(false);
+    expect(hasAllowedPrefix('refactor(utils): simplify types')).toBe(false);
   });
 });
 
