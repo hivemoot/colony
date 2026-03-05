@@ -343,6 +343,9 @@ function parseIssueRefFromUrl(
 
   try {
     const parsed = new URL(url);
+    if (parsed.hostname.toLowerCase() !== 'github.com') {
+      return null;
+    }
     const pathParts = parsed.pathname.split('/');
     const owner = pathParts[1];
     const repo = pathParts[2];
