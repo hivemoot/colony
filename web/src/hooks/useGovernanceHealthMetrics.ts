@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { GovernanceHealthMetrics } from '../../shared/governance-health-metrics.ts';
+import {
+  parseGovernanceHealthMetrics,
+  type GovernanceHealthMetrics,
+} from '../../shared/governance-health-metrics.ts';
 
 const BASE_URL = import.meta.env.BASE_URL ?? '/';
 
@@ -32,7 +35,7 @@ export function useGovernanceHealthMetrics(): UseGovernanceHealthMetricsResult {
         }
         const raw: unknown = await res.json();
         if (!cancelled) {
-          setMetrics(raw as GovernanceHealthMetrics);
+          setMetrics(parseGovernanceHealthMetrics(raw));
         }
       } catch {
         if (!cancelled) setMetrics(null);

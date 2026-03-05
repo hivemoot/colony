@@ -69,3 +69,37 @@ export interface GovernanceHealthMetrics {
   /** Non-fatal issues encountered during computation (e.g. insufficient data). */
   warnings: string[];
 }
+
+/**
+ * Runtime validator for the governance-health-metrics.json artifact.
+ * Returns null if the shape is missing required fields, so callers can
+ * treat malformed artifacts as "not yet available" rather than crash.
+ */
+export function parseGovernanceHealthMetrics(
+  raw: unknown
+): GovernanceHealthMetrics | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (
+    typeof r.computedAt !== 'string' ||
+    typeof r.dataWindowDays !== 'number' ||
+    typeof r.mergedPrsSampled !== 'number' ||
+    typeof r.metrics !== 'object' ||
+    r.metrics === null ||
+    !Array.isArray(r.warnings)
+  )
+    return null;
+  const m = r.metrics as Record<string, unknown>;
+  if (
+    typeof m.prCycleTime !== 'object' ||
+    m.prCycleTime === null ||
+    typeof m.roleDiversity !== 'object' ||
+    m.roleDiversity === null ||
+    typeof m.contestedDecisionRate !== 'object' ||
+    m.contestedDecisionRate === null ||
+    typeof m.crossAgentReviewRate !== 'object' ||
+    m.crossAgentReviewRate === null
+  )
+    return null;
+  return raw as GovernanceHealthMetrics;
+}
