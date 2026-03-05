@@ -24,7 +24,8 @@
     "check-bot-write-access": "tsx scripts/check-bot-write-access.ts",
     "external-outreach-metrics": "tsx scripts/external-outreach-metrics.ts",
     "fast-track-candidates": "tsx scripts/fast-track-candidates.ts",
-    "replay-governance": "tsx scripts/replay-governance.ts"
+    "replay-governance": "tsx scripts/replay-governance.ts",
+    "check-governance-health": "tsx scripts/check-governance-health.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
