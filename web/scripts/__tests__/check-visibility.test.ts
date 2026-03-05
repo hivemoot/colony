@@ -8,6 +8,8 @@ import {
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
   resolveVisibilityUserAgent,
+  type CheckResult,
+  type VisibilityReport,
 } from '../check-visibility';
 
 describe('resolveVisibilityUserAgent', () => {
@@ -178,5 +180,34 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('VisibilityReport', () => {
+  it('has the expected shape with summary and checks fields', () => {
+    const checks: CheckResult[] = [
+      { label: 'Index HTML exists', ok: true },
+      { label: 'Sitemap present', ok: false, details: 'sitemap.xml not found' },
+    ];
+
+    const report: VisibilityReport = {
+      generatedAt: '2026-03-05T00:00:00.000Z',
+      summary: {
+        total: checks.length,
+        passed: checks.filter((c) => c.ok).length,
+        failed: checks.filter((c) => !c.ok).length,
+      },
+      checks,
+    };
+
+    expect(report.summary.total).toBe(2);
+    expect(report.summary.passed).toBe(1);
+    expect(report.summary.failed).toBe(1);
+    expect(report.checks[0]).toEqual({ label: 'Index HTML exists', ok: true });
+    expect(report.checks[1]).toMatchObject({
+      label: 'Sitemap present',
+      ok: false,
+      details: 'sitemap.xml not found',
+    });
   });
 });
