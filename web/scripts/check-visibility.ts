@@ -18,10 +18,28 @@ const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
 const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 
-interface CheckResult {
+export interface CheckResult {
   label: string;
   ok: boolean;
   details?: string;
+}
+
+export interface VisibilityReport {
+  generatedAt: string;
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+  };
+  checks: CheckResult[];
+}
+
+interface CliOptions {
+  json: boolean;
+}
+
+function parseArgs(argv: string[]): CliOptions {
+  return { json: argv.includes('--json') };
 }
 
 export function resolveVisibilityUserAgent(
@@ -707,8 +725,24 @@ async function runChecks(): Promise<CheckResult[]> {
 }
 
 async function main(): Promise<void> {
+  const options = parseArgs(process.argv.slice(2));
   const results = await runChecks();
   const failed = results.filter((result) => !result.ok);
+
+  if (options.json) {
+    const report: VisibilityReport = {
+      generatedAt: new Date().toISOString(),
+      summary: {
+        total: results.length,
+        passed: results.length - failed.length,
+        failed: failed.length,
+      },
+      checks: results,
+    };
+    console.log(JSON.stringify(report, null, 2));
+    process.exit(0);
+    return;
+  }
 
   console.log('External visibility checks');
   for (const result of results) {
