@@ -283,6 +283,45 @@ describe('evaluateEligibility', () => {
     );
   });
 
+  it('waives prefix requirement for feat: PR with 6+ approvals and no CHANGES_REQUESTED', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 110,
+      title: 'feat: add new feature with high quorum',
+      url: 'https://example.test/pr/110',
+      latestReviews: approvers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.highApprovalWaiver).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('does not waive prefix for feat: PR with fewer than 6 approvals', () => {
+    const result = evaluateEligibility({
+      number: 111,
+      title: 'feat: add feature with insufficient quorum',
+      url: 'https://example.test/pr/111',
+      latestReviews: Array.from({ length: 5 }, (_, i) => ({
+        state: 'APPROVED',
+        author: { login: `agent-${i}` },
+      })),
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 42, state: 'OPEN' }],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      `title prefix must be one of: ${ALLOWED_PREFIXES.join(', ')}`
+    );
+  });
+
   it('does not apply waiver when fewer than 6 approvals', () => {
     const result = evaluateEligibility({
       number: 107,
