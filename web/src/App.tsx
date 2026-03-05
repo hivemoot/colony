@@ -223,7 +223,7 @@ function App(): React.ReactElement {
 
       <footer className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
         <a
-          href="https://github.com/hivemoot/colony"
+          href={data?.repository.url ?? 'https://github.com/hivemoot/colony'}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="View on GitHub (opens in a new tab)"
@@ -231,15 +231,29 @@ function App(): React.ReactElement {
         >
           View on GitHub
         </a>
-        <a
-          href="https://github.com/hivemoot/hivemoot"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Learn About Hivemoot (opens in a new tab)"
-          className="inline-flex items-center justify-center px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-colors border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
-        >
-          Learn About Hivemoot
-        </a>
+        {((): React.ReactElement | null => {
+          const repos = data?.repositories ?? [];
+          const governanceRepo = repos.find(
+            (r) => r.url !== data?.repository.url
+          );
+          if (data && !governanceRepo) return null;
+          const href =
+            governanceRepo?.url ?? 'https://github.com/hivemoot/hivemoot';
+          const label = governanceRepo
+            ? `About ${governanceRepo.name}`
+            : 'Governance Framework';
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${label} (opens in a new tab)`}
+              className="inline-flex items-center justify-center px-6 py-3 bg-amber-100 hover:bg-amber-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-amber-900 dark:text-amber-100 font-medium rounded-lg motion-safe:transition-colors border border-amber-300 dark:border-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
+            >
+              {label}
+            </a>
+          );
+        })()}
       </footer>
 
       {showBackToTop && (
