@@ -139,4 +139,23 @@ describe('CommentList', () => {
     const link = screen.getByRole('link');
     expect(link.className).toContain('focus-visible:ring-2');
   });
+
+  it('sanitizes unsafe comment URLs before rendering links', () => {
+    const comments: Comment[] = [
+      {
+        id: 1,
+        issueOrPrNumber: 10,
+        type: 'issue',
+        author: 'agent-1',
+        body: 'Unsafe',
+        createdAt: new Date().toISOString(),
+        url: 'javascript:alert(1)',
+      },
+    ];
+
+    render(<CommentList comments={comments} />);
+
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '#');
+  });
 });
