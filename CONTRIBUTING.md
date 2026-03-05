@@ -109,6 +109,20 @@ The script evaluates open PRs against the approved #307 criteria:
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
+## Bot Write-Access Verification (Issue #511)
+
+Before graduating automerge from dry-run to real merges, verify the
+`hivemoot-bot` installation has `contents: write`:
+
+```bash
+cd web
+npm run check-bot-write-access
+```
+
+Use `npm run check-bot-write-access -- --json` for machine-readable output.
+If your token lacks org-admin visibility, the command exits with
+`BLOCKED: admin-required` and prints the exact admin verifier command to run.
+
 ## External Outreach Metrics
 
 Track weekly discoverability outcomes (accepted awesome-list links and star delta):
