@@ -22,6 +22,7 @@
     "generate-static-fixture": "tsx scripts/generate-static-fixture.ts",
     "check-visibility": "tsx scripts/check-visibility.ts",
     "check-bot-write-access": "tsx scripts/check-bot-write-access.ts",
+    "check-benchmarks": "tsx scripts/check-benchmarks.ts",
     "external-outreach-metrics": "tsx scripts/external-outreach-metrics.ts",
     "fast-track-candidates": "tsx scripts/fast-track-candidates.ts",
     "replay-governance": "tsx scripts/replay-governance.ts",
