@@ -2040,6 +2040,81 @@ describe('buildExternalVisibility', () => {
     expect(topicsCheck?.details).toContain('Missing required topics:');
     expect(topicsCheck?.details).toContain('ai-governance');
   });
+
+  it('reports hub reachability checks when hubs are reachable', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('ok', { status: 200 });
+    });
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const agentsHub = visibility.checks.find(
+      (c) => c.id === 'deployed-agents-hub-reachable'
+    );
+    const proposalsHub = visibility.checks.find(
+      (c) => c.id === 'deployed-proposals-hub-reachable'
+    );
+    expect(agentsHub?.ok).toBe(true);
+    expect(agentsHub?.details).toContain('returned 200');
+    expect(proposalsHub?.ok).toBe(true);
+    expect(proposalsHub?.details).toContain('returned 200');
+  });
+
+  it('reports hub reachability checks as failing when hubs return 404', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        if (url.endsWith('/agents/') || url.endsWith('/proposals/')) {
+          return new Response('not found', { status: 404 });
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const agentsHub = visibility.checks.find(
+      (c) => c.id === 'deployed-agents-hub-reachable'
+    );
+    const proposalsHub = visibility.checks.find(
+      (c) => c.id === 'deployed-proposals-hub-reachable'
+    );
+    expect(agentsHub?.ok).toBe(false);
+    expect(agentsHub?.details).toContain('returned 404');
+    expect(proposalsHub?.ok).toBe(false);
+    expect(proposalsHub?.details).toContain('returned 404');
+  });
 });
 
 describe('updateSitemapLastmod', () => {
