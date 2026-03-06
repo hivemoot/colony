@@ -9,6 +9,7 @@ import {
   type GovernanceSLOStatus,
   type ReliabilityMode,
 } from '../utils/governance-ops';
+import { sanitizeUrl } from '../utils/markdown';
 
 interface GovernanceOpsProps {
   data: ActivityData;
@@ -174,7 +175,7 @@ export function GovernanceOps({
                 <span className="font-medium">{incident.title}</span>
                 {incident.sourceUrl && (
                   <a
-                    href={incident.sourceUrl}
+                    href={sanitizeUrl(incident.sourceUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="ml-1 underline decoration-dotted underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded"

@@ -102,6 +102,15 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
   return normalizeHttpsUrl(rawValue);
 }
 
+export function resolveDeployedPageUrl(
+  baseUrl: string,
+  pagePath: string
+): string {
+  const normalizedBase = `${baseUrl.replace(/\/+$/, '')}/`;
+  const normalizedPath = pagePath.replace(/^\/+/, '');
+  return new URL(normalizedPath, normalizedBase).toString();
+}
+
 export function isValidOpenGraphImageType(rawValue: string): boolean {
   const value = rawValue.trim().toLowerCase();
   return value.startsWith('image/');
@@ -324,6 +333,29 @@ async function runChecks(): Promise<CheckResult[]> {
     label: 'Deployed site is reachable',
     ok: rootRes?.status === 200,
   });
+
+  const deployedHubChecks = await Promise.all(
+    [
+      { label: 'Deployed /agents/ hub is reachable', path: 'agents/' },
+      {
+        label: 'Deployed /proposals/ hub is reachable',
+        path: 'proposals/',
+      },
+    ].map(async ({ label, path }) => {
+      const url = resolveDeployedPageUrl(baseUrl, path);
+      const response = await fetchWithTimeout(url);
+      const ok = response?.status === 200;
+      return {
+        label,
+        ok,
+        details: ok
+          ? `GET ${url} returned 200`
+          : `GET ${url} returned ${response?.status ?? 'no response'}`,
+      };
+    })
+  );
+
+  results.push(...deployedHubChecks);
 
   let deployedRootHtml = '';
   let deployedJsonLd = false;

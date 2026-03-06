@@ -10,6 +10,7 @@ import {
   type AgentRole,
   type AgentRoleProfile,
 } from '../utils/governance';
+import { sanitizeUrl } from '../utils/markdown';
 import { formatTimeAgo } from '../utils/time';
 import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 import { AgentSpecialization } from './AgentSpecialization';
@@ -362,7 +363,7 @@ function RecentActivity({
             <span className="text-sm text-amber-800 dark:text-amber-200">
               {event.url ? (
                 <a
-                  href={event.url}
+                  href={sanitizeUrl(event.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-amber-600 dark:hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded"

@@ -4,6 +4,7 @@ import {
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
   normalizeHttpsUrl,
+  resolveDeployedPageUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
   resolveVisibilityUserAgent,
@@ -135,6 +136,26 @@ describe('buildRepositoryApiUrl', () => {
         repo: 'example-colony',
       })
     ).toBe('https://api.github.com/repos/example-org/example-colony');
+  });
+});
+
+describe('resolveDeployedPageUrl', () => {
+  it('resolves hub URLs from a root deployment base', () => {
+    expect(resolveDeployedPageUrl('https://example.org', 'agents/')).toBe(
+      'https://example.org/agents/'
+    );
+    expect(resolveDeployedPageUrl('https://example.org/', '/proposals/')).toBe(
+      'https://example.org/proposals/'
+    );
+  });
+
+  it('preserves nested base paths used by template deployments', () => {
+    expect(
+      resolveDeployedPageUrl('https://example.org/my-colony', 'agents/')
+    ).toBe('https://example.org/my-colony/agents/');
+    expect(
+      resolveDeployedPageUrl('https://example.org/my-colony/', '/proposals/')
+    ).toBe('https://example.org/my-colony/proposals/');
   });
 });
 

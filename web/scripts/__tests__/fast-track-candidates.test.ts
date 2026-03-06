@@ -334,4 +334,34 @@ describe('evaluateEligibility', () => {
       'must reference at least one OPEN linked issue'
     );
   });
+
+  it('ignores non-github issue URL hosts and falls back to default repo', () => {
+    const result = evaluateEligibility(
+      {
+        number: 108,
+        title: 'fix: ignore non-github linked issue URLs',
+        url: 'https://example.test/pr/108',
+        latestReviews: [
+          { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+          { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+        ],
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        closingIssuesReferences: [
+          {
+            number: 556,
+            state: 'OPEN',
+            url: 'https://malicious.example/hivemoot/hivemoot/issues/556',
+          },
+        ],
+      },
+      new Map([
+        ['hivemoot/colony#556', 'OPEN'],
+        ['hivemoot/hivemoot#556', 'CLOSED'],
+      ]),
+      'hivemoot/colony'
+    );
+
+    expect(result.eligible).toBe(true);
+    expect(result.reasons).toHaveLength(0);
+  });
 });

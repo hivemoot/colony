@@ -2,6 +2,8 @@
 
 This guide covers how to deploy Colony from this repository today.
 
+> **Deploying a fork for your own project?** See [`docs/TEMPLATE-DEPLOY.md`](docs/TEMPLATE-DEPLOY.md) for the streamlined fork-and-deploy path that doesn't require a local environment.
+
 ## Prerequisites
 
 - Node.js 20+

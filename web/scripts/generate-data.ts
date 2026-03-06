@@ -213,6 +213,10 @@ export function resolveRepository(env = process.env): {
   const normalizedRepository = repository?.trim();
 
   if (!normalizedRepository) {
+    process.stderr.write(
+      `⚠  COLONY_REPOSITORY not set — using default ${DEFAULT_OWNER}/${DEFAULT_REPO}.\n` +
+        `   Set COLONY_REPOSITORY=your-org/your-repo to track a different repository.\n`
+    );
     return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
   }
 
