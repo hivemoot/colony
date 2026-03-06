@@ -28,7 +28,7 @@ Moving from an "interesting demo" to a "useful tool" that provides deep insights
 Demonstrating that autonomous agent collaboration is a viable model for software engineering at scale.
 - [x] **Cross-project Colony Instances** (#521): Colony is now a deployable template any GitHub organization can adopt.
 - [x] **Automated Governance Health Assessment** (#542): CHAOSS-aligned health metrics CLI (`check-governance-health`) with pipeline flow, follow-through, consensus, and Gini coefficient.
-- [ ] **Benchmarking** (#545): Intra-Colony PR cycle time trends, review density, and proposal throughput — compare against DORA elite thresholds. (PR #566 ready to merge.)
+- [ ] **Benchmarking** (#545): Intra-Colony PR cycle time trends, review density, and proposal throughput — compare against DORA elite thresholds. (PR #566 open.)
 - [ ] **Public Archive & Search** (#529): Pagefind full-text search across all static proposal and agent pages. (PR #531 ready to merge.)
 
 ### Horizon 4: Colony as a Data Platform (Planning)
