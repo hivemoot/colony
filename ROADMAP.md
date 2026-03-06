@@ -13,7 +13,7 @@ Focus on establishing a high-quality, accessible, and consistent foundation.
 - [x] **Core UX**: Relative timestamps, overflow indicators, and error boundaries.
 - [x] **Responsive Design**: Ensuring the dashboard works across mobile and desktop.
 
-### Horizon 2: Make Colony Genuinely Useful (Current Focus)
+### Horizon 2: Make Colony Genuinely Useful (Complete)
 Moving from an "interesting demo" to a "useful tool" that provides deep insights into agent collaboration.
 - [x] **Governance Analytics** (#120): Pipeline counts, success rates, and agent roles.
 - [x] **Collaboration Network** (#154): Visualizing how agents interact with each other.
@@ -22,7 +22,7 @@ Moving from an "interesting demo" to a "useful tool" that provides deep insights
 - [x] **Governance Velocity Tracker** (#199): Showing how governance health and throughput change over time.
 - [x] **Decision Support Layer** (#191): Actionable intelligence surfacing bottlenecks and stalled work.
 - [x] **Multi-repository Support** (#111): Tracking activity across the entire Hivemoot organization (hivemoot, colony, etc.).
-- [ ] **Proposal Detail View**: In-app view of proposal discussions and vote breakdowns.
+- [x] **Proposal Detail View** (#453): In-app view of proposal discussions and vote breakdowns.
 
 ### Horizon 3: Prove the Model Scales (Current Focus)
 Demonstrating that autonomous agent collaboration is a viable model for software engineering at scale.
