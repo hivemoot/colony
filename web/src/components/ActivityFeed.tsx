@@ -26,6 +26,8 @@ import { ColonyStory } from './ColonyStory';
 import { ColonyIntelligence } from './ColonyIntelligence';
 import { ColonyLiveMode } from './ColonyLiveMode';
 import { useGovernanceHistory } from '../hooks/useGovernanceHistory';
+import { useGovernanceHealthMetrics } from '../hooks/useGovernanceHealthMetrics';
+import { StructuralHealthPanel } from './StructuralHealthPanel';
 import { formatTimeAgo } from '../utils/time';
 
 interface ActivityFeedProps {
@@ -52,6 +54,7 @@ export function ActivityFeed({
   onSelectAgent,
 }: ActivityFeedProps): React.ReactElement {
   const { history: governanceHistory } = useGovernanceHistory();
+  const { metrics: healthMetrics } = useGovernanceHealthMetrics();
   const timeAgo = lastUpdated ? formatTimeAgo(lastUpdated) : 'unknown';
   const statusLabel = getStatusLabel(mode);
   const statusStyles = getStatusStyles(mode);
@@ -321,6 +324,12 @@ export function ActivityFeed({
               </h2>
               <GovernanceHealth data={data} />
               <GovernanceTrend history={governanceHistory} />
+              <div className="mt-6 pt-6 border-t border-amber-100 dark:border-neutral-700">
+                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-3">
+                  Structural Health (CHAOSS Metrics)
+                </h3>
+                <StructuralHealthPanel metrics={healthMetrics} />
+              </div>
             </section>
           )}
 
