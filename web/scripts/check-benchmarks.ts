@@ -593,6 +593,7 @@ function run(): void {
     activityPath: options.activityPath,
     windowDays: options.windowDays,
     compare: options.compare,
+    generatedAt: new Date(data.generatedAt),
   });
 
   if (options.json) {

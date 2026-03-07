@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildBenchmarkReport,
   buildTimeWindows,
@@ -244,21 +244,22 @@ describe('buildBenchmarkReport', () => {
     expect(report.windows[1]?.contributorConcentration.gini).toBeGreaterThan(0);
   });
 
-  it('is deterministic for the same input and clock', () => {
-    const clock = vi.useFakeTimers();
-    clock.setSystemTime(new Date('2026-03-04T12:00:00.000Z'));
+  it('is deterministic for the same input regardless of wall clock', () => {
+    const data = createActivityData();
 
-    const first = buildBenchmarkReport(createActivityData(), {
+    const first = buildBenchmarkReport(data, {
       activityPath: '/tmp/activity.json',
       windowDays: 30,
+      generatedAt: new Date(data.generatedAt),
     });
-    const second = buildBenchmarkReport(createActivityData(), {
+    const second = buildBenchmarkReport(data, {
       activityPath: '/tmp/activity.json',
       windowDays: 30,
+      generatedAt: new Date(data.generatedAt),
     });
 
     expect(first).toEqual(second);
-    clock.useRealTimers();
+    expect(first.generatedAt).toBe(data.generatedAt);
   });
 });
 
