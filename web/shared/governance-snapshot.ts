@@ -105,6 +105,18 @@ export function buildGovernanceHistoryArtifact({
   };
 }
 
+/**
+ * Produces the canonical JSON string used as input for integrity hashing.
+ *
+ * STABILITY CONTRACT: Field order is part of the integrity contract.
+ * The exact serialization order is: schemaVersion, generatedAt, snapshots,
+ * provenance, completeness. Adding, removing, or reordering fields here is
+ * a BREAKING CHANGE — existing stored artifacts will have invalid digests.
+ *
+ * The `integrity` field is intentionally excluded to enable seal-then-verify
+ * semantics: the digest can be computed before the `integrity` field exists,
+ * and verified without excluding it at read time.
+ */
 export function serializeGovernanceHistoryForIntegrity(
   artifact:
     | GovernanceHistoryArtifact
@@ -421,7 +433,7 @@ function computeConsensusScore(proposals: Proposal[]): number {
 }
 
 /** Gini coefficient for distribution analysis. Returns 0-1. */
-function computeGini(values: number[]): number {
+export function computeGini(values: number[]): number {
   if (values.length <= 1) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const n = sorted.length;

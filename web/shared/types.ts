@@ -29,6 +29,8 @@ export interface PullRequest {
   createdAt: string;
   closedAt?: string | null;
   mergedAt?: string | null;
+  /** ISO timestamp of the first APPROVED review, if available */
+  firstApprovalAt?: string | null;
   /** "owner/name" identifier for multi-repo support */
   repo?: string;
 }
@@ -41,6 +43,7 @@ export interface PhaseTransition {
 export interface Proposal {
   number: number;
   title: string;
+  body?: string;
   phase:
     | 'discussion'
     | 'voting'
@@ -117,6 +120,7 @@ export interface VisibilityCheck {
     | 'deployed-jsonld'
     | 'deployed-canonical'
     | 'deployed-og-image'
+    | 'deployed-og-image-dimensions'
     | 'deployed-twitter-image'
     | 'deployed-pwa-manifest'
     | 'deployed-pwa-icons'

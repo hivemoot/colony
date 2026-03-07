@@ -1,8 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Proposal, PullRequest, Comment } from '../types/activity';
 import { handleAvatarError, getGitHubAvatarUrl } from '../utils/avatar';
 import { formatDuration, formatTimeAgo } from '../utils/time';
-import { buildDecisionSnapshot } from '../utils/decision-explorer';
+import {
+  buildDecisionSnapshot,
+  getProposalHash,
+} from '../utils/decision-explorer';
+import { renderMarkdown, sanitizeUrl } from '../utils/markdown';
+import { filterProposals, type ProposalPhaseFilter } from '../utils/governance';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -11,6 +16,59 @@ interface ProposalListProps {
   repoUrl: string;
   filteredAgent?: string | null;
 }
+
+function readSearchParams(): {
+  query: string;
+  phaseFilter: ProposalPhaseFilter;
+} {
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get('q') ?? '';
+  const filter = params.get('filter') ?? 'all';
+  const phaseFilter: ProposalPhaseFilter =
+    filter === 'active' || filter === 'decided' ? filter : 'all';
+  return { query: q, phaseFilter };
+}
+
+function updateSearchParams(
+  query: string,
+  phaseFilter: ProposalPhaseFilter
+): void {
+  const params = new URLSearchParams(window.location.search);
+  if (query) {
+    params.set('q', query);
+  } else {
+    params.delete('q');
+  }
+  if (phaseFilter !== 'all') {
+    params.set('filter', phaseFilter);
+  } else {
+    params.delete('filter');
+  }
+  const search = params.toString();
+  const newUrl =
+    window.location.pathname +
+    (search ? `?${search}` : '') +
+    window.location.hash;
+  window.history.replaceState(null, '', newUrl);
+}
+
+function findProposalByHash(
+  hash: string,
+  proposals: Proposal[]
+): Proposal | null {
+  if (!hash.startsWith('#proposal-')) return null;
+  const fragment = hash.slice(1);
+  return proposals.find((p) => getProposalHash(p) === fragment) ?? null;
+}
+
+const PHASE_FILTER_OPTIONS: Array<{
+  value: ProposalPhaseFilter;
+  label: string;
+}> = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'decided', label: 'Decided' },
+];
 
 export function ProposalList({
   proposals,
@@ -23,14 +81,71 @@ export function ProposalList({
     () => new Set()
   );
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(
-    null
+    () => {
+      const match = findProposalByHash(window.location.hash, []);
+      return match ? getProposalIdentity(match) : null;
+    }
   );
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => readSearchParams().query
+  );
+  const [phaseFilter, setPhaseFilter] = useState<ProposalPhaseFilter>(
+    () => readSearchParams().phaseFilter
+  );
+  const detailRef = useRef<HTMLElement>(null);
+
+  // Resolve hash-based deep link once proposals are available
+  const resolvedHashId = useMemo(() => {
+    const match = findProposalByHash(window.location.hash, proposals);
+    return match ? getProposalIdentity(match) : null;
+  }, [proposals]);
+
+  // Effective selected ID: explicit user selection takes priority; fall back
+  // to the hash-resolved ID so deep links work without a render-phase setState.
+  const effectiveSelectedId = selectedProposalId ?? resolvedHashId;
+
+  // Sync hash → selection on hash change (back/forward navigation)
+  useEffect(() => {
+    const onHashChange = (): void => {
+      const match = findProposalByHash(window.location.hash, proposals);
+      setSelectedProposalId(match ? getProposalIdentity(match) : null);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return (): void => {
+      window.removeEventListener('hashchange', onHashChange);
+    };
+  }, [proposals]);
+
+  const selectProposal = useCallback((proposal: Proposal | null): void => {
+    if (proposal) {
+      const id = getProposalIdentity(proposal);
+      setSelectedProposalId(id);
+      window.history.replaceState(null, '', `#${getProposalHash(proposal)}`);
+    } else {
+      setSelectedProposalId(null);
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search
+      );
+    }
+  }, []);
+
+  // Scroll detail panel into view when selection changes
+  useEffect(() => {
+    if (effectiveSelectedId && detailRef.current) {
+      detailRef.current.scrollIntoView?.({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [effectiveSelectedId]);
 
   const selectedProposal = useMemo(
     () =>
-      proposals.find((p) => getProposalIdentity(p) === selectedProposalId) ??
+      proposals.find((p) => getProposalIdentity(p) === effectiveSelectedId) ??
       null,
-    [proposals, selectedProposalId]
+    [proposals, effectiveSelectedId]
   );
 
   const snapshot = useMemo(
@@ -63,6 +178,42 @@ export function ProposalList({
     [selectedProposal, comments]
   );
 
+  const participants = useMemo(() => {
+    const unique = new Map<string, { count: number }>();
+    for (const c of proposalComments) {
+      if (isSystemComment(c)) continue;
+      const existing = unique.get(c.author);
+      if (existing) {
+        existing.count++;
+      } else {
+        unique.set(c.author, { count: 1 });
+      }
+    }
+    return [...unique.entries()].sort((a, b) => b[1].count - a[1].count);
+  }, [proposalComments]);
+
+  const visibleProposals = useMemo(
+    () => filterProposals(proposals, searchQuery, phaseFilter),
+    [proposals, searchQuery, phaseFilter]
+  );
+
+  const handleQueryChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const q = e.target.value;
+      setSearchQuery(q);
+      updateSearchParams(q, phaseFilter);
+    },
+    [phaseFilter]
+  );
+
+  const handlePhaseFilterChange = useCallback(
+    (next: ProposalPhaseFilter): void => {
+      setPhaseFilter(next);
+      updateSearchParams(searchQuery, next);
+    },
+    [searchQuery]
+  );
+
   if (proposals.length === 0) {
     return (
       <p className="text-sm text-amber-600 dark:text-amber-400 italic">
@@ -75,16 +226,53 @@ export function ProposalList({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={handleQueryChange}
+          placeholder="Search proposals…"
+          aria-label="Search proposals"
+          className="flex-1 rounded-md border border-amber-200 dark:border-neutral-600 bg-white/60 dark:bg-neutral-800/60 px-3 py-1.5 text-sm text-amber-900 dark:text-amber-100 placeholder-amber-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-500"
+        />
+        <div
+          role="group"
+          aria-label="Filter by phase"
+          className="flex gap-1 shrink-0"
+        >
+          {PHASE_FILTER_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handlePhaseFilterChange(value)}
+              aria-pressed={phaseFilter === value}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                phaseFilter === value
+                  ? 'bg-amber-500 text-white border-amber-500 dark:bg-amber-600 dark:border-amber-600'
+                  : 'bg-white/60 dark:bg-neutral-800/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-neutral-600 hover:bg-amber-50 dark:hover:bg-neutral-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {visibleProposals.length === 0 && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 italic">
+          No proposals match your search.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
-        {proposals.map((proposal) => {
+        {visibleProposals.map((proposal) => {
           const proposalId = getProposalIdentity(proposal);
           const explorerId = getDecisionExplorerId(proposal);
-          const isSelected = proposalId === selectedProposalId;
+          const isSelected = proposalId === effectiveSelectedId;
           const proposalRepoUrl = getRepositoryUrl(proposal.repo, repoUrl);
 
           return (
             <article
               key={proposalId}
+              id={getProposalHash(proposal)}
               className={`bg-white/40 dark:bg-neutral-800/40 border rounded-lg motion-safe:transition-colors ${
                 isSelected
                   ? 'border-amber-400 dark:border-amber-500'
@@ -93,9 +281,7 @@ export function ProposalList({
             >
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedProposalId(isSelected ? null : proposalId)
-                }
+                onClick={() => selectProposal(isSelected ? null : proposal)}
                 aria-expanded={isSelected}
                 aria-controls={explorerId}
                 className="w-full text-left p-4 hover:bg-white/60 dark:hover:bg-neutral-800/60 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
@@ -176,9 +362,7 @@ export function ProposalList({
                   View issue
                 </a>
                 <span className="text-amber-600 dark:text-amber-400">
-                  {isSelected
-                    ? 'Hide decision explorer'
-                    : 'Open decision explorer'}
+                  {isSelected ? 'Hide detail view' : 'Open detail view'}
                 </span>
               </div>
             </article>
@@ -188,19 +372,52 @@ export function ProposalList({
 
       {selectedProposal && snapshot && (
         <section
+          ref={detailRef}
           id={getDecisionExplorerId(selectedProposal)}
-          aria-label={`Decision explorer for proposal #${selectedProposal.number}`}
-          className="bg-white/40 dark:bg-neutral-800/40 border border-amber-300 dark:border-neutral-600 rounded-lg p-4"
+          aria-label={`Proposal detail for #${selectedProposal.number}`}
+          className="bg-white/40 dark:bg-neutral-800/40 border border-amber-300 dark:border-neutral-600 rounded-lg p-5"
         >
-          <div className="flex flex-wrap justify-between gap-2 mb-4">
-            <h3 className="text-base font-semibold text-amber-900 dark:text-amber-100">
-              Decision Explorer: #{selectedProposal.number}
-            </h3>
-            <PhaseBadge phase={selectedProposal.phase} />
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                  #{selectedProposal.number}
+                </h3>
+                <PhaseBadge phase={selectedProposal.phase} />
+              </div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                {selectedProposal.title}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <CopyLinkButton proposal={selectedProposal} />
+              <button
+                type="button"
+                onClick={() => selectProposal(null)}
+                className="text-xs px-2 py-1 rounded border border-amber-300 dark:border-neutral-500 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+                aria-label="Close detail view"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
+              {selectedProposal.body && (
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                    Proposal
+                  </h4>
+                  <div
+                    className="proposal-body text-sm text-amber-900 dark:text-neutral-200 leading-relaxed"
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdown(selectedProposal.body),
+                    }}
+                  />
+                </div>
+              )}
+
               <div>
                 <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
                   Timeline
@@ -235,7 +452,7 @@ export function ProposalList({
               <div>
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                    Discussion
+                    Discussion ({proposalComments.length})
                   </h4>
                   <a
                     href={`${getRepositoryUrl(selectedProposal.repo, repoUrl)}/issues/${selectedProposal.number}`}
@@ -250,7 +467,7 @@ export function ProposalList({
                   <ul className="space-y-4">
                     {proposalComments.map((comment) => {
                       const systemComment = isSystemComment(comment);
-                      const commentKey = `${selectedProposalId ?? 'none'}:${comment.id}`;
+                      const commentKey = `${effectiveSelectedId ?? 'none'}:${comment.id}`;
                       const isExpanded = expandedCommentIds.has(commentKey);
                       const commentPreview = truncateCommentBody(
                         comment.body,
@@ -290,7 +507,7 @@ export function ProposalList({
                                 ·
                               </span>
                               <a
-                                href={comment.url}
+                                href={sanitizeUrl(comment.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
@@ -380,6 +597,36 @@ export function ProposalList({
                 )}
               </div>
 
+              {participants.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                    Participants ({participants.length})
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {participants.map(([author, { count }]) => (
+                      <li
+                        key={author}
+                        className="flex items-center gap-2 text-xs"
+                      >
+                        <img
+                          src={getGitHubAvatarUrl(author)}
+                          alt=""
+                          loading="lazy"
+                          className="w-4 h-4 rounded-full border border-amber-200 dark:border-neutral-600"
+                          onError={handleAvatarError}
+                        />
+                        <span className="text-amber-800 dark:text-amber-200 font-medium">
+                          @{author}
+                        </span>
+                        <span className="text-amber-500 dark:text-amber-400">
+                          {count} {count === 1 ? 'comment' : 'comments'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div>
                 <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
                   Implementation
@@ -444,6 +691,37 @@ function getRepositoryUrl(
 
 function getDecisionExplorerId(proposal: Proposal): string {
   return `decision-explorer-${getProposalIdentity(proposal).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
+
+function CopyLinkButton({
+  proposal,
+}: {
+  proposal: Proposal;
+}): React.ReactElement {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (): Promise<void> => {
+    if (!navigator.clipboard?.writeText) return;
+    const url = `${window.location.origin}${window.location.pathname}#${getProposalHash(proposal)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard write failed — ignore silently
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="text-xs px-2 py-1 rounded border border-amber-300 dark:border-neutral-500 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
+      aria-label="Copy link to proposal"
+    >
+      {copied ? 'Copied!' : 'Copy link'}
+    </button>
+  );
 }
 
 function LifecycleDuration({

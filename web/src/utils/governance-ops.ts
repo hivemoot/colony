@@ -45,7 +45,7 @@ export interface GovernanceOpsReport {
 }
 
 const CLOSING_KEYWORD_PATTERN =
-  /(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
+  /\b(?:fix(?:es)?|close[sd]?|resolve[sd]?)\b\s+(?:([a-z0-9_.-]+\/[a-z0-9_.-]+))?#(\d+)/gi;
 const READY_STALE_HOURS = 24;
 const DASHBOARD_FRESH_HOURS = 6;
 const DASHBOARD_WARN_HOURS = 24;
@@ -343,8 +343,12 @@ function mapIssueToPRs(
 
     let match;
     while ((match = CLOSING_KEYWORD_PATTERN.exec(searchArea)) !== null) {
-      const issueNumber = parseInt(match[1], 10);
-      const key = issueKey(prRepo, issueNumber);
+      const referencedRepo = resolveRepoTag(match[1], prRepo);
+      const issueNumber = parseInt(match[2], 10);
+      if (!Number.isInteger(issueNumber)) {
+        continue;
+      }
+      const key = issueKey(referencedRepo, issueNumber);
       const existing = map.get(key) ?? [];
       if (
         !existing.some(
@@ -370,7 +374,11 @@ function resolveRepoTag(
   repo: string | undefined,
   fallbackRepo: string
 ): string {
-  return repo && repo.trim().length > 0 ? repo : fallbackRepo;
+  const normalized = repo?.trim().toLowerCase();
+  if (normalized) {
+    return normalized;
+  }
+  return fallbackRepo.trim().toLowerCase();
 }
 
 function issueKey(repo: string, issueNumber: number): string {
