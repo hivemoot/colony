@@ -7,6 +7,7 @@ import {
   buildGovernanceHistoryArtifact,
   parseGovernanceHistoryArtifact,
   serializeGovernanceHistoryForIntegrity,
+  computeGini,
   type GovernanceSnapshot,
 } from '../governance-snapshot';
 import type { ActivityData, Proposal, AgentStats } from '../types';
@@ -354,5 +355,61 @@ describe('governance history artifact', () => {
 
     expect(decoded.integrity).toBeUndefined();
     expect(decoded.schemaVersion).toBe(GOVERNANCE_HISTORY_SCHEMA_VERSION);
+  });
+});
+
+describe('computeGini', () => {
+  it('returns 0 for an empty array', () => {
+    expect(computeGini([])).toBe(0);
+  });
+
+  it('returns 0 for a single-element array', () => {
+    expect(computeGini([42])).toBe(0);
+  });
+
+  it('returns 0 when all values are zero', () => {
+    expect(computeGini([0, 0, 0, 0])).toBe(0);
+  });
+
+  it('returns 0 for a perfectly equal distribution', () => {
+    expect(computeGini([1, 1, 1, 1])).toBe(0);
+    expect(computeGini([5, 5, 5])).toBe(0);
+  });
+
+  it('returns 0.5 for two values where one is zero and one is nonzero', () => {
+    // [0, 1]: sumOfDiffs = (-1)*0 + (1)*1 = 1; Gini = 1 / (2*1) = 0.5
+    expect(computeGini([0, 1])).toBe(0.5);
+  });
+
+  it('returns 0.25 for [1, 3]', () => {
+    // sorted=[1,3], n=2, total=4
+    // sumOfDiffs = (-1)*1 + (1)*3 = 2; Gini = 2/(2*4) = 0.25
+    expect(computeGini([1, 3])).toBe(0.25);
+  });
+
+  it('returns 0.75 for extreme concentration [0, 0, 0, 1]', () => {
+    // sorted=[0,0,0,1], n=4, total=1
+    // sumOfDiffs = (-3)*0 + (-1)*0 + (1)*0 + (3)*1 = 3; Gini = 3/(4*1) = 0.75
+    expect(computeGini([0, 0, 0, 1])).toBe(0.75);
+  });
+
+  it('returns the correct value for an arithmetic progression [1,2,3,4,5]', () => {
+    // sorted=[1,2,3,4,5], n=5, total=15
+    // sumOfDiffs = -4 + -4 + 0 + 8 + 20 = 20; Gini = 20/(5*15) = 4/15
+    expect(computeGini([1, 2, 3, 4, 5])).toBeCloseTo(4 / 15, 10);
+  });
+
+  it('produces the same result regardless of input order', () => {
+    const sorted = computeGini([1, 2, 3, 4, 5]);
+    const reversed = computeGini([5, 4, 3, 2, 1]);
+    const shuffled = computeGini([3, 1, 5, 2, 4]);
+    expect(reversed).toBeCloseTo(sorted, 10);
+    expect(shuffled).toBeCloseTo(sorted, 10);
+  });
+
+  it('returns a value in [0, 1) for any realistic distribution', () => {
+    const gini = computeGini([1, 4, 9, 16, 25]);
+    expect(gini).toBeGreaterThan(0);
+    expect(gini).toBeLessThan(1);
   });
 });
