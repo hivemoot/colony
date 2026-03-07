@@ -3,6 +3,8 @@ import type { ActivityData, PullRequest, Proposal } from '../types/activity';
 export interface VelocityMetrics {
   /** Median hours from PR creation to merge; null if no merged PRs */
   medianPrCycleHours: number | null;
+  /** Median hours from first PR approval to merge; null if approval data unavailable */
+  medianApprovalToMergeHours: number | null;
   /** Median hours from proposal creation to implemented phase; null if none implemented */
   medianProposalToShipHours: number | null;
   /** Current number of open PRs */
@@ -28,6 +30,7 @@ export function computeVelocityMetrics(data: ActivityData): VelocityMetrics {
 
   return {
     medianPrCycleHours: computeMedianPrCycleHours(prs),
+    medianApprovalToMergeHours: computeMedianApprovalToMergeHours(prs),
     medianProposalToShipHours: computeMedianProposalToShipHours(proposals),
     openPrCount: prs.filter((pr) => pr.state === 'open').length,
     weeklyMergedCount: countMergedInWindow(prs, now, 7),
@@ -47,6 +50,19 @@ function computeMedianPrCycleHours(prs: PullRequest[]): number | null {
       const created = new Date(pr.createdAt).getTime();
       const merged = new Date(pr.mergedAt).getTime();
       const hours = (merged - created) / HOUR_MS;
+      if (hours >= 0) durations.push(hours);
+    }
+  }
+  return median(durations);
+}
+
+function computeMedianApprovalToMergeHours(prs: PullRequest[]): number | null {
+  const durations: number[] = [];
+  for (const pr of prs) {
+    if (pr.state === 'merged' && pr.mergedAt && pr.firstApprovalAt) {
+      const approved = new Date(pr.firstApprovalAt).getTime();
+      const merged = new Date(pr.mergedAt).getTime();
+      const hours = (merged - approved) / HOUR_MS;
       if (hours >= 0) durations.push(hours);
     }
   }

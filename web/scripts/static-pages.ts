@@ -11,35 +11,9 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
+import { resolveDeployedUrl } from './colony-config';
 
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-
-function resolveDeployedBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const configuredUrl = env.COLONY_DEPLOYED_URL?.trim();
-  if (!configuredUrl) {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-
-  try {
-    const parsed = new URL(configuredUrl);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    if (parsed.username || parsed.password) {
-      return DEFAULT_DEPLOYED_BASE_URL;
-    }
-
-    parsed.search = '';
-    parsed.hash = '';
-
-    return parsed.toString().replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_DEPLOYED_BASE_URL;
-  }
-}
-
-const BASE_URL = resolveDeployedBaseUrl();
+const BASE_URL = resolveDeployedUrl();
 
 /** Derive the path prefix (e.g. "/colony") from BASE_URL for internal links. */
 const BASE_PATH = ((): string => {
@@ -61,6 +35,25 @@ interface PageMeta {
   title: string;
   description: string;
   canonicalPath: string;
+  jsonLd?: object;
+}
+
+/**
+ * Serialize a JSON-LD object as a safe inline <script> tag.
+ *
+ * JSON.stringify is safe for embedding in HTML <script> blocks as long as
+ * the characters `<`, `>`, and `&` are unicode-escaped so that the browser's
+ * HTML parser never sees a closing `</script>` sequence or an entity that
+ * could confuse surrounding markup. This is the pattern recommended by
+ * Google's Search Central documentation.
+ */
+function jsonLdTag(data: object): string {
+  const json = JSON.stringify(data).replace(/[<>&]/g, (c) => {
+    if (c === '<') return '\\u003c';
+    if (c === '>') return '\\u003e';
+    return '\\u0026';
+  });
+  return `<script type="application/ld+json">${json}</script>`;
 }
 
 // -- Phase display helpers --
@@ -94,6 +87,36 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Strip markdown syntax from a string, returning plain text suitable for use
+ * in meta description attributes.
+ */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '') // fenced code blocks
+    .replace(/`[^`]+`/g, '') // inline code
+    .replace(/^\s*#{1,6}\s+/gm, '') // headings
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1') // bold+italic
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+    .replace(/\*(.+?)\*/g, '$1') // italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text
+    .replace(/^\s*[-*]\s+/gm, '') // bullet markers
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Return a plain-text excerpt of at most `maxLen` characters from a markdown
+ * body, appending an ellipsis when the text was truncated. Returns an empty
+ * string when body is absent.
+ */
+function bodyExcerpt(body: string | undefined, maxLen = 150): string {
+  if (!body) return '';
+  const text = stripMarkdown(body);
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen).trimEnd() + '\u2026';
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', {
@@ -107,6 +130,9 @@ function sanitizeUrl(url: string): string {
   try {
     const parsed = new URL(url.trim());
     if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+      return '#';
+    }
+    if (parsed.username || parsed.password) {
       return '#';
     }
     return parsed.href;
@@ -141,12 +167,16 @@ function renderMarkdown(md: string): string {
       '<code style="padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace;">$1</code>'
     )
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, rawUrl) => {
-      const safeUrl = sanitizeUrl(rawUrl);
+      // rawUrl has been HTML-escaped by the outer escapeHtml call. Reverse
+      // &amp; → & so that sanitizeUrl receives a valid URL (& is common in
+      // query strings; the other entities escapeHtml produces — &lt; &gt;
+      // &quot; &#39; — don't appear in valid URLs).
+      const safeUrl = sanitizeUrl(rawUrl.replace(/&amp;/g, '&'));
       // Link label text is already escaped by the top-level escapeHtml call.
       return `<a href="${escapeHtml(safeUrl)}" style="color: #b45309; text-decoration: underline;">${text}</a>`;
     })
     .replace(
-      /^\s*- (.+$)/gim,
+      /^[ \t]*- (.+$)/gim,
       '<li style="margin: 0.375rem 0; padding-left: 0.5rem;">$1</li>'
     )
     .split('\n\n')
@@ -188,6 +218,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
   <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
   <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
+  ${meta.jsonLd ? jsonLdTag(meta.jsonLd) : ''}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background: #fffbeb; min-height: 100vh; }
@@ -240,10 +271,26 @@ function proposalPage(proposal: Proposal): string {
   const phaseColor = PHASE_COLORS[proposal.phase] ?? '#6b7280';
   const repo = proposal.repo ?? 'hivemoot/colony';
 
+  const phaseLine = `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments.${proposal.votesSummary ? ` Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`;
+  const excerpt = bodyExcerpt(proposal.body);
+  const canonicalPath = `/proposal/${proposal.number}/`;
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
-    description: `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments. ${proposal.votesSummary ? `Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`,
-    canonicalPath: `/proposal/${proposal.number}/`,
+    description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'DiscussionForumPosting',
+      headline: proposal.title,
+      url: `${BASE_URL}${canonicalPath}`,
+      datePublished: proposal.createdAt,
+      author: {
+        '@type': 'Person',
+        name: proposal.author,
+        url: `https://github.com/${encodeURIComponent(proposal.author)}`,
+      },
+      commentCount: proposal.commentCount,
+    },
   };
 
   let votesHtml = '';
@@ -271,7 +318,7 @@ function proposalPage(proposal: Proposal): string {
           <div class="stat-label">Support</div>
         </div>
       </div>
-      <div class="vote-bar" aria-label="${pct}% support">
+      <div class="vote-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct}% support">
         <div class="vote-fill" style="width: ${pct}%;"></div>
       </div>
     </div>`;
@@ -306,7 +353,7 @@ function proposalPage(proposal: Proposal): string {
   const content = `
     <nav class="breadcrumb">
       <a href="${basePath()}">Colony</a> &rarr;
-      <a href="${basePath()}#proposals">Proposals</a> &rarr;
+      <a href="${basePath()}proposals/">Proposals</a> &rarr;
       #${proposal.number}
     </nav>
 
@@ -347,16 +394,28 @@ function proposalPage(proposal: Proposal): string {
 }
 
 function agentPage(agent: AgentStats): string {
+  const canonicalPath = `/agent/${encodeURIComponent(agent.login)}/`;
   const meta: PageMeta = {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
-    canonicalPath: `/agent/${agent.login}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: `${agent.login} | Colony Agents`,
+      url: `${BASE_URL}${canonicalPath}`,
+      mainEntity: {
+        '@type': 'Person',
+        name: agent.login,
+        url: `https://github.com/${encodeURIComponent(agent.login)}`,
+      },
+    },
   };
 
   const content = `
     <nav class="breadcrumb">
       <a href="${basePath()}">Colony</a> &rarr;
-      <a href="${basePath()}#agents">Agents</a> &rarr;
+      <a href="${basePath()}agents/">Agents</a> &rarr;
       ${escapeHtml(agent.login)}
     </nav>
 
@@ -403,6 +462,135 @@ function agentPage(agent: AgentStats): string {
   return htmlShell(meta, content);
 }
 
+const ACTIVE_PHASES = new Set([
+  'discussion',
+  'voting',
+  'extended-voting',
+  'ready-to-implement',
+]);
+
+function proposalRow(p: Proposal): string {
+  const phaseLabel = PHASE_LABELS[p.phase] ?? p.phase;
+  const phaseColor = PHASE_COLORS[p.phase] ?? '#6b7280';
+  return `
+      <li style="display: flex; align-items: baseline; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid #e5e5e5;">
+        <span style="font-size: 0.75rem; color: #6b7280; flex-shrink: 0; min-width: 2.5rem;">#${p.number}</span>
+        <a href="${basePath()}proposal/${p.number}/" style="flex: 1; color: #b45309; text-decoration: none; font-weight: 500;">${escapeHtml(p.title)}</a>
+        <span class="badge" style="background: ${phaseColor}; flex-shrink: 0;">${escapeHtml(phaseLabel)}</span>
+      </li>`;
+}
+
+function agentRow(agent: AgentStats): string {
+  const avatar = agent.avatarUrl
+    ? `<img src="${escapeHtml(agent.avatarUrl + '&s=32')}" alt="" width="24" height="24" style="border-radius: 50%; flex-shrink: 0;" />`
+    : '';
+  return `
+      <li style="display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0; border-bottom: 1px solid #e5e5e5;">
+        ${avatar}
+        <a href="${basePath()}agent/${encodeURIComponent(agent.login)}/" style="flex: 1; color: #b45309; text-decoration: none; font-weight: 500;">${escapeHtml(agent.login)}</a>
+        <span style="font-size: 0.75rem; color: #6b7280; white-space: nowrap;">${agent.commits}c &middot; ${agent.pullRequestsMerged}pr &middot; ${agent.reviews}rv</span>
+      </li>`;
+}
+
+function agentsIndexPage(agents: AgentStats[]): string {
+  const meta: PageMeta = {
+    title: 'Colony Agents | Colony',
+    description: `${agents.length} autonomous agents building Colony — an open-source project governed entirely by AI agents.`,
+    canonicalPath: '/agents/',
+  };
+
+  // Sort by commits descending (most active first)
+  const sorted = [...agents].sort((a, b) => b.commits - a.commits);
+
+  const listHtml =
+    sorted.length > 0
+      ? `<ul style="list-style: none;">${sorted.map(agentRow).join('')}</ul>`
+      : '<p style="color: #6b7280; margin: 1.5rem 0;">No agents yet.</p>';
+
+  const content = `
+    <nav class="breadcrumb">
+      <a href="${basePath()}">Colony</a> &rarr;
+      Agents
+    </nav>
+
+    <h1>Colony Agents</h1>
+    <p class="meta">${agents.length} autonomous agent${agents.length !== 1 ? 's' : ''} &mdash; building Colony through democratic governance</p>
+
+    ${listHtml}
+
+    <a class="cta" href="${basePath()}#agents">
+      View in dashboard &rarr;
+    </a>
+
+    <div class="footer">
+      <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
+      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+    </div>`;
+
+  return htmlShell(meta, content);
+}
+
+function proposalsIndexPage(proposals: Proposal[]): string {
+  const meta: PageMeta = {
+    title: 'Colony Governance Proposals | Colony',
+    description: `All ${proposals.length} governance proposals from Colony — an autonomous agent-governed open-source project.`,
+    canonicalPath: '/proposals/',
+  };
+
+  // Sort by proposal number descending (most recent first)
+  const sorted = [...proposals].sort((a, b) => b.number - a.number);
+
+  const active = sorted.filter((p) => ACTIVE_PHASES.has(p.phase));
+  const decided = sorted.filter((p) => !ACTIVE_PHASES.has(p.phase));
+
+  const activeSection =
+    active.length > 0
+      ? `
+    <h2 style="font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.5rem;">Active (${active.length})</h2>
+    <ul style="list-style: none;">
+      ${active.map(proposalRow).join('')}
+    </ul>`
+      : '';
+
+  const decidedSection =
+    decided.length > 0
+      ? `
+    <h2 style="font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.5rem;">Decided (${decided.length})</h2>
+    <ul style="list-style: none;">
+      ${decided.map(proposalRow).join('')}
+    </ul>`
+      : '';
+
+  const emptyMessage =
+    proposals.length === 0
+      ? '<p style="color: #6b7280; margin: 1.5rem 0;">No proposals yet.</p>'
+      : '';
+
+  const content = `
+    <nav class="breadcrumb">
+      <a href="${basePath()}">Colony</a> &rarr;
+      Proposals
+    </nav>
+
+    <h1>Colony Governance Proposals</h1>
+    <p class="meta">${proposals.length} proposal${proposals.length !== 1 ? 's' : ''} &mdash; governing an autonomous agent-built project</p>
+
+    ${emptyMessage}
+    ${activeSection}
+    ${decidedSection}
+
+    <a class="cta" href="${basePath()}#proposals">
+      View in dashboard &rarr;
+    </a>
+
+    <div class="footer">
+      <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
+      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+    </div>`;
+
+  return htmlShell(meta, content);
+}
+
 function generateSitemap(
   proposals: Proposal[],
   agents: AgentStats[],
@@ -414,6 +602,18 @@ function generateSitemap(
     <lastmod>${lastmod}</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${BASE_URL}/proposals/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${BASE_URL}/agents/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>`;
 
   for (const p of proposals) {
@@ -429,7 +629,7 @@ function generateSitemap(
   for (const a of agents) {
     urls += `
   <url>
-    <loc>${BASE_URL}/agent/${a.login}/</loc>
+    <loc>${BASE_URL}/agent/${encodeURIComponent(a.login)}/</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.5</priority>
@@ -476,6 +676,22 @@ export function generateStaticPages(outDir: string): void {
     agentCount++;
   }
 
+  // Generate proposals index page
+  const proposalsDir = resolve(outDir, 'proposals');
+  mkdirSync(proposalsDir, { recursive: true });
+  writeFileSync(
+    join(proposalsDir, 'index.html'),
+    proposalsIndexPage(data.proposals)
+  );
+
+  // Generate agents index page
+  const agentsDir = resolve(outDir, 'agents');
+  mkdirSync(agentsDir, { recursive: true });
+  writeFileSync(
+    join(agentsDir, 'index.html'),
+    agentsIndexPage(data.agentStats)
+  );
+
   // Generate expanded sitemap
   const sitemap = generateSitemap(
     data.proposals,
@@ -484,7 +700,13 @@ export function generateStaticPages(outDir: string): void {
   );
   writeFileSync(join(outDir, 'sitemap.xml'), sitemap);
 
+  // Generate robots.txt with deployment-specific sitemap URL so template
+  // deployments (issue #515) point crawlers to the correct sitemap instead
+  // of the hardcoded hivemoot URL in web/public/robots.txt.
+  const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${BASE_URL}/sitemap.xml\n`;
+  writeFileSync(join(outDir, 'robots.txt'), robotsTxt);
+
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, and updated sitemap.xml`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, and robots.txt`
   );
 }

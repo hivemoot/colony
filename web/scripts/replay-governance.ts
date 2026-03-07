@@ -24,6 +24,24 @@ export interface ReplayOptions {
   json: boolean;
 }
 
+export interface SubMetricSummary {
+  first: number;
+  last: number;
+  delta: number;
+  min: number;
+  max: number;
+  average: number;
+}
+
+export interface GovernanceSubMetrics {
+  participation: SubMetricSummary | null;
+  pipelineFlow: SubMetricSummary | null;
+  followThrough: SubMetricSummary | null;
+  consensusQuality: SubMetricSummary | null;
+  activeAgents: SubMetricSummary | null;
+  proposalVelocity: SubMetricSummary | null;
+}
+
 export interface GovernanceReplaySummary {
   points: number;
   from: string | null;
@@ -34,6 +52,7 @@ export interface GovernanceReplaySummary {
   minHealth: number | null;
   maxHealth: number | null;
   averageHealth: number | null;
+  subMetrics: GovernanceSubMetrics | null;
 }
 
 export function parseReplayArgs(args: string[]): ReplayOptions {
@@ -79,6 +98,26 @@ export function parseReplayArgs(args: string[]): ReplayOptions {
   return { file, from, to, json };
 }
 
+export function summarizeNumericValues(
+  values: (number | null | undefined)[]
+): SubMetricSummary | null {
+  const valid = values.filter((v): v is number => Number.isFinite(v as number));
+  if (valid.length === 0) {
+    return null;
+  }
+  const first = valid[0];
+  const last = valid[valid.length - 1];
+  const sum = valid.reduce((acc, v) => acc + v, 0);
+  return {
+    first,
+    last,
+    delta: last - first,
+    min: Math.min(...valid),
+    max: Math.max(...valid),
+    average: Math.round((sum / valid.length) * 100) / 100,
+  };
+}
+
 export function summarizeGovernanceReplay(
   snapshots: GovernanceSnapshot[],
   from: string | null,
@@ -107,12 +146,26 @@ export function summarizeGovernanceReplay(
       minHealth: null,
       maxHealth: null,
       averageHealth: null,
+      subMetrics: null,
     };
   }
 
   const scores = windowed.map((snapshot) => snapshot.healthScore);
   const first = scores[0];
   const last = scores[scores.length - 1];
+
+  const subMetrics: GovernanceSubMetrics = {
+    participation: summarizeNumericValues(windowed.map((s) => s.participation)),
+    pipelineFlow: summarizeNumericValues(windowed.map((s) => s.pipelineFlow)),
+    followThrough: summarizeNumericValues(windowed.map((s) => s.followThrough)),
+    consensusQuality: summarizeNumericValues(
+      windowed.map((s) => s.consensusQuality)
+    ),
+    activeAgents: summarizeNumericValues(windowed.map((s) => s.activeAgents)),
+    proposalVelocity: summarizeNumericValues(
+      windowed.map((s) => s.proposalVelocity)
+    ),
+  };
 
   return {
     points: windowed.length,
@@ -127,6 +180,7 @@ export function summarizeGovernanceReplay(
       Math.round(
         (scores.reduce((sum, score) => sum + score, 0) / scores.length) * 100
       ) / 100,
+    subMetrics,
   };
 }
 
@@ -185,7 +239,7 @@ function formatTextOutput(params: {
       ? artifact.provenance.repositories.join(', ')
       : 'unknown';
 
-  return [
+  const lines = [
     `Schema: v${artifact.schemaVersion}`,
     `Generated: ${artifact.generatedAt}`,
     `Repositories: ${repos}`,
@@ -194,7 +248,31 @@ function formatTextOutput(params: {
     `Replay points: ${summary.points}`,
     `Window: ${summary.from ?? 'n/a'} -> ${summary.to ?? 'n/a'}`,
     `Health: first=${summary.firstHealth ?? 'n/a'} last=${summary.lastHealth ?? 'n/a'} delta=${summary.deltaHealth ?? 'n/a'} avg=${summary.averageHealth ?? 'n/a'}`,
-  ].join('\n');
+  ];
+
+  if (summary.subMetrics) {
+    lines.push('Sub-metrics:');
+    const sm = summary.subMetrics;
+    const dims: Array<[string, SubMetricSummary | null]> = [
+      ['  participation', sm.participation],
+      ['  pipelineFlow', sm.pipelineFlow],
+      ['  followThrough', sm.followThrough],
+      ['  consensusQuality', sm.consensusQuality],
+      ['  activeAgents', sm.activeAgents],
+      ['  proposalVelocity', sm.proposalVelocity],
+    ];
+    for (const [label, s] of dims) {
+      if (s) {
+        lines.push(
+          `${label}: first=${s.first} last=${s.last} delta=${s.delta} avg=${s.average}`
+        );
+      } else {
+        lines.push(`${label}: n/a`);
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 async function main(): Promise<void> {

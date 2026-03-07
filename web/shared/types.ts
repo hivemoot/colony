@@ -29,6 +29,8 @@ export interface PullRequest {
   createdAt: string;
   closedAt?: string | null;
   mergedAt?: string | null;
+  /** ISO timestamp of the first APPROVED review, if available */
+  firstApprovalAt?: string | null;
   /** "owner/name" identifier for multi-repo support */
   repo?: string;
 }

@@ -17,6 +17,8 @@ import { GovernanceTrend } from './GovernanceTrend';
 import { GovernanceOps } from './GovernanceOps';
 import { GovernanceBalance } from './GovernanceBalance';
 import { VelocityMetrics } from './VelocityMetrics';
+import { BenchmarkPanel } from './BenchmarkPanel';
+import { GovernanceAssessment } from './GovernanceAssessment';
 import { CollaborationNetwork } from './CollaborationNetwork';
 import { ProposalList } from './ProposalList';
 import { CommentList } from './CommentList';
@@ -285,6 +287,25 @@ export function ActivityFeed({
 
           {data && data.proposals.length > 0 && (
             <section
+              id="assessment"
+              aria-labelledby="section-assessment"
+              className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2
+                id="section-assessment"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
+                <span role="img" aria-label="assessment">
+                  🔍
+                </span>
+                Governance Assessment
+              </h2>
+              <GovernanceAssessment data={data} history={governanceHistory} />
+            </section>
+          )}
+
+          {data && data.proposals.length > 0 && (
+            <section
               id="health"
               aria-labelledby="section-health"
               className="bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
@@ -338,6 +359,25 @@ export function ActivityFeed({
                 Velocity
               </h2>
               <VelocityMetrics data={data} />
+            </section>
+          )}
+
+          {data && data.pullRequests.length > 0 && (
+            <section
+              id="benchmarking"
+              aria-labelledby="section-benchmarking"
+              className="scroll-mt-28 bg-white/50 dark:bg-neutral-700/50 rounded-xl p-6 backdrop-blur-sm border border-amber-200 dark:border-neutral-600"
+            >
+              <h2
+                id="section-benchmarking"
+                className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-4 flex items-center justify-center gap-2"
+              >
+                <span role="img" aria-label="benchmarking">
+                  📊
+                </span>
+                Benchmarking
+              </h2>
+              <BenchmarkPanel data={data} />
             </section>
           )}
 

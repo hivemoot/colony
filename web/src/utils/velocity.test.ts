@@ -51,6 +51,7 @@ describe('computeVelocityMetrics', () => {
   it('returns null metrics for empty data', () => {
     const result = computeVelocityMetrics(makeData());
     expect(result.medianPrCycleHours).toBeNull();
+    expect(result.medianApprovalToMergeHours).toBeNull();
     expect(result.medianProposalToShipHours).toBeNull();
     expect(result.openPrCount).toBe(0);
     expect(result.weeklyMergedCount).toBe(0);
@@ -82,6 +83,45 @@ describe('computeVelocityMetrics', () => {
     ];
     const result = computeVelocityMetrics(makeData({ pullRequests: prs }));
     expect(result.medianPrCycleHours).toBe(24); // median of [12, 24, 60]
+  });
+
+  it('computes median approval-to-merge hours from firstApprovalAt', () => {
+    const prs = [
+      makePR({
+        number: 1,
+        state: 'merged',
+        firstApprovalAt: '2026-02-10T00:00:00Z',
+        mergedAt: '2026-02-10T12:00:00Z', // 12 hours after approval
+      }),
+      makePR({
+        number: 2,
+        state: 'merged',
+        firstApprovalAt: '2026-02-10T00:00:00Z',
+        mergedAt: '2026-02-11T00:00:00Z', // 24 hours after approval
+      }),
+      makePR({
+        number: 3,
+        state: 'merged',
+        firstApprovalAt: '2026-02-10T00:00:00Z',
+        mergedAt: '2026-02-12T12:00:00Z', // 60 hours after approval
+      }),
+    ];
+    const result = computeVelocityMetrics(makeData({ pullRequests: prs }));
+    expect(result.medianApprovalToMergeHours).toBe(24); // median of [12, 24, 60]
+  });
+
+  it('returns null approval-to-merge when no firstApprovalAt data exists', () => {
+    const prs = [
+      makePR({
+        number: 1,
+        state: 'merged',
+        createdAt: '2026-02-10T00:00:00Z',
+        mergedAt: '2026-02-10T12:00:00Z',
+        // no firstApprovalAt
+      }),
+    ];
+    const result = computeVelocityMetrics(makeData({ pullRequests: prs }));
+    expect(result.medianApprovalToMergeHours).toBeNull();
   });
 
   it('ignores open and closed-but-not-merged PRs for cycle time', () => {

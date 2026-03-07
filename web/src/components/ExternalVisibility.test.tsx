@@ -93,4 +93,36 @@ describe('ExternalVisibility', () => {
     ).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
   });
+
+  it('hides admin-blocked signals section when blockers list is empty', () => {
+    const dataWithNoBlockers: ExternalVisibilityData = {
+      ...mockVisibility,
+      blockers: [],
+    };
+
+    render(<ExternalVisibility data={dataWithNoBlockers} />);
+
+    expect(
+      screen.queryByText(/admin-blocked signals:/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders check details text', () => {
+    render(<ExternalVisibility data={mockVisibility} />);
+
+    expect(
+      screen.getByText('Missing homepage repository setting.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('activity.json is stale')).toBeInTheDocument();
+  });
+
+  it('sets aria-label on blocked badge with admin action guidance', () => {
+    render(<ExternalVisibility data={mockVisibility} />);
+
+    const blockedBadge = screen.getByText(/^blocked$/i);
+    expect(blockedBadge).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/^blocked:.*requires repository admin action/i)
+    );
+  });
 });
