@@ -102,7 +102,7 @@ export function AgentLeaderboard({
                       onError={handleAvatarError}
                     />
                     <a
-                      href={`https://github.com/${agent.login}`}
+                      href={`https://github.com/${encodeURIComponent(agent.login)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="relative z-20 font-medium text-amber-900 dark:text-amber-100 hover:text-amber-600 dark:hover:text-amber-400 motion-safe:transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"

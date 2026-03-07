@@ -1,7 +1,13 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import {
   resolveRepository,
+  resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
+  resolveRepositoryHomepage,
+  updateSitemapLastmod,
   mapCommits,
   mapIssues,
   mapPullRequests,
@@ -13,6 +19,7 @@ import {
   extractGovernanceIncidents,
   deduplicateAgents,
   extractPhaseTransitions,
+  filterAndMapProposals,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -69,6 +76,24 @@ describe('resolveRepository', () => {
   it('should throw on invalid format', () => {
     expect(() => resolveRepository({ COLONY_REPOSITORY: 'invalid' })).toThrow();
   });
+
+  it('should reject repository values with extra path segments', () => {
+    expect(() =>
+      resolveRepository({ COLONY_REPOSITORY: 'hivemoot/colony/extra' })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+
+  it('should trim whitespace around owner and repo', () => {
+    const result = resolveRepository({
+      COLONY_REPOSITORY: '  hivemoot / colony  ',
+    });
+    expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
+
+  it('should fall back to defaults when COLONY_REPOSITORY is blank', () => {
+    const result = resolveRepository({ COLONY_REPOSITORY: '   ' });
+    expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
 });
 
 describe('resolveRepositories', () => {
@@ -120,6 +145,14 @@ describe('resolveRepositories', () => {
     ).toThrow(/Invalid repository "invalid"/);
   });
 
+  it('should throw when a multi-repo entry has extra path segments', () => {
+    expect(() =>
+      resolveRepositories({
+        COLONY_REPOSITORIES: 'hivemoot/colony,hivemoot/hivemoot/extra',
+      })
+    ).toThrow(/Expected format "owner\/repo"/);
+  });
+
   it('should handle single repo in COLONY_REPOSITORIES', () => {
     const result = resolveRepositories({
       COLONY_REPOSITORIES: 'hivemoot/colony',
@@ -135,6 +168,64 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('resolveRepositoryHomepage', () => {
+  it('accepts and normalizes https homepage URLs', () => {
+    expect(
+      resolveRepositoryHomepage('https://colony.example.org/path/?utm=1#frag')
+    ).toBe('https://colony.example.org/path');
+  });
+
+  it('rejects insecure and local homepage URLs', () => {
+    expect(resolveRepositoryHomepage('http://colony.example.org')).toBe('');
+    expect(resolveRepositoryHomepage('https://localhost:4173')).toBe('');
+    expect(resolveRepositoryHomepage('https://127.0.0.1:8443')).toBe('');
+    expect(resolveRepositoryHomepage('https://[::1]/')).toBe('');
+    expect(resolveRepositoryHomepage('https://[2001:db8::1]/')).toBe('');
+  });
+
+  it('rejects credential-bearing homepage URLs', () => {
+    expect(
+      resolveRepositoryHomepage('https://user:secret@example.com/colony/')
+    ).toBe('');
+    expect(resolveRepositoryHomepage('https://user@example.com/colony/')).toBe(
+      ''
+    );
+  });
+
+  it('rejects malformed URL strings', () => {
+    expect(resolveRepositoryHomepage('https//missing-colon.example.com')).toBe(
+      ''
+    );
+    expect(resolveRepositoryHomepage('not-a-url')).toBe('');
+    expect(resolveRepositoryHomepage('')).toBe('');
+  });
+});
+
+describe('resolveRequiredDiscoverabilityTopics', () => {
+  it('returns defaults when COLONY_REQUIRED_DISCOVERABILITY_TOPICS is unset', () => {
+    expect(resolveRequiredDiscoverabilityTopics({})).toEqual(
+      REQUIRED_DISCOVERABILITY_TOPICS
+    );
+  });
+
+  it('parses, normalizes, and deduplicates configured topics', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS:
+          ' Custom-Topic,custom-topic, dashboard ,',
+      })
+    ).toEqual(['custom-topic', 'dashboard']);
+  });
+
+  it('falls back to defaults when configured topics are blank', () => {
+    expect(
+      resolveRequiredDiscoverabilityTopics({
+        COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' , , ',
+      })
+    ).toEqual(REQUIRED_DISCOVERABILITY_TOPICS);
   });
 });
 
@@ -692,6 +783,56 @@ describe('buildExternalVisibility', () => {
     );
   });
 
+  it('marks freshness check as failed when deployed activity JSON timestamp is in the future', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({
+              generatedAt: new Date(
+                Date.now() + 8 * 60 * 60 * 1000
+              ).toISOString(),
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }
+          );
+        }
+
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const freshnessCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-activity-freshness'
+    );
+    expect(freshnessCheck?.ok).toBe(false);
+    expect(freshnessCheck?.details).toContain('future');
+  });
+
   it('runs deployed checks against configured homepage with deterministic fetch responses', async () => {
     const baseUrl = 'https://hivemoot.github.io/colony';
     const recentGeneratedAt = new Date(
@@ -713,7 +854,10 @@ describe('buildExternalVisibility', () => {
               <head>
                 <link rel="icon" href="${baseUrl}/favicon.ico" sizes="any" />
                 <link rel="canonical" href="${baseUrl}/" />
+                <link rel="manifest" href="${baseUrl}/manifest.webmanifest" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/colony/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
@@ -731,7 +875,24 @@ describe('buildExternalVisibility', () => {
         if (url === `${baseUrl}/twitter-image.png`) {
           return new Response('image-bytes', { status: 200 });
         }
-        if (url === `${baseUrl}/apple-touch-icon.png`) {
+        if (url === `${baseUrl}/manifest.webmanifest`) {
+          return new Response(
+            JSON.stringify({
+              icons: [
+                { src: `${baseUrl}/pwa-192x192.png`, sizes: '192x192' },
+                { src: `${baseUrl}/pwa-512x512.png`, sizes: '512x512' },
+              ],
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/pwa-192x192.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (
+          url === `${baseUrl}/pwa-512x512.png` ||
+          url === `${baseUrl}/apple-touch-icon.png`
+        ) {
           return new Response('image-bytes', { status: 200 });
         }
         if (url === `${baseUrl}/robots.txt`) {
@@ -785,11 +946,20 @@ describe('buildExternalVisibility', () => {
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image')?.ok
     ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-og-image-dimensions')?.ok
+    ).toBe(true);
     expect(visibility.checks.find((c) => c.id === 'deployed-favicon')?.ok).toBe(
       true
     );
     expect(
       visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-pwa-manifest')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-pwa-icons')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-apple-touch-icon')?.ok
@@ -837,6 +1007,45 @@ describe('buildExternalVisibility', () => {
     expect(visibility.checks.find((c) => c.id === 'has-homepage')?.ok).toBe(
       false
     );
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      fallbackBaseUrl,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  it('uses fallback deployed URL when homepage is invalid', async () => {
+    const fallbackBaseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (): Promise<Response> => {
+        throw new Error('network unavailable');
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: 'http://127.0.0.1:4173/dashboard',
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    expect(visibility.checks.find((c) => c.id === 'has-homepage')?.ok).toBe(
+      false
+    );
+
+    const rootCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-root-reachable'
+    );
+    expect(rootCheck?.details).toContain(
+      `Fallback URL used: ${fallbackBaseUrl}`
+    );
+
     expect(globalThis.fetch).toHaveBeenCalledWith(
       fallbackBaseUrl,
       expect.objectContaining({ signal: expect.any(AbortSignal) })
@@ -999,6 +1208,279 @@ describe('buildExternalVisibility', () => {
     expect(twitterImageCheck?.details).toContain(
       'Missing twitter:image metadata on deployed homepage'
     );
+  });
+
+  it('flags missing og:image dimensions on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link href="${baseUrl}/favicon.ico" sizes="any" rel="icon" />
+                <link href="${baseUrl}/" rel="canonical" />
+                <meta content="${baseUrl}/og-image.png" property="og:image" />
+                <meta content="${baseUrl}/twitter-image.png" name="twitter:image" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/favicon.ico`) {
+          return new Response('icon-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const ogImageDimensionsCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-og-image-dimensions'
+    );
+    expect(ogImageDimensionsCheck?.ok).toBe(false);
+    expect(ogImageDimensionsCheck?.details).toContain(
+      'Missing og:image:width and og:image:height metadata on deployed homepage'
+    );
+  });
+
+  it('flags missing required PWA icon sizes in deployed manifest', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <link rel="manifest" href="${baseUrl}/manifest.webmanifest" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/manifest.webmanifest`) {
+          return new Response(
+            JSON.stringify({
+              icons: [{ src: `${baseUrl}/pwa-192x192.png`, sizes: '192x192' }],
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const manifestCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-pwa-manifest'
+    );
+    expect(manifestCheck?.ok).toBe(false);
+    expect(manifestCheck?.details).toContain('Missing required icon sizes');
+
+    const iconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-pwa-icons'
+    );
+    expect(iconCheck?.ok).toBe(false);
+    expect(iconCheck?.details).toContain('512x512: missing manifest icon URL');
+  });
+
+  it('flags non-200 deployed PWA icon URLs', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <link rel="canonical" href="${baseUrl}/" />
+                <link rel="manifest" href="${baseUrl}/manifest.webmanifest" />
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/manifest.webmanifest`) {
+          return new Response(
+            JSON.stringify({
+              icons: [
+                { src: `${baseUrl}/pwa-192x192.png`, sizes: '192x192' },
+                { src: `${baseUrl}/pwa-512x512.png`, sizes: '512x512' },
+              ],
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        if (url === `${baseUrl}/pwa-192x192.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/pwa-512x512.png`) {
+          return new Response('missing', { status: 404 });
+        }
+        if (url === `${baseUrl}/og-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/twitter-image.png`) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        if (url === `${baseUrl}/robots.txt`) {
+          return new Response(
+            `User-agent: *\nSitemap: ${baseUrl}/sitemap.xml`,
+            {
+              status: 200,
+            }
+          );
+        }
+        if (url === `${baseUrl}/sitemap.xml`) {
+          return new Response(
+            '<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>',
+            { status: 200 }
+          );
+        }
+        if (url === `${baseUrl}/data/activity.json`) {
+          return new Response(
+            JSON.stringify({ generatedAt: new Date().toISOString() }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const manifestCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-pwa-manifest'
+    );
+    expect(manifestCheck?.ok).toBe(true);
+
+    const iconCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-pwa-icons'
+    );
+    expect(iconCheck?.ok).toBe(false);
+    expect(iconCheck?.details).toContain('512x512: GET');
+    expect(iconCheck?.details).toContain('returned 404');
   });
 
   it('flags relative social image metadata values as invalid', async () => {
@@ -1557,5 +2039,233 @@ describe('buildExternalVisibility', () => {
     expect(topicsCheck?.ok).toBe(false);
     expect(topicsCheck?.details).toContain('Missing required topics:');
     expect(topicsCheck?.details).toContain('ai-governance');
+  });
+});
+
+describe('updateSitemapLastmod', () => {
+  let tempDir: string;
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('should update lastmod to the generation date', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    writeFileSync(
+      sitemapPath,
+      '<?xml version="1.0"?>\n<urlset><url><lastmod>2026-02-11</lastmod></url></urlset>'
+    );
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    const result = readFileSync(sitemapPath, 'utf-8');
+    expect(result).toContain('<lastmod>2026-02-12</lastmod>');
+    expect(result).not.toContain('2026-02-11');
+  });
+
+  it('should not throw when sitemap does not exist', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const missingPath = join(tempDir, 'nonexistent.xml');
+
+    expect(() =>
+      updateSitemapLastmod('2026-02-12T20:05:04.575Z', missingPath)
+    ).not.toThrow();
+  });
+
+  it('should not rewrite when lastmod is already current', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    const content =
+      '<?xml version="1.0"?>\n<urlset><url><lastmod>2026-02-12</lastmod></url></urlset>';
+    writeFileSync(sitemapPath, content);
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    expect(readFileSync(sitemapPath, 'utf-8')).toBe(content);
+  });
+
+  it('should update all lastmod tags in a multi-URL sitemap', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'sitemap-'));
+    const sitemapPath = join(tempDir, 'sitemap.xml');
+    writeFileSync(
+      sitemapPath,
+      '<?xml version="1.0"?>\n<urlset>' +
+        '<url><loc>https://example.com/</loc><lastmod>2026-02-10</lastmod></url>' +
+        '<url><loc>https://example.com/about</loc><lastmod>2026-02-09</lastmod></url>' +
+        '</urlset>'
+    );
+
+    updateSitemapLastmod('2026-02-12T20:05:04.575Z', sitemapPath);
+
+    const result = readFileSync(sitemapPath, 'utf-8');
+    const matches = result.match(/<lastmod>2026-02-12<\/lastmod>/g);
+    expect(matches).toHaveLength(2);
+    expect(result).not.toContain('2026-02-10');
+    expect(result).not.toContain('2026-02-09');
+  });
+});
+
+const baseIssue: GitHubIssue = {
+  number: 1,
+  title: 'Test proposal',
+  body: 'Test body',
+  state: 'open',
+  state_reason: null,
+  labels: [],
+  created_at: '2026-02-01T00:00:00Z',
+  closed_at: null,
+  user: { login: 'hivemoot-agent' },
+  comments: 0,
+};
+
+describe('filterAndMapProposals', () => {
+  it('includes issues with legacy phase: labels', () => {
+    const issues: GitHubIssue[] = [
+      { ...baseIssue, number: 1, labels: [{ name: 'phase:discussion' }] },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].phase).toBe('discussion');
+  });
+
+  it('includes issues with hivemoot:ready-to-implement label', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 100,
+        title: 'New-era proposal',
+        labels: [{ name: 'hivemoot:ready-to-implement' }],
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].number).toBe(100);
+    expect(result[0].phase).toBe('ready-to-implement');
+  });
+
+  it('includes issues with hivemoot:implemented label', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 200,
+        labels: [{ name: 'hivemoot:implemented' }],
+        state: 'closed',
+        state_reason: 'completed',
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].phase).toBe('implemented');
+  });
+
+  it('includes issues with hivemoot:inconclusive label', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 201,
+        labels: [{ name: 'hivemoot:inconclusive' }],
+        state: 'closed',
+        state_reason: null,
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(1);
+    expect(result[0].phase).toBe('inconclusive');
+  });
+
+  it('drops non-phase hivemoot:* labels like hivemoot:merge-ready', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 300,
+        labels: [{ name: 'hivemoot:merge-ready' }],
+      },
+    ];
+    const result = filterAndMapProposals(issues);
+    // merge-ready is not in validPhases, so it gets filtered out
+    expect(result).toHaveLength(0);
+  });
+
+  it('handles a mix of legacy phase: and hivemoot: issues', () => {
+    const issues: GitHubIssue[] = [
+      { ...baseIssue, number: 10, labels: [{ name: 'phase:implemented' }] },
+      {
+        ...baseIssue,
+        number: 400,
+        labels: [{ name: 'hivemoot:ready-to-implement' }],
+      },
+      { ...baseIssue, number: 50, labels: [{ name: 'unrelated' }] },
+    ];
+    const result = filterAndMapProposals(issues);
+    expect(result).toHaveLength(2);
+    const numbers = result.map((p) => p.number).sort((a, b) => a - b);
+    expect(numbers).toEqual([10, 400]);
+  });
+
+  it('attaches repoTag when provided', () => {
+    const issues: GitHubIssue[] = [
+      {
+        ...baseIssue,
+        number: 500,
+        labels: [{ name: 'hivemoot:ready-to-implement' }],
+      },
+    ];
+    const result = filterAndMapProposals(issues, 'hivemoot/colony');
+    expect(result[0].repo).toBe('hivemoot/colony');
+  });
+});
+
+describe('extractPhaseTransitions with hivemoot:* labels', () => {
+  it('extracts hivemoot:* prefixed phase label events', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:discussion' },
+        created_at: '2026-02-10T10:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:voting' },
+        created_at: '2026-02-11T10:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:ready-to-implement' },
+        created_at: '2026-02-12T10:00:00Z',
+      },
+    ];
+    const result = extractPhaseTransitions(timeline);
+    expect(result).toEqual([
+      { phase: 'discussion', enteredAt: '2026-02-10T10:00:00Z' },
+      { phase: 'voting', enteredAt: '2026-02-11T10:00:00Z' },
+      { phase: 'ready-to-implement', enteredAt: '2026-02-12T10:00:00Z' },
+    ]);
+  });
+
+  it('handles a mix of phase: and hivemoot: prefixed events', () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: 'labeled',
+        label: { name: 'phase:discussion' },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:voting' },
+        created_at: '2026-01-02T00:00:00Z',
+      },
+      {
+        event: 'labeled',
+        label: { name: 'hivemoot:implemented' },
+        created_at: '2026-01-03T00:00:00Z',
+      },
+    ];
+    const result = extractPhaseTransitions(timeline);
+    expect(result).toEqual([
+      { phase: 'discussion', enteredAt: '2026-01-01T00:00:00Z' },
+      { phase: 'voting', enteredAt: '2026-01-02T00:00:00Z' },
+      { phase: 'implemented', enteredAt: '2026-01-03T00:00:00Z' },
+    ]);
   });
 });

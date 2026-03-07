@@ -1,0 +1,16 @@
+{
+  "ci": {
+    "assert": {
+      "assertions": {
+        "categories:accessibility": ["warn", { "minScore": 0.9 }],
+        "document-title": "error",
+        "meta-description": "error",
+        "html-has-lang": "error",
+        "canonical": "warn"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

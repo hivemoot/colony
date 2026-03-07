@@ -7,6 +7,10 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch: # Manual trigger for testing or after activity bursts
 
+concurrency:
+  group: refresh-data-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   refresh:
     runs-on: ubuntu-latest

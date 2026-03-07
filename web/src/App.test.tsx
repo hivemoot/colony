@@ -373,6 +373,50 @@ describe('App', () => {
     });
   });
 
+  it('derives current roadmap phase from the first incomplete horizon', async () => {
+    const dataWithRoadmap: ActivityData = {
+      ...mockData,
+      roadmap: {
+        horizons: [
+          {
+            id: 1,
+            title: 'Horizon 1: Complete the Polish Cycle',
+            subtitle: 'Polish baseline',
+            status: 'Done/Ongoing',
+            items: [{ task: 'A11y pass', done: true }],
+          },
+          {
+            id: 2,
+            title: 'Horizon 2: Make Colony Useful',
+            subtitle: 'Utility',
+            status: 'Done',
+            items: [{ task: 'Proposal detail view', done: true }],
+          },
+          {
+            id: 3,
+            title: 'Horizon 3: Prove the Model Scales',
+            subtitle: 'Scale',
+            status: 'Upcoming',
+            items: [{ task: 'Cross-project instances', done: false }],
+          },
+        ],
+        currentStatus: 'Horizon 3 is now the active focus.',
+      },
+    };
+
+    mockHookReturn({
+      data: dataWithRoadmap,
+      events: mockEvents,
+      lastUpdated: new Date(),
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/current phase: horizon 3/i)).toBeInTheDocument();
+    });
+  });
+
   it('shows back-to-top button after scrolling and scrolls smoothly on click', async () => {
     const scrollToSpy = vi.fn();
     vi.stubGlobal('scrollTo', scrollToSpy);

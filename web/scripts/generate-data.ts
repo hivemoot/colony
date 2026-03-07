@@ -14,6 +14,7 @@
  */
 
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
@@ -45,6 +46,8 @@ import {
   type GovernanceHistoryArtifact,
 } from '../shared/governance-snapshot.ts';
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
+import { evaluateGeneratedAtFreshness } from './freshness';
+import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -59,8 +62,7 @@ const ROBOTS_PATH = join(ROOT_DIR, 'web', 'public', 'robots.txt');
 const GITHUB_API = 'https://api.github.com';
 const DEFAULT_OWNER = 'hivemoot';
 const DEFAULT_REPO = 'colony';
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-const REQUIRED_DISCOVERABILITY_TOPICS = [
+export const DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS = [
   'autonomous-agents',
   'ai-governance',
   'multi-agent',
@@ -87,6 +89,7 @@ export interface GitHubRepo {
 export interface GitHubIssue {
   number: number;
   title: string;
+  body?: string | null;
   state: string;
   state_reason?: string | null;
   labels: Array<{ name: string }>;
@@ -207,20 +210,39 @@ export function resolveRepository(env = process.env): {
   repo: string;
 } {
   const repository = env.COLONY_REPOSITORY ?? env.GITHUB_REPOSITORY;
+  const normalizedRepository = repository?.trim();
 
-  if (!repository) {
+  if (!normalizedRepository) {
+    process.stderr.write(
+      `⚠  COLONY_REPOSITORY not set — using default ${DEFAULT_OWNER}/${DEFAULT_REPO}.\n` +
+        `   Set COLONY_REPOSITORY=your-org/your-repo to track a different repository.\n`
+    );
     return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
   }
 
-  const [owner, repo] = repository.split('/');
+  return parseOwnerRepo(
+    normalizedRepository,
+    `Invalid repository "${normalizedRepository}". Expected format "owner/repo".`
+  );
+}
 
-  if (!owner || !repo) {
-    throw new Error(
-      `Invalid repository "${repository}". Expected format "owner/repo".`
-    );
+export function resolveRequiredDiscoverabilityTopics(
+  env: NodeJS.ProcessEnv = process.env
+): string[] {
+  const configured = env.COLONY_REQUIRED_DISCOVERABILITY_TOPICS;
+  if (!configured) {
+    return DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS;
   }
 
-  return { owner, repo };
+  const parsed = configured
+    .split(',')
+    .map((topic) => topic.trim().toLowerCase())
+    .filter(Boolean);
+
+  const uniqueTopics = [...new Set(parsed)];
+  return uniqueTopics.length > 0
+    ? uniqueTopics
+    : DEFAULT_REQUIRED_DISCOVERABILITY_TOPICS;
 }
 
 /**
@@ -250,12 +272,11 @@ export function resolveRepositories(
   const result: Array<{ owner: string; repo: string }> = [];
 
   for (const r of repos) {
-    const [owner, repo] = r.split('/');
-    if (!owner || !repo) {
-      throw new Error(
-        `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
-      );
-    }
+    const parsed = parseOwnerRepo(
+      r,
+      `Invalid repository "${r}" in COLONY_REPOSITORIES. Expected format "owner/repo".`
+    );
+    const { owner, repo } = parsed;
     const key = `${owner}/${repo}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -264,6 +285,25 @@ export function resolveRepositories(
   }
 
   return result;
+}
+
+function parseOwnerRepo(
+  input: string,
+  invalidMessage: string
+): { owner: string; repo: string } {
+  const parts = input.split('/');
+  if (parts.length !== 2) {
+    throw new Error(invalidMessage);
+  }
+
+  const owner = parts[0]?.trim() ?? '';
+  const repo = parts[1]?.trim() ?? '';
+
+  if (!owner || !repo) {
+    throw new Error(invalidMessage);
+  }
+
+  return { owner, repo };
 }
 
 export function mapCommits(
@@ -430,43 +470,52 @@ async function fetchPullRequests(
   return mapPullRequests([...openPRs, ...closedPRs], repoTag);
 }
 
-async function fetchProposals(
-  owner: string,
-  repo: string,
+const VALID_PHASES = [
+  'discussion',
+  'voting',
+  'extended-voting',
+  'ready-to-implement',
+  'implemented',
+  'rejected',
+  'inconclusive',
+] as const;
+
+/**
+ * Pure mapping of raw GitHub issues to Proposals (no network calls).
+ * Accepts both legacy `phase:*` and current `hivemoot:*` phase label prefixes.
+ * Exported for unit testing.
+ */
+export function filterAndMapProposals(
   rawIssues: GitHubIssue[],
   repoTag?: string
-): Promise<Proposal[]> {
+): Proposal[] {
   const proposalIssues = rawIssues.filter(
     (i) =>
-      i.labels.some((l) => l.name.startsWith('phase:')) ||
+      i.labels.some(
+        (l) => l.name.startsWith('phase:') || l.name.startsWith('hivemoot:')
+      ) ||
       i.labels.some((l) => l.name === 'inconclusive') ||
       i.labels.some((l) => l.name === 'proposal')
   );
 
   const proposals: Proposal[] = [];
-  const validPhases = [
-    'discussion',
-    'voting',
-    'extended-voting',
-    'ready-to-implement',
-    'implemented',
-    'rejected',
-    'inconclusive',
-  ] as const;
 
   for (const i of proposalIssues) {
-    // Check for phase: prefixed label first, then standalone inconclusive label,
-    // and finally fallback to 'discussion' if it only has the 'proposal' label.
-    const phaseLabel = i.labels.find((l) => l.name.startsWith('phase:'))?.name;
+    // Accept both legacy `phase:*` and current `hivemoot:*` prefixed labels.
+    // For standalone `inconclusive` or `proposal` labels, fall back to those
+    // phase names directly.
+    const phaseLabel = i.labels.find(
+      (l) => l.name.startsWith('phase:') || l.name.startsWith('hivemoot:')
+    )?.name;
     const phaseName =
-      phaseLabel?.replace('phase:', '') ??
+      phaseLabel?.replace(/^(?:phase:|hivemoot:)/, '') ??
       (i.labels.some((l) => l.name === 'inconclusive')
         ? 'inconclusive'
         : i.labels.some((l) => l.name === 'proposal')
           ? 'discussion'
           : undefined);
 
-    if (!phaseName || !(validPhases as readonly string[]).includes(phaseName))
+    if (!phaseName || !(VALID_PHASES as readonly string[]).includes(phaseName))
       continue;
 
     let phase = phaseName as Proposal['phase'];
@@ -488,6 +537,7 @@ async function fetchProposals(
     proposals.push({
       number: i.number,
       title: i.title,
+      ...(i.body?.trim() ? { body: i.body.slice(0, 10000) } : {}),
       phase,
       author: i.user.login,
       createdAt: i.created_at,
@@ -495,6 +545,75 @@ async function fetchProposals(
       ...(repoTag ? { repo: repoTag } : {}),
     });
   }
+
+  return proposals;
+}
+
+interface GitHubReview {
+  state: string;
+  submitted_at: string;
+}
+
+/**
+ * Fetch the timestamp of the first APPROVED review for a single PR.
+ * Returns null if no APPROVED review exists or the request fails.
+ */
+async function fetchFirstApprovalAt(
+  owner: string,
+  repo: string,
+  prNumber: number
+): Promise<string | null> {
+  try {
+    const reviews = await fetchJson<GitHubReview[]>(
+      `/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=100`
+    );
+    const approvals = reviews
+      .filter((r) => r.state === 'APPROVED')
+      .sort(
+        (a, b) =>
+          new Date(a.submitted_at).getTime() -
+          new Date(b.submitted_at).getTime()
+      );
+    return approvals.length > 0 ? approvals[0].submitted_at : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enrich the most recent merged PRs with their first approval timestamp.
+ * Capped at 20 PRs to limit additional API calls.
+ */
+export async function enrichMergedPRsWithApprovalTimes(
+  owner: string,
+  repo: string,
+  pullRequests: PullRequest[]
+): Promise<void> {
+  const MAX_ENRICHED = 20;
+  const mergedPRs = pullRequests
+    .filter(
+      (pr): pr is PullRequest & { mergedAt: string } =>
+        pr.state === 'merged' && typeof pr.mergedAt === 'string'
+    )
+    .sort(
+      (a, b) => new Date(b.mergedAt).getTime() - new Date(a.mergedAt).getTime()
+    )
+    .slice(0, MAX_ENRICHED);
+
+  await Promise.all(
+    mergedPRs.map(async (pr) => {
+      pr.firstApprovalAt = await fetchFirstApprovalAt(owner, repo, pr.number);
+    })
+  );
+}
+
+async function fetchProposals(
+  owner: string,
+  repo: string,
+  rawIssues: GitHubIssue[],
+  repoTag?: string
+): Promise<Proposal[]> {
+  const proposals = filterAndMapProposals(rawIssues, repoTag);
 
   // Fetch votes for all proposals that have been through a voting round.
   // The Queen's voting comment persists after phase transitions, so we can
@@ -550,10 +669,12 @@ export function extractPhaseTransitions(
   return timelineEvents
     .filter(
       (event) =>
-        event.event === 'labeled' && event.label?.name?.startsWith('phase:')
+        event.event === 'labeled' &&
+        (event.label?.name?.startsWith('phase:') ||
+          event.label?.name?.startsWith('hivemoot:'))
     )
     .map((event) => ({
-      phase: event.label?.name.replace('phase:', '') ?? '',
+      phase: event.label?.name.replace(/^(?:phase:|hivemoot:)/, '') ?? '',
       enteredAt: event.created_at,
     }))
     .sort(
@@ -670,9 +791,15 @@ export function mapEvents(
       event.payload.action === 'labeled'
     ) {
       const { issue, label } = event.payload;
-      if (!issue || !label || !label.name.startsWith('phase:')) continue;
+      if (
+        !issue ||
+        !label ||
+        (!label.name.startsWith('phase:') &&
+          !label.name.startsWith('hivemoot:'))
+      )
+        continue;
 
-      const phase = label.name.replace('phase:', '');
+      const phase = label.name.replace(/^(?:phase:|hivemoot:)/, '');
       comments.push({
         id: parseInt(event.id),
         issueOrPrNumber: issue.number,
@@ -890,12 +1017,10 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = resolveRepositoryHomepage(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }
@@ -904,6 +1029,43 @@ function resolveDeployedBaseUrl(homepage?: string | null): {
     baseUrl: DEFAULT_DEPLOYED_BASE_URL,
     usedFallback: true,
   };
+}
+
+export function resolveRepositoryHomepage(homepage?: string | null): string {
+  const trimmedHomepage = homepage?.trim();
+  if (!trimmedHomepage) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmedHomepage);
+    if (parsed.protocol !== 'https:') {
+      return '';
+    }
+
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    const normalizedHostname = parsed.hostname
+      .toLowerCase()
+      .replace(/^\[|\]$/g, '')
+      .replace(/\.$/, '');
+    if (
+      normalizedHostname === 'localhost' ||
+      normalizedHostname.endsWith('.localhost') ||
+      isIP(normalizedHostname) !== 0
+    ) {
+      return '';
+    }
+
+    parsed.search = '';
+    parsed.hash = '';
+
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
 }
 
 function normalizeUrlForMatch(value: string): string {
@@ -920,14 +1082,28 @@ function getAbsoluteHttpsUrl(rawValue: string): string {
 }
 
 function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
+  const trimmed = rawValue.trim();
+  if (!trimmed || trimmed.startsWith('data:')) {
+    return '';
+  }
+
   try {
-    const parsed = new URL(rawValue, `${baseUrl}/`);
+    const parsed = new URL(trimmed, `${baseUrl}/`);
     return parsed.protocol === 'https:' ? parsed.toString() : '';
   } catch {
     return '';
   }
 }
 
+function iconHasRequiredSize(
+  icon: { sizes?: unknown },
+  expectedSize: string
+): boolean {
+  return (
+    typeof icon.sizes === 'string' &&
+    icon.sizes.toLowerCase().split(/\s+/).includes(expectedSize.toLowerCase())
+  );
+}
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -1024,14 +1200,16 @@ export async function buildExternalVisibility(
   repositories: RepositoryInfo[]
 ): Promise<ExternalVisibility> {
   const primary = repositories[0];
+  const normalizedHomepage = resolveRepositoryHomepage(primary?.homepage);
+  const requiredDiscoverabilityTopics = resolveRequiredDiscoverabilityTopics();
   const normalizedTopics = new Set(
     (primary?.topics ?? []).map((topic) => topic.toLowerCase())
   );
-  const missingRequiredTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+  const missingRequiredTopics = requiredDiscoverabilityTopics.filter(
     (topic) => !normalizedTopics.has(topic)
   );
 
-  const hasHomepage = Boolean(primary?.homepage?.trim());
+  const hasHomepage = Boolean(normalizedHomepage);
   const hasTopics = missingRequiredTopics.length === 0;
   const hasDescription = Boolean(
     primary?.description && /dashboard/i.test(primary.description)
@@ -1057,8 +1235,8 @@ export async function buildExternalVisibility(
       label: 'Repository homepage URL configured',
       ok: hasHomepage,
       details: hasHomepage
-        ? (primary.homepage ?? undefined)
-        : 'Missing homepage repository setting.',
+        ? normalizedHomepage
+        : 'Missing or invalid homepage repository setting.',
       blockedByAdmin: !hasHomepage,
     },
     {
@@ -1066,7 +1244,7 @@ export async function buildExternalVisibility(
       label: 'Repository topics configured',
       ok: hasTopics,
       details: hasTopics
-        ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+        ? `${requiredDiscoverabilityTopics.length}/${requiredDiscoverabilityTopics.length} required topics present`
         : `Missing required topics: ${missingRequiredTopics.join(', ')}`,
       blockedByAdmin: !hasTopics,
     },
@@ -1106,7 +1284,7 @@ export async function buildExternalVisibility(
   ];
 
   // Deployed site parity checks (Scout Intelligence)
-  const { baseUrl, usedFallback } = resolveDeployedBaseUrl(primary?.homepage);
+  const { baseUrl, usedFallback } = resolveDeployedBaseUrl(normalizedHomepage);
   const deployedSourceDetails = usedFallback
     ? `Fallback URL used: ${DEFAULT_DEPLOYED_BASE_URL} (repository homepage missing or invalid).`
     : `Source URL: ${baseUrl}`;
@@ -1206,6 +1384,42 @@ export async function buildExternalVisibility(
           : 'Missing og:image metadata on deployed homepage',
   });
 
+  const ogImageWidthRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:width',
+    'content'
+  );
+  const ogImageHeightRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:height',
+    'content'
+  );
+  const ogImageWidth = Number.parseInt(ogImageWidthRaw, 10);
+  const ogImageHeight = Number.parseInt(ogImageHeightRaw, 10);
+  const hasOgImageDimensions =
+    Number.isInteger(ogImageWidth) &&
+    Number.isInteger(ogImageHeight) &&
+    ogImageWidth > 0 &&
+    ogImageHeight > 0;
+  checks.push({
+    id: 'deployed-og-image-dimensions',
+    label: 'Deployed Open Graph image dimensions are declared',
+    ok: hasOgImageDimensions,
+    details: hasOgImageDimensions
+      ? `og:image dimensions set to ${ogImageWidth}x${ogImageHeight}`
+      : !ogImageWidthRaw && !ogImageHeightRaw
+        ? 'Missing og:image:width and og:image:height metadata on deployed homepage'
+        : !ogImageWidthRaw
+          ? 'Missing og:image:width metadata on deployed homepage'
+          : !ogImageHeightRaw
+            ? 'Missing og:image:height metadata on deployed homepage'
+            : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
@@ -1241,6 +1455,118 @@ export async function buildExternalVisibility(
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const manifestRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'manifest',
+    'href'
+  );
+  const manifestUrl = manifestRaw ? resolveHttpsUrl(manifestRaw, baseUrl) : '';
+  const manifestRes = manifestUrl ? await fetchWithTimeout(manifestUrl) : null;
+
+  const requiredManifestSizes = ['192x192', '512x512'] as const;
+  const manifestIconUrls: Partial<
+    Record<(typeof requiredManifestSizes)[number], string>
+  > = {};
+  let manifestIconDetails = '';
+
+  if (!manifestRaw) {
+    manifestIconDetails = 'Missing manifest link metadata on deployed homepage';
+  } else if (!manifestUrl) {
+    manifestIconDetails = `Manifest URL must resolve to absolute https URL (found: ${manifestRaw})`;
+  } else if (manifestRes?.status !== 200) {
+    manifestIconDetails = `GET ${manifestUrl} returned ${manifestRes?.status ?? 'no response'}`;
+  } else {
+    try {
+      const manifest = (await manifestRes.json()) as {
+        icons?: Array<{ src?: unknown; sizes?: unknown }>;
+      };
+
+      if (!Array.isArray(manifest.icons)) {
+        manifestIconDetails = 'Manifest is missing icons[] entries';
+      } else {
+        const missingSizes: string[] = [];
+        const invalidIconUrls: string[] = [];
+        for (const size of requiredManifestSizes) {
+          const icon = manifest.icons.find((entry) =>
+            iconHasRequiredSize(entry, size)
+          );
+          if (!icon || typeof icon.src !== 'string' || !icon.src.trim()) {
+            missingSizes.push(size);
+            continue;
+          }
+
+          const iconUrl = resolveHttpsUrl(icon.src, manifestUrl);
+          if (!iconUrl) {
+            invalidIconUrls.push(`${size} (${icon.src})`);
+            continue;
+          }
+          manifestIconUrls[size] = iconUrl;
+        }
+
+        if (missingSizes.length > 0 || invalidIconUrls.length > 0) {
+          const parts: string[] = [];
+          if (missingSizes.length > 0) {
+            parts.push(
+              `Missing required icon sizes: ${missingSizes.join(', ')}`
+            );
+          }
+          if (invalidIconUrls.length > 0) {
+            parts.push(
+              `Icon URLs must resolve to absolute https URLs: ${invalidIconUrls.join(', ')}`
+            );
+          }
+          manifestIconDetails = parts.join('. ');
+        } else {
+          manifestIconDetails = `Manifest contains ${requiredManifestSizes.join(' and ')} icons`;
+        }
+      }
+    } catch {
+      manifestIconDetails = `Manifest at ${manifestUrl} is not valid JSON`;
+    }
+  }
+
+  checks.push({
+    id: 'deployed-pwa-manifest',
+    label: 'Deployed PWA manifest has required square icons',
+    ok:
+      manifestIconDetails ===
+      `Manifest contains ${requiredManifestSizes.join(' and ')} icons`,
+    details: manifestIconDetails,
+  });
+
+  const manifestIconFetches = await Promise.all(
+    requiredManifestSizes.map(async (size) => {
+      const url = manifestIconUrls[size];
+      if (!url) {
+        return { size, status: null as number | null, url: '' };
+      }
+      const response = await fetchWithTimeout(url);
+      return { size, status: response?.status ?? null, url };
+    })
+  );
+  const allManifestIconsReachable = manifestIconFetches.every(
+    ({ status }) => status === 200
+  );
+  const manifestFetchDetails = allManifestIconsReachable
+    ? manifestIconFetches
+        .map(({ size, url }) => `${size}: GET ${url} returned 200`)
+        .join('; ')
+    : manifestIconFetches
+        .map(({ size, status, url }) =>
+          url
+            ? `${size}: GET ${url} returned ${status ?? 'no response'}`
+            : `${size}: missing manifest icon URL`
+        )
+        .join('; ');
+  checks.push({
+    id: 'deployed-pwa-icons',
+    label: 'Deployed PWA icon assets are reachable',
+    ok: allManifestIconsReachable,
+    details: manifestFetchDetails,
   });
 
   const faviconRaw = extractFileBackedFaviconHref(deployedRootHtml);
@@ -1342,19 +1668,11 @@ export async function buildExternalVisibility(
       const activity = (await activityRes.json()) as {
         generatedAt?: unknown;
       };
-      if (typeof activity.generatedAt === 'string') {
-        const timestamp = new Date(activity.generatedAt).getTime();
-        if (!isNaN(timestamp)) {
-          const ageMs = Date.now() - timestamp;
-          const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18; // Critical threshold from proposal
-          freshnessDetails = `Deployed data is ${Math.round(ageHours)}h old`;
-        } else {
-          freshnessDetails = `Invalid timestamp in deployed activity.json. ${deployedSourceDetails}`;
-        }
-      } else {
-        freshnessDetails = `Missing generatedAt in deployed activity.json. ${deployedSourceDetails}`;
-      }
+      const freshness = evaluateGeneratedAtFreshness(activity.generatedAt);
+      freshnessOk = freshness.ok;
+      freshnessDetails = freshness.ok
+        ? freshness.details
+        : `${freshness.details}. ${deployedSourceDetails}`;
     } catch {
       freshnessDetails = `Invalid activity.json format on deployed site. ${deployedSourceDetails}`;
     }
@@ -1494,6 +1812,7 @@ async function fetchRepoActivity(
     repoTag
   );
   await fetchPhaseTransitions(owner, repo, proposals);
+  await enrichMergedPRsWithApprovalTimes(owner, repo, prResult.pullRequests);
 
   const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
 
@@ -1669,6 +1988,29 @@ function loadHistory(): GovernanceHistoryArtifact {
   return emptyHistoryArtifact(new Date(0).toISOString());
 }
 
+/**
+ * Update the sitemap lastmod date to match the data generation timestamp.
+ * Keeps the sitemap file accurate for search engine crawl priority.
+ */
+export function updateSitemapLastmod(
+  generatedAt: string,
+  sitemapPath: string = SITEMAP_PATH
+): void {
+  if (!existsSync(sitemapPath)) {
+    return;
+  }
+  const content = readFileSync(sitemapPath, 'utf-8');
+  const dateOnly = generatedAt.slice(0, 10);
+  const updated = content.replace(
+    /<lastmod>[^<]+<\/lastmod>/gi,
+    `<lastmod>${dateOnly}</lastmod>`
+  );
+  if (updated !== content) {
+    writeFileSync(sitemapPath, updated);
+    console.log(`Sitemap lastmod updated to ${dateOnly}`);
+  }
+}
+
 function toRepoTag(repo: { owner: string; name: string }): string {
   return `${repo.owner}/${repo.name}`;
 }
@@ -1683,6 +2025,9 @@ async function main(): Promise<void> {
     // Write activity data
     writeFileSync(OUTPUT_FILE, JSON.stringify(data, null, 2));
     console.log(`Activity data written to ${OUTPUT_FILE}`);
+
+    // Keep sitemap lastmod in sync with the generation timestamp
+    updateSitemapLastmod(data.generatedAt);
 
     // Compute and append governance snapshot for historical tracking
     const requestedRepos = resolveRepositories().map(

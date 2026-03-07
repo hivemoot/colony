@@ -193,7 +193,7 @@ export function ColonyLiveMode({
                       }}
                     >
                       <a
-                        href={`https://github.com/${node.login}`}
+                        href={`https://github.com/${encodeURIComponent(node.login)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group flex flex-col items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 rounded-md"
