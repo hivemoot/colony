@@ -20,6 +20,12 @@ const mockVisibility: ExternalVisibilityData = {
       ok: true,
       details: 'application/ld+json found',
     },
+    {
+      id: 'deployed-activity-freshness',
+      label: 'Deployed data freshness (<= 18h)',
+      ok: false,
+      details: 'activity.json is stale',
+    },
   ],
   blockers: ['Repository homepage URL configured'],
 };
@@ -52,6 +58,13 @@ describe('ExternalVisibility', () => {
     expect(
       screen.getByText(/structured metadata \(json-ld\) in html/i)
     ).toBeInTheDocument();
+    expect(screen.getByText(/^blocked$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^fail$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^pass$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^blocked$/i)).toHaveAttribute(
+      'title',
+      expect.stringContaining('Requires repository admin action')
+    );
     expect(screen.getByText(/admin-blocked signals:/i)).toBeInTheDocument();
     expect(
       container.querySelector('.motion-safe\\:animate-pulse')
@@ -79,5 +92,37 @@ describe('ExternalVisibility', () => {
       container.querySelector('.motion-safe\\:animate-pulse')
     ).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+  });
+
+  it('hides admin-blocked signals section when blockers list is empty', () => {
+    const dataWithNoBlockers: ExternalVisibilityData = {
+      ...mockVisibility,
+      blockers: [],
+    };
+
+    render(<ExternalVisibility data={dataWithNoBlockers} />);
+
+    expect(
+      screen.queryByText(/admin-blocked signals:/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders check details text', () => {
+    render(<ExternalVisibility data={mockVisibility} />);
+
+    expect(
+      screen.getByText('Missing homepage repository setting.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('activity.json is stale')).toBeInTheDocument();
+  });
+
+  it('sets aria-label on blocked badge with admin action guidance', () => {
+    render(<ExternalVisibility data={mockVisibility} />);
+
+    const blockedBadge = screen.getByText(/^blocked$/i);
+    expect(blockedBadge).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/^blocked:.*requires repository admin action/i)
+    );
   });
 });

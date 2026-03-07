@@ -1,29 +1,50 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { evaluateGeneratedAtFreshness } from './freshness';
+import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
+import {
+  resolveRepository,
+  resolveRepositoryHomepage,
+  resolveRequiredDiscoverabilityTopics,
+} from './generate-data';
+
+export { resolveRepositoryHomepage };
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'public', 'sitemap.xml');
 const ROBOTS_PATH = join(ROOT_DIR, 'public', 'robots.txt');
-const DEFAULT_DEPLOYED_BASE_URL = 'https://hivemoot.github.io/colony';
-const REQUIRED_DISCOVERABILITY_TOPICS = [
-  'autonomous-agents',
-  'ai-governance',
-  'multi-agent',
-  'agent-collaboration',
-  'dashboard',
-  'react',
-  'typescript',
-  'github-pages',
-  'open-source',
-];
+const DEFAULT_VISIBILITY_USER_AGENT = 'colony-visibility-check';
 
 interface CheckResult {
   label: string;
   ok: boolean;
   details?: string;
+}
+
+export function resolveVisibilityUserAgent(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const configured = env.VISIBILITY_USER_AGENT?.trim();
+  return configured || DEFAULT_VISIBILITY_USER_AGENT;
+}
+
+export function resolveVisibilityRepository(
+  env: NodeJS.ProcessEnv = process.env
+): {
+  owner: string;
+  repo: string;
+} {
+  return resolveRepository(env);
+}
+
+export function buildRepositoryApiUrl(repository: {
+  owner: string;
+  repo: string;
+}): string {
+  return `https://api.github.com/repos/${repository.owner}/${repository.repo}`;
 }
 
 function readIfExists(path: string): string {
@@ -37,12 +58,10 @@ function resolveDeployedBaseUrl(homepage?: string): {
   baseUrl: string;
   usedFallback: boolean;
 } {
-  const trimmedHomepage = homepage?.trim();
-  if (trimmedHomepage && trimmedHomepage.startsWith('http')) {
+  const normalizedHomepage = resolveRepositoryHomepage(homepage);
+  if (normalizedHomepage) {
     return {
-      baseUrl: trimmedHomepage.endsWith('/')
-        ? trimmedHomepage.slice(0, -1)
-        : trimmedHomepage,
+      baseUrl: normalizedHomepage,
       usedFallback: false,
     };
   }
@@ -57,15 +76,63 @@ function normalizeUrlForMatch(value: string): string {
   return value.replace(/\/+$/, '').toLowerCase();
 }
 
-function getAbsoluteHttpsUrl(rawValue: string): string {
+export function normalizeHttpsUrl(rawValue: string, baseUrl?: string): string {
+  const trimmed = rawValue.trim();
+  if (!trimmed || trimmed.toLowerCase().startsWith('data:')) {
+    return '';
+  }
+
   try {
-    const parsed = new URL(rawValue);
-    return parsed.protocol === 'https:' ? parsed.toString() : '';
+    const parsed = baseUrl ? new URL(trimmed, baseUrl) : new URL(trimmed);
+    if (parsed.protocol !== 'https:') {
+      return '';
+    }
+
+    if (parsed.username || parsed.password) {
+      return '';
+    }
+
+    return parsed.toString();
   } catch {
     return '';
   }
 }
 
+function getAbsoluteHttpsUrl(rawValue: string): string {
+  return normalizeHttpsUrl(rawValue);
+}
+
+export function resolveDeployedPageUrl(
+  baseUrl: string,
+  pagePath: string
+): string {
+  const normalizedBase = `${baseUrl.replace(/\/+$/, '')}/`;
+  const normalizedPath = pagePath.replace(/^\/+/, '');
+  return new URL(normalizedPath, normalizedBase).toString();
+}
+
+export function isValidOpenGraphImageType(rawValue: string): boolean {
+  const value = rawValue.trim().toLowerCase();
+  return value.startsWith('image/');
+}
+
+export function hasTwitterImageAltText(rawValue: string): boolean {
+  return rawValue.trim().length > 0;
+}
+
+function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
+  return normalizeHttpsUrl(rawValue, `${baseUrl}/`);
+}
+
+function iconHasRequiredSize(
+  icon: { sizes?: unknown },
+  expectedSize: string
+): boolean {
+  return (
+    typeof icon.sizes === 'string' &&
+    icon.sizes.toLowerCase().split(/\s+/).includes(expectedSize.toLowerCase())
+  );
+}
 function extractTagAttributeValue(
   html: string,
   tagName: string,
@@ -121,6 +188,43 @@ function extractTagAttributeValue(
   return '';
 }
 
+function extractFileBackedFaviconHref(html: string): string {
+  const tagPattern = /<link\b[^>]*>/gi;
+  const attrPattern = (attribute: string): RegExp =>
+    new RegExp(
+      `\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      'i'
+    );
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tag = match[0];
+    const relMatch = tag.match(attrPattern('rel'));
+    const relValue = (
+      relMatch?.[1] ??
+      relMatch?.[2] ??
+      relMatch?.[3] ??
+      ''
+    ).trim();
+    if (!relValue.toLowerCase().split(/\s+/).includes('icon')) {
+      continue;
+    }
+
+    const hrefMatch = tag.match(attrPattern('href'));
+    const hrefValue = (
+      hrefMatch?.[1] ??
+      hrefMatch?.[2] ??
+      hrefMatch?.[3] ??
+      ''
+    ).trim();
+    if (!hrefValue || hrefValue.toLowerCase().startsWith('data:')) {
+      continue;
+    }
+    return hrefValue;
+  }
+
+  return '';
+}
+
 async function runChecks(): Promise<CheckResult[]> {
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
@@ -142,24 +246,24 @@ async function runChecks(): Promise<CheckResult[]> {
   ];
 
   let homepageUrl = '';
+  const requiredDiscoverabilityTopics = resolveRequiredDiscoverabilityTopics();
+  const visibilityRepository = resolveVisibilityRepository();
 
   // Repository metadata checks via GitHub API
   try {
     const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    const userAgent = resolveVisibilityUserAgent();
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'hivemoot-scout-visibility-check',
+      'User-Agent': userAgent,
     };
     if (token) {
       headers.Authorization = `token ${token}`;
     }
 
-    const response = await fetch(
-      'https://api.github.com/repos/hivemoot/colony',
-      {
-        headers,
-      }
-    );
+    const response = await fetch(buildRepositoryApiUrl(visibilityRepository), {
+      headers,
+    });
 
     if (response.ok) {
       const repo = (await response.json()) as {
@@ -167,24 +271,24 @@ async function runChecks(): Promise<CheckResult[]> {
         homepage?: string | null;
         description?: string | null;
       };
-      homepageUrl = repo.homepage || '';
+      homepageUrl = resolveRepositoryHomepage(repo.homepage);
       const normalizedTopics = new Set(
         (repo.topics ?? []).map((topic) => topic.toLowerCase())
       );
-      const missingTopics = REQUIRED_DISCOVERABILITY_TOPICS.filter(
+      const missingTopics = requiredDiscoverabilityTopics.filter(
         (topic) => !normalizedTopics.has(topic)
       );
       results.push({
-        label: `Repository has required topics (${REQUIRED_DISCOVERABILITY_TOPICS.length})`,
+        label: `Repository has required topics (${requiredDiscoverabilityTopics.length})`,
         ok: missingTopics.length === 0,
         details:
           missingTopics.length === 0
-            ? `${REQUIRED_DISCOVERABILITY_TOPICS.length}/${REQUIRED_DISCOVERABILITY_TOPICS.length} required topics present`
+            ? `${requiredDiscoverabilityTopics.length}/${requiredDiscoverabilityTopics.length} required topics present`
             : `Missing required topics: ${missingTopics.join(', ')}`,
       });
       results.push({
         label: 'Repository homepage URL is set',
-        ok: Boolean(repo.homepage && repo.homepage.includes('github.io')),
+        ok: Boolean(homepageUrl),
       });
       results.push({
         label: 'Repository description mentions dashboard',
@@ -229,6 +333,29 @@ async function runChecks(): Promise<CheckResult[]> {
     label: 'Deployed site is reachable',
     ok: rootRes?.status === 200,
   });
+
+  const deployedHubChecks = await Promise.all(
+    [
+      { label: 'Deployed /agents/ hub is reachable', path: 'agents/' },
+      {
+        label: 'Deployed /proposals/ hub is reachable',
+        path: 'proposals/',
+      },
+    ].map(async ({ label, path }) => {
+      const url = resolveDeployedPageUrl(baseUrl, path);
+      const response = await fetchWithTimeout(url);
+      const ok = response?.status === 200;
+      return {
+        label,
+        ok,
+        details: ok
+          ? `GET ${url} returned 200`
+          : `GET ${url} returned ${response?.status ?? 'no response'}`,
+      };
+    })
+  );
+
+  results.push(...deployedHubChecks);
 
   let deployedRootHtml = '';
   let deployedJsonLd = false;
@@ -288,6 +415,59 @@ async function runChecks(): Promise<CheckResult[]> {
           : 'Missing og:image metadata on deployed homepage',
   });
 
+  const ogImageWidthRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:width',
+    'content'
+  );
+  const ogImageHeightRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:height',
+    'content'
+  );
+  const ogImageWidth = Number.parseInt(ogImageWidthRaw, 10);
+  const ogImageHeight = Number.parseInt(ogImageHeightRaw, 10);
+  const hasOgImageDimensions =
+    Number.isInteger(ogImageWidth) &&
+    Number.isInteger(ogImageHeight) &&
+    ogImageWidth > 0 &&
+    ogImageHeight > 0;
+  results.push({
+    label: 'Deployed Open Graph image dimensions are declared',
+    ok: hasOgImageDimensions,
+    details: hasOgImageDimensions
+      ? `og:image dimensions set to ${ogImageWidth}x${ogImageHeight}`
+      : !ogImageWidthRaw && !ogImageHeightRaw
+        ? 'Missing og:image:width and og:image:height metadata on deployed homepage'
+        : !ogImageWidthRaw
+          ? 'Missing og:image:width metadata on deployed homepage'
+          : !ogImageHeightRaw
+            ? 'Missing og:image:height metadata on deployed homepage'
+            : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
+  });
+
+  const ogImageTypeRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:type',
+    'content'
+  );
+  const hasOgImageType = isValidOpenGraphImageType(ogImageTypeRaw);
+  results.push({
+    label: 'Deployed Open Graph image type is declared',
+    ok: hasOgImageType,
+    details: hasOgImageType
+      ? `og:image:type set to ${ogImageTypeRaw.trim()}`
+      : !ogImageTypeRaw
+        ? 'Missing og:image:type metadata on deployed homepage'
+        : `Invalid og:image:type value: ${ogImageTypeRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
@@ -324,6 +504,173 @@ async function runChecks(): Promise<CheckResult[]> {
           : 'Missing twitter:image metadata on deployed homepage',
   });
 
+  const twitterImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image:alt',
+    'content'
+  );
+  const hasTwitterImageAlt = hasTwitterImageAltText(twitterImageAltRaw);
+  results.push({
+    label: 'Deployed Twitter image alt text is declared',
+    ok: hasTwitterImageAlt,
+    details: hasTwitterImageAlt
+      ? 'twitter:image:alt metadata is present'
+      : 'Missing twitter:image:alt metadata on deployed homepage',
+  });
+
+  const manifestRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'manifest',
+    'href'
+  );
+  const manifestUrl = manifestRaw ? resolveHttpsUrl(manifestRaw, baseUrl) : '';
+  const manifestRes = manifestUrl ? await fetchWithTimeout(manifestUrl) : null;
+  const requiredManifestSizes = ['192x192', '512x512'] as const;
+
+  const manifestIconUrls: Partial<
+    Record<(typeof requiredManifestSizes)[number], string>
+  > = {};
+  let manifestDetails = '';
+
+  if (!manifestRaw) {
+    manifestDetails = 'Missing manifest link metadata on deployed homepage';
+  } else if (!manifestUrl) {
+    manifestDetails = `Manifest URL must resolve to absolute https URL (found: ${manifestRaw})`;
+  } else if (manifestRes?.status !== 200) {
+    manifestDetails = `GET ${manifestUrl} returned ${manifestRes?.status ?? 'no response'}`;
+  } else {
+    try {
+      const manifest = (await manifestRes.json()) as {
+        icons?: Array<{ src?: unknown; sizes?: unknown }>;
+      };
+      if (!Array.isArray(manifest.icons)) {
+        manifestDetails = 'Manifest is missing icons[] entries';
+      } else {
+        const missingSizes: string[] = [];
+        const invalidIconUrls: string[] = [];
+        for (const size of requiredManifestSizes) {
+          const icon = manifest.icons.find((entry) =>
+            iconHasRequiredSize(entry, size)
+          );
+          if (!icon || typeof icon.src !== 'string' || !icon.src.trim()) {
+            missingSizes.push(size);
+            continue;
+          }
+
+          const iconUrl = resolveHttpsUrl(icon.src, manifestUrl);
+          if (!iconUrl) {
+            invalidIconUrls.push(`${size} (${icon.src})`);
+            continue;
+          }
+          manifestIconUrls[size] = iconUrl;
+        }
+
+        if (missingSizes.length > 0 || invalidIconUrls.length > 0) {
+          const parts: string[] = [];
+          if (missingSizes.length > 0) {
+            parts.push(
+              `Missing required icon sizes: ${missingSizes.join(', ')}`
+            );
+          }
+          if (invalidIconUrls.length > 0) {
+            parts.push(
+              `Icon URLs must resolve to absolute https URLs: ${invalidIconUrls.join(', ')}`
+            );
+          }
+          manifestDetails = parts.join('. ');
+        } else {
+          manifestDetails = `Manifest contains ${requiredManifestSizes.join(' and ')} icons`;
+        }
+      }
+    } catch {
+      manifestDetails = `Manifest at ${manifestUrl} is not valid JSON`;
+    }
+  }
+
+  results.push({
+    label: 'Deployed PWA manifest has required square icons',
+    ok:
+      manifestDetails ===
+      `Manifest contains ${requiredManifestSizes.join(' and ')} icons`,
+    details: manifestDetails,
+  });
+
+  const manifestIconFetches = await Promise.all(
+    requiredManifestSizes.map(async (size) => {
+      const url = manifestIconUrls[size];
+      if (!url) {
+        return { size, status: null as number | null, url: '' };
+      }
+      const response = await fetchWithTimeout(url);
+      return { size, status: response?.status ?? null, url };
+    })
+  );
+  const allManifestIconsReachable = manifestIconFetches.every(
+    ({ status }) => status === 200
+  );
+  const manifestFetchDetails = allManifestIconsReachable
+    ? manifestIconFetches
+        .map(({ size, url }) => `${size}: GET ${url} returned 200`)
+        .join('; ')
+    : manifestIconFetches
+        .map(({ size, status, url }) =>
+          url
+            ? `${size}: GET ${url} returned ${status ?? 'no response'}`
+            : `${size}: missing manifest icon URL`
+        )
+        .join('; ');
+  results.push({
+    label: 'Deployed PWA icon assets are reachable',
+    ok: allManifestIconsReachable,
+    details: manifestFetchDetails,
+  });
+
+  const faviconRaw = extractFileBackedFaviconHref(deployedRootHtml);
+  const faviconUrl = faviconRaw ? resolveHttpsUrl(faviconRaw, baseUrl) : '';
+  const faviconRes = faviconUrl ? await fetchWithTimeout(faviconUrl) : null;
+  const hasDeployedFavicon = faviconRes?.status === 200;
+  results.push({
+    label: 'Deployed favicon reachable',
+    ok: hasDeployedFavicon,
+    details: hasDeployedFavicon
+      ? `GET ${faviconUrl} returned 200`
+      : faviconUrl
+        ? `GET ${faviconUrl} returned ${faviconRes?.status ?? 'no response'}`
+        : faviconRaw
+          ? `Invalid favicon URL: ${faviconRaw}`
+          : 'Missing file-backed favicon metadata on deployed homepage',
+  });
+
+  const appleTouchIconRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'link',
+    'rel',
+    'apple-touch-icon',
+    'href'
+  );
+  const appleTouchIconUrl = appleTouchIconRaw
+    ? resolveHttpsUrl(appleTouchIconRaw, baseUrl)
+    : '';
+  const appleTouchIconRes = appleTouchIconUrl
+    ? await fetchWithTimeout(appleTouchIconUrl)
+    : null;
+  const hasDeployedAppleTouchIcon = appleTouchIconRes?.status === 200;
+  results.push({
+    label: 'Deployed Apple touch icon reachable',
+    ok: hasDeployedAppleTouchIcon,
+    details: hasDeployedAppleTouchIcon
+      ? `GET ${appleTouchIconUrl} returned 200`
+      : appleTouchIconUrl
+        ? `GET ${appleTouchIconUrl} returned ${appleTouchIconRes?.status ?? 'no response'}`
+        : appleTouchIconRaw
+          ? `apple-touch-icon href must resolve to an https URL (found: ${appleTouchIconRaw})`
+          : 'Missing apple-touch-icon link tag on deployed homepage',
+  });
+
   const robotsText = robotsRes?.status === 200 ? await robotsRes.text() : '';
   results.push({
     label: 'Deployed robots.txt has sitemap',
@@ -337,26 +684,23 @@ async function runChecks(): Promise<CheckResult[]> {
   });
 
   let freshnessOk = false;
+  let freshnessDetails = 'Could not fetch deployed activity data';
   if (activityRes?.status === 200) {
     try {
       const activity = (await activityRes.json()) as {
         generatedAt?: unknown;
       };
-      if (typeof activity.generatedAt === 'string') {
-        const timestamp = new Date(activity.generatedAt).getTime();
-        if (!isNaN(timestamp)) {
-          const ageMs = Date.now() - timestamp;
-          const ageHours = ageMs / (1000 * 60 * 60);
-          freshnessOk = ageHours <= 18;
-        }
-      }
+      const freshness = evaluateGeneratedAtFreshness(activity.generatedAt);
+      freshnessOk = freshness.ok;
+      freshnessDetails = freshness.details;
     } catch {
-      // ignore
+      freshnessDetails = 'Invalid activity.json format on deployed site';
     }
   }
   results.push({
     label: 'Deployed data freshness (<= 18h)',
     ok: freshnessOk,
+    details: freshnessDetails,
   });
 
   return results;
@@ -383,4 +727,14 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main();
+function isDirectExecution(): boolean {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  return resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+}
+
+if (isDirectExecution()) {
+  void main();
+}

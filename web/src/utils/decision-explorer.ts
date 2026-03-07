@@ -18,6 +18,12 @@ export interface DecisionSnapshot {
   };
 }
 
+export function getProposalHash(proposal: Proposal): string {
+  return proposal.repo
+    ? `proposal-${proposal.repo.replace('/', '-')}-${proposal.number}`
+    : `proposal-${proposal.number}`;
+}
+
 const CLOSING_KEYWORD_PATTERN =
   /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:[a-z0-9_.-]+\/[a-z0-9_.-]+)?#(\d+)\b/gi;
 
