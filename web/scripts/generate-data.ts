@@ -48,12 +48,14 @@ import {
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
 import { evaluateGeneratedAtFreshness } from './freshness';
 import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
+import type { GovernanceHealthMetrics } from '../shared/governance-health-metrics.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const HEALTH_METRICS_FILE = join(OUTPUT_DIR, 'governance-health-metrics.json');
 const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
@@ -2015,6 +2017,164 @@ function toRepoTag(repo: { owner: string; name: string }): string {
   return `${repo.owner}/${repo.name}`;
 }
 
+// ---------------------------------------------------------------------------
+// Governance Health Metrics (CHAOSS-aligned, computed from ActivityData)
+// ---------------------------------------------------------------------------
+
+/** Gini coefficient for a distribution. Returns 0–1 (0 = equal, 1 = monopoly). */
+function computeGiniCoefficient(values: number[]): number {
+  if (values.length <= 1) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+  const sum = sorted.reduce((acc, v) => acc + v, 0);
+  if (sum === 0) return 0;
+  let numerator = 0;
+  for (let i = 0; i < n; i++) {
+    numerator += (2 * (i + 1) - n - 1) * sorted[i];
+  }
+  return numerator / (n * sum);
+}
+
+/**
+ * Linear-interpolation percentile for an already-sorted numeric array.
+ * Returns 0 if the array is empty.
+ */
+function computePercentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0];
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+/** Compute all four CHAOSS-aligned governance health metrics from ActivityData. */
+export function computeGovernanceHealthMetrics(
+  data: ActivityData,
+  computedAt: string
+): GovernanceHealthMetrics {
+  const warnings: string[] = [];
+
+  // 1. PR Cycle Time (p50 / p95) — time from PR open to merge, in days
+  const mergedPrs = data.pullRequests.filter(
+    (pr) => pr.state === 'merged' && pr.mergedAt
+  );
+  const cycleTimes = mergedPrs
+    .map(
+      (pr) =>
+        (new Date(pr.mergedAt ?? '').getTime() -
+          new Date(pr.createdAt).getTime()) /
+        86_400_000
+    )
+    .filter((d) => d >= 0)
+    .sort((a, b) => a - b);
+
+  if (cycleTimes.length < 5) {
+    warnings.push(
+      `PR cycle time: only ${cycleTimes.length} merged PRs — percentiles may be imprecise.`
+    );
+  }
+
+  const prCycleTime = {
+    p50Days: Number(computePercentile(cycleTimes, 50).toFixed(2)),
+    p95Days: Number(computePercentile(cycleTimes, 95).toFixed(2)),
+    sampleSize: cycleTimes.length,
+  };
+
+  // 2. Role Diversity (Gini coefficient of per-agent contribution counts)
+  const contributionCounts = data.agentStats.map(
+    (a) => a.commits + a.pullRequestsMerged + a.reviews
+  );
+  const activeAgents = contributionCounts.filter((c) => c > 0);
+
+  if (activeAgents.length < 2) {
+    warnings.push(
+      `Role diversity: only ${activeAgents.length} active agent(s) — Gini not meaningful.`
+    );
+  }
+
+  const roleDiversity = {
+    gini: Number(computeGiniCoefficient(activeAgents).toFixed(3)),
+    sampleSize: activeAgents.length,
+  };
+
+  // 3. Contested Decision Rate — proposals with at least one 👎
+  const proposalsWithVotes = data.proposals.filter((p) => p.votesSummary);
+  const contestedProposals = proposalsWithVotes.filter(
+    (p) => (p.votesSummary?.thumbsDown ?? 0) > 0
+  );
+
+  if (proposalsWithVotes.length === 0) {
+    warnings.push('Contested decision rate: no voted proposals found.');
+  }
+
+  const contestedDecisionRate = {
+    rate:
+      proposalsWithVotes.length > 0
+        ? Number(
+            (contestedProposals.length / proposalsWithVotes.length).toFixed(3)
+          )
+        : 0,
+    contestedCount: contestedProposals.length,
+    totalVoted: proposalsWithVotes.length,
+  };
+
+  // 4. Cross-Agent Review Rate — reviews where reviewer ≠ PR author
+  const reviewComments = data.comments.filter((c) => c.type === 'review');
+  const prAuthorByNumber = new Map(
+    data.pullRequests.map((pr) => [pr.number, pr.author])
+  );
+  const crossAgentReviews = reviewComments.filter((r) => {
+    const prAuthor = prAuthorByNumber.get(r.issueOrPrNumber);
+    return prAuthor !== undefined && prAuthor !== r.author;
+  });
+
+  if (reviewComments.length < 5) {
+    warnings.push(
+      `Cross-agent review rate: only ${reviewComments.length} review comment(s) — rate may be imprecise.`
+    );
+  }
+
+  const crossAgentReviewRate = {
+    rate:
+      reviewComments.length > 0
+        ? Number((crossAgentReviews.length / reviewComments.length).toFixed(3))
+        : 0,
+    crossAgentCount: crossAgentReviews.length,
+    totalReviews: reviewComments.length,
+  };
+
+  // Compute data window in days (span from oldest to newest event)
+  const allTimestamps = [
+    ...data.commits.map((c) => c.date),
+    ...data.pullRequests.map((pr) => pr.createdAt),
+    ...data.proposals.map((p) => p.createdAt),
+  ]
+    .filter(Boolean)
+    .map((t) => new Date(t).getTime())
+    .filter((t) => !isNaN(t));
+
+  const dataWindowDays =
+    allTimestamps.length >= 2
+      ? Math.round(
+          (Math.max(...allTimestamps) - Math.min(...allTimestamps)) / 86_400_000
+        )
+      : 0;
+
+  return {
+    computedAt,
+    dataWindowDays,
+    mergedPrsSampled: mergedPrs.length,
+    metrics: {
+      prCycleTime,
+      roleDiversity,
+      contestedDecisionRate,
+      crossAgentReviewRate,
+    },
+    warnings,
+  };
+}
+
 async function main(): Promise<void> {
   try {
     const data = await generateActivityData();
@@ -2077,6 +2237,16 @@ async function main(): Promise<void> {
     writeFileSync(HISTORY_FILE, JSON.stringify(updatedHistory, null, 2));
     console.log(
       `Governance snapshot appended (${updatedSnapshots.length} entries, score: ${snapshot.healthScore}, schema: v${updatedHistory.schemaVersion}, completeness: ${updatedHistory.completeness.status})`
+    );
+
+    // Compute and write CHAOSS-aligned governance health metrics artifact
+    const healthMetrics = computeGovernanceHealthMetrics(
+      data,
+      data.generatedAt
+    );
+    writeFileSync(HEALTH_METRICS_FILE, JSON.stringify(healthMetrics, null, 2));
+    console.log(
+      `Governance health metrics written (dataWindow: ${healthMetrics.dataWindowDays}d, mergedPRs: ${healthMetrics.mergedPrsSampled}, warnings: ${healthMetrics.warnings.length})`
     );
   } catch (error) {
     console.error('Failed to generate activity data:', error);

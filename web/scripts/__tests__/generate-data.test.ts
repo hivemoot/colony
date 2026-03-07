@@ -20,6 +20,7 @@ import {
   deduplicateAgents,
   extractPhaseTransitions,
   filterAndMapProposals,
+  computeGovernanceHealthMetrics,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -2266,5 +2267,186 @@ describe('extractPhaseTransitions with hivemoot:* labels', () => {
       { phase: 'voting', enteredAt: '2026-01-02T00:00:00Z' },
       { phase: 'implemented', enteredAt: '2026-01-03T00:00:00Z' },
     ]);
+  });
+});
+
+describe('computeGovernanceHealthMetrics', () => {
+  function makeActivityData(
+    overrides: Partial<import('../../shared/types').ActivityData> = {}
+  ): import('../../shared/types').ActivityData {
+    return {
+      generatedAt: '2026-03-05T00:00:00Z',
+      repository: {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 0,
+        openIssues: 0,
+      },
+      agents: [],
+      agentStats: [],
+      commits: [],
+      issues: [],
+      pullRequests: [],
+      comments: [],
+      proposals: [],
+      ...overrides,
+    };
+  }
+
+  it('returns zero/empty metrics for an empty dataset', () => {
+    const result = computeGovernanceHealthMetrics(
+      makeActivityData(),
+      '2026-03-05T00:00:00Z'
+    );
+    expect(result.computedAt).toBe('2026-03-05T00:00:00Z');
+    expect(result.mergedPrsSampled).toBe(0);
+    expect(result.metrics.prCycleTime.sampleSize).toBe(0);
+    expect(result.metrics.roleDiversity.sampleSize).toBe(0);
+    expect(result.metrics.contestedDecisionRate.totalVoted).toBe(0);
+    expect(result.metrics.crossAgentReviewRate.totalReviews).toBe(0);
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('computes PR cycle time from merged PRs', () => {
+    const data = makeActivityData({
+      pullRequests: [
+        {
+          number: 1,
+          title: 'PR 1',
+          state: 'merged',
+          author: 'agent-a',
+          createdAt: '2026-01-01T00:00:00Z',
+          mergedAt: '2026-01-03T00:00:00Z', // 2 days
+        },
+        {
+          number: 2,
+          title: 'PR 2',
+          state: 'merged',
+          author: 'agent-b',
+          createdAt: '2026-01-05T00:00:00Z',
+          mergedAt: '2026-01-06T00:00:00Z', // 1 day
+        },
+        {
+          number: 3,
+          title: 'Open PR',
+          state: 'open',
+          author: 'agent-a',
+          createdAt: '2026-01-10T00:00:00Z',
+        },
+      ],
+    });
+    const result = computeGovernanceHealthMetrics(data, '2026-03-05T00:00:00Z');
+    expect(result.mergedPrsSampled).toBe(2);
+    expect(result.metrics.prCycleTime.sampleSize).toBe(2);
+    // p50 of [1, 2] = 1.5
+    expect(result.metrics.prCycleTime.p50Days).toBe(1.5);
+  });
+
+  it('computes Gini coefficient for role diversity', () => {
+    const data = makeActivityData({
+      agentStats: [
+        {
+          login: 'agent-a',
+          commits: 10,
+          pullRequestsMerged: 5,
+          issuesOpened: 2,
+          reviews: 3,
+          comments: 1,
+          lastActiveAt: '2026-03-01T00:00:00Z',
+        },
+        {
+          login: 'agent-b',
+          commits: 10,
+          pullRequestsMerged: 5,
+          issuesOpened: 2,
+          reviews: 3,
+          comments: 1,
+          lastActiveAt: '2026-03-01T00:00:00Z',
+        },
+      ],
+    });
+    const result = computeGovernanceHealthMetrics(data, '2026-03-05T00:00:00Z');
+    // Equal contributions → Gini = 0
+    expect(result.metrics.roleDiversity.gini).toBe(0);
+    expect(result.metrics.roleDiversity.sampleSize).toBe(2);
+  });
+
+  it('computes contested decision rate from proposals with votes', () => {
+    const data = makeActivityData({
+      proposals: [
+        {
+          number: 1,
+          title: 'P1',
+          phase: 'implemented',
+          author: 'agent-a',
+          createdAt: '2026-01-01T00:00:00Z',
+          commentCount: 0,
+          votesSummary: { thumbsUp: 5, thumbsDown: 1 }, // contested
+        },
+        {
+          number: 2,
+          title: 'P2',
+          phase: 'implemented',
+          author: 'agent-b',
+          createdAt: '2026-01-02T00:00:00Z',
+          commentCount: 0,
+          votesSummary: { thumbsUp: 4, thumbsDown: 0 }, // not contested
+        },
+        {
+          number: 3,
+          title: 'P3',
+          phase: 'discussion',
+          author: 'agent-a',
+          createdAt: '2026-01-03T00:00:00Z',
+          commentCount: 0,
+          // no votesSummary — not counted
+        },
+      ],
+    });
+    const result = computeGovernanceHealthMetrics(data, '2026-03-05T00:00:00Z');
+    expect(result.metrics.contestedDecisionRate.totalVoted).toBe(2);
+    expect(result.metrics.contestedDecisionRate.contestedCount).toBe(1);
+    expect(result.metrics.contestedDecisionRate.rate).toBe(0.5);
+  });
+
+  it('computes cross-agent review rate', () => {
+    const data = makeActivityData({
+      pullRequests: [
+        {
+          number: 10,
+          title: 'PR',
+          state: 'merged',
+          author: 'agent-a',
+          createdAt: '2026-01-01T00:00:00Z',
+          mergedAt: '2026-01-02T00:00:00Z',
+        },
+      ],
+      comments: [
+        {
+          id: 1,
+          issueOrPrNumber: 10,
+          type: 'review',
+          author: 'agent-b', // different agent → cross-agent
+          body: 'LGTM',
+          createdAt: '2026-01-01T12:00:00Z',
+          url: 'https://example.com/1',
+        },
+        {
+          id: 2,
+          issueOrPrNumber: 10,
+          type: 'review',
+          author: 'agent-a', // same agent → self-review, not cross-agent
+          body: 'Updating',
+          createdAt: '2026-01-01T13:00:00Z',
+          url: 'https://example.com/2',
+        },
+      ],
+    });
+    const result = computeGovernanceHealthMetrics(data, '2026-03-05T00:00:00Z');
+    expect(result.metrics.crossAgentReviewRate.totalReviews).toBe(2);
+    expect(result.metrics.crossAgentReviewRate.crossAgentCount).toBe(1);
+    expect(result.metrics.crossAgentReviewRate.rate).toBe(0.5);
   });
 });
