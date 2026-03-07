@@ -1,5 +1,6 @@
 import type { ActivityData, AgentStats, Proposal } from '../types/activity';
 import { computeGovernanceMetrics, type GovernanceMetrics } from './governance';
+import { computeGini } from '../../shared/governance-snapshot';
 
 /** Health bucket thresholds (inclusive lower bound) */
 export type HealthBucket =
@@ -340,25 +341,6 @@ export function computeConsensus(proposals: Proposal[]): SubMetric {
     score,
     reason: `${avgComments.toFixed(1)} avg comments, ${votedProposals.length} proposals voted on — consensus quality is ${qualityWord}`,
   };
-}
-
-/** Compute the Gini coefficient for a set of values. Returns 0–1. */
-export function computeGini(values: number[]): number {
-  if (values.length <= 1) return 0;
-
-  const sorted = [...values].sort((a, b) => a - b);
-  const n = sorted.length;
-  const total = sorted.reduce((a, b) => a + b, 0);
-
-  if (total === 0) return 0;
-
-  let sumOfDiffs = 0;
-  for (let i = 0; i < n; i++) {
-    // Weight by position: lower-ranked values contribute more to inequality
-    sumOfDiffs += (2 * (i + 1) - n - 1) * sorted[i];
-  }
-
-  return sumOfDiffs / (n * total);
 }
 
 /** Compute the data window in days from earliest to latest proposal. */

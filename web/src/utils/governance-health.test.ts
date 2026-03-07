@@ -6,9 +6,9 @@ import {
   computePipelineFlow,
   computeFollowThrough,
   computeConsensus,
-  computeGini,
   scoreToBucket,
 } from './governance-health';
+import { computeGini } from '../../shared/governance-snapshot';
 import { computeGovernanceMetrics } from './governance';
 
 function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
