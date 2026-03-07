@@ -226,14 +226,39 @@ function extractFileBackedFaviconHref(html: string): string {
 }
 
 export function hasAtomAutodiscoveryLink(html: string): boolean {
-  const type = extractTagAttributeValue(
-    html,
-    'link',
-    'rel',
-    'alternate',
-    'type'
-  );
-  return type.toLowerCase() === 'application/atom+xml';
+  const tagPattern = /<link\b[^>]*>/gi;
+  const attrPattern = (attribute: string): RegExp =>
+    new RegExp(
+      `\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      'i'
+    );
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tag = match[0];
+    const relMatch = tag.match(attrPattern('rel'));
+    const relValue = (
+      relMatch?.[1] ??
+      relMatch?.[2] ??
+      relMatch?.[3] ??
+      ''
+    ).trim();
+    if (!relValue.toLowerCase().split(/\s+/).includes('alternate')) {
+      continue;
+    }
+
+    const typeMatch = tag.match(attrPattern('type'));
+    const typeValue = (
+      typeMatch?.[1] ??
+      typeMatch?.[2] ??
+      typeMatch?.[3] ??
+      ''
+    ).trim();
+    if (typeValue.toLowerCase() === 'application/atom+xml') {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function runChecks(): Promise<CheckResult[]> {

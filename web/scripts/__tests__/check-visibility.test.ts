@@ -210,4 +210,12 @@ describe('hasAtomAutodiscoveryLink', () => {
     const html = `<link rel="alternate" type="Application/Atom+XML" href="/feed.xml">`;
     expect(hasAtomAutodiscoveryLink(html)).toBe(true);
   });
+
+  it('detects Atom link when another alternate link comes first', () => {
+    const html = `<head>
+      <link rel="alternate" type="application/json" href="/api/feed">
+      <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="Colony Proposals">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
 });
