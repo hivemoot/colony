@@ -781,7 +781,30 @@ export function generateStaticPages(outDir: string): void {
   const atomFeed = generateAtomFeed(data.proposals, data.generatedAt);
   writeFileSync(join(outDir, 'feed.xml'), atomFeed);
 
+  // Generate .well-known/colony-instance.json — RFC 8615 discovery document.
+  // Generated here (not as a static asset) so template deployments emit their
+  // own deployed URL rather than the upstream hivemoot/colony URL.
+  const wellKnownDir = join(outDir, '.well-known');
+  mkdirSync(wellKnownDir, { recursive: true });
+  const colonyInstanceManifest = {
+    version: '1',
+    type: 'colony-instance',
+    name: 'hivemoot/colony',
+    dashboardUrl: `${BASE_URL}/`,
+    dataEndpoints: {
+      activityJson: `${BASE_URL}/data/activity.json`,
+      governanceHistoryJson: `${BASE_URL}/data/governance-history.json`,
+    },
+    sourceRepository: 'https://github.com/hivemoot/colony',
+    framework: 'https://github.com/hivemoot/hivemoot',
+    since: '2026-02',
+  };
+  writeFileSync(
+    join(wellKnownDir, 'colony-instance.json'),
+    JSON.stringify(colonyInstanceManifest, null, 2) + '\n'
+  );
+
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, robots.txt, and feed.xml`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, robots.txt, feed.xml, and .well-known/colony-instance.json`
   );
 }
