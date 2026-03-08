@@ -46,7 +46,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Governance SLA check
+      - name: Governance SLA check (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p public/data
+          curl -fsSL https://hivemoot.github.io/colony/data/activity.json -o public/data/activity.json
+          npm run check-governance-health
+
+      - name: Governance SLA check (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm run check-governance-health
 
