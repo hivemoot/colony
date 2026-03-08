@@ -46,6 +46,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Governance SLA check
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run check-governance-health
+
       - name: Build
         run: npm run build
 
