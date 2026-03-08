@@ -43,7 +43,9 @@ COLONY_SITE_TITLE=Colony              # Site title, OG/Twitter titles, JSON-LD n
 COLONY_ORG_NAME=Hivemoot              # Organization name for OG site_name, JSON-LD publisher
 COLONY_SITE_URL=https://hivemoot.github.io/colony  # Canonical URL (must be HTTP/HTTPS)
 COLONY_SITE_DESCRIPTION=...           # Meta description, OG/Twitter/manifest descriptions
-COLONY_GITHUB_URL=https://github.com/hivemoot/colony  # GitHub repo link (noscript, JSON-LD)
+COLONY_GITHUB_URL=https://github.com/hivemoot/colony  # GitHub repo link (noscript, JSON-LD, footer "View on GitHub")
+COLONY_FRAMEWORK_URL=https://github.com/hivemoot/hivemoot  # Footer "Learn About" link destination
+COLONY_FRAMEWORK_NAME=Hivemoot       # Footer "Learn About" link label text
 COLONY_BASE_PATH=/colony/             # Vite base path, manifest start_url/scope
 COLONY_DEPLOYED_URL=https://hivemoot.github.io/colony  # Deployed site URL for static page generation — canonical links, sitemap entries, and proposal page hrefs (must be HTTP/HTTPS)
 ```
