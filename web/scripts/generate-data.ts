@@ -48,12 +48,21 @@ import {
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
 import { evaluateGeneratedAtFreshness } from './freshness';
 import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
+import {
+  buildHealthReport,
+  type HealthReport,
+  type CycleTimeMetric,
+  type RoleDiversityMetric,
+  type ContestedRateMetric,
+  type CrossRoleReviewMetric,
+} from './check-governance-health';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const HEALTH_HISTORY_FILE = join(OUTPUT_DIR, 'governance-health-history.json');
 const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
@@ -1988,6 +1997,97 @@ function loadHistory(): GovernanceHistoryArtifact {
   return emptyHistoryArtifact(new Date(0).toISOString());
 }
 
+// ──────────────────────────────────────────────
+// Governance health history (CHAOSS-aligned metrics over time)
+// ──────────────────────────────────────────────
+
+export const HEALTH_HISTORY_SCHEMA_VERSION = 1;
+/** Maximum snapshots retained in governance-health-history.json (~3 months of daily runs). */
+export const HEALTH_HISTORY_MAX_ENTRIES = 90;
+
+export interface GovernanceHealthEntry {
+  timestamp: string;
+  prCycleTime: CycleTimeMetric;
+  roleDiversity: RoleDiversityMetric;
+  contestedDecisionRate: ContestedRateMetric;
+  crossRoleReviewRate: CrossRoleReviewMetric;
+  warningCount: number;
+}
+
+export interface GovernanceHealthHistory {
+  schemaVersion: number;
+  generatedAt: string;
+  /** Ordered oldest-to-newest, capped at HEALTH_HISTORY_MAX_ENTRIES. */
+  snapshots: GovernanceHealthEntry[];
+}
+
+/**
+ * Build a GovernanceHealthEntry from a HealthReport.
+ */
+export function buildGovernanceHealthEntry(
+  report: HealthReport
+): GovernanceHealthEntry {
+  return {
+    timestamp: report.generatedAt,
+    prCycleTime: report.metrics.prCycleTime,
+    roleDiversity: report.metrics.roleDiversity,
+    contestedDecisionRate: report.metrics.contestedDecisionRate,
+    crossRoleReviewRate: report.metrics.crossRoleReviewRate,
+    warningCount: report.warnings.length,
+  };
+}
+
+/**
+ * Append a new entry to the health history, keeping the most recent
+ * HEALTH_HISTORY_MAX_ENTRIES snapshots.
+ */
+export function appendGovernanceHealthEntry(
+  existing: GovernanceHealthEntry[],
+  entry: GovernanceHealthEntry
+): GovernanceHealthEntry[] {
+  const updated = [...existing, entry];
+  if (updated.length > HEALTH_HISTORY_MAX_ENTRIES) {
+    return updated.slice(updated.length - HEALTH_HISTORY_MAX_ENTRIES);
+  }
+  return updated;
+}
+
+/**
+ * Load governance-health-history.json from disk, returning an empty history on
+ * parse failure or missing file.
+ */
+export function loadGovernanceHealthHistory(
+  filePath: string = HEALTH_HISTORY_FILE
+): GovernanceHealthHistory {
+  if (!existsSync(filePath)) {
+    return {
+      schemaVersion: HEALTH_HISTORY_SCHEMA_VERSION,
+      generatedAt: new Date(0).toISOString(),
+      snapshots: [],
+    };
+  }
+  try {
+    const raw = readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      'snapshots' in (parsed as object) &&
+      Array.isArray((parsed as GovernanceHealthHistory).snapshots)
+    ) {
+      return parsed as GovernanceHealthHistory;
+    }
+  } catch {
+    // Handled by fallback below.
+  }
+  console.warn('Could not parse governance health history, starting fresh');
+  return {
+    schemaVersion: HEALTH_HISTORY_SCHEMA_VERSION,
+    generatedAt: new Date(0).toISOString(),
+    snapshots: [],
+  };
+}
+
 /**
  * Update the sitemap lastmod date to match the data generation timestamp.
  * Keeps the sitemap file accurate for search engine crawl priority.
@@ -2077,6 +2177,27 @@ async function main(): Promise<void> {
     writeFileSync(HISTORY_FILE, JSON.stringify(updatedHistory, null, 2));
     console.log(
       `Governance snapshot appended (${updatedSnapshots.length} entries, score: ${snapshot.healthScore}, schema: v${updatedHistory.schemaVersion}, completeness: ${updatedHistory.completeness.status})`
+    );
+
+    // Compute and append CHAOSS-aligned health metrics for trend tracking
+    const healthReport = buildHealthReport(data);
+    const healthEntry = buildGovernanceHealthEntry(healthReport);
+    const existingHealth = loadGovernanceHealthHistory();
+    const updatedHealthSnapshots = appendGovernanceHealthEntry(
+      existingHealth.snapshots,
+      healthEntry
+    );
+    const updatedHealthHistory: GovernanceHealthHistory = {
+      schemaVersion: HEALTH_HISTORY_SCHEMA_VERSION,
+      generatedAt: data.generatedAt,
+      snapshots: updatedHealthSnapshots,
+    };
+    writeFileSync(
+      HEALTH_HISTORY_FILE,
+      JSON.stringify(updatedHealthHistory, null, 2)
+    );
+    console.log(
+      `Governance health entry appended (${updatedHealthSnapshots.length} entries, warnings: ${healthEntry.warningCount}, cycleP95: ${healthEntry.prCycleTime.p95 !== null ? (healthEntry.prCycleTime.p95 / 60 / 24).toFixed(1) + 'd' : 'N/A'})`
     );
   } catch (error) {
     console.error('Failed to generate activity data:', error);
