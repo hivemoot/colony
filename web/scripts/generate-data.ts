@@ -48,12 +48,14 @@ import {
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
 import { evaluateGeneratedAtFreshness } from './freshness';
 import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
+import { buildChaossSnapshot } from './chaoss-snapshot';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const METRICS_SNAPSHOT_FILE = join(OUTPUT_DIR, 'metrics', 'snapshot.json');
 const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
@@ -2025,6 +2027,16 @@ async function main(): Promise<void> {
     // Write activity data
     writeFileSync(OUTPUT_FILE, JSON.stringify(data, null, 2));
     console.log(`Activity data written to ${OUTPUT_FILE}`);
+
+    // Emit CHAOSS-compatible metrics snapshot
+    const sourceRepo = `https://github.com/${data.repository.owner}/${data.repository.name}`;
+    const chaossSnapshot = buildChaossSnapshot(data, sourceRepo);
+    mkdirSync(join(OUTPUT_DIR, 'metrics'), { recursive: true });
+    writeFileSync(
+      METRICS_SNAPSHOT_FILE,
+      JSON.stringify(chaossSnapshot, null, 2)
+    );
+    console.log(`CHAOSS metrics snapshot written to ${METRICS_SNAPSHOT_FILE}`);
 
     // Keep sitemap lastmod in sync with the generation timestamp
     updateSitemapLastmod(data.generatedAt);
