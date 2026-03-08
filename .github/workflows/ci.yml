@@ -41,10 +41,15 @@ jobs:
         run: npm run test
 
       - name: Generate activity data
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm run generate-data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Governance SLA check
+        run: npm run check-governance-health
+        env:
+          GH_CYCLE_P95_WARN_DAYS: '14'
+          GH_CONTESTED_MIN_WARN: '0'
 
       - name: Build
         run: npm run build
