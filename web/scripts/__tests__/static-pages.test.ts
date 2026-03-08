@@ -1464,7 +1464,9 @@ describe('generateStaticPages', () => {
         )
       );
 
-      expect(manifest.dashboardUrl).toBe('https://my-org.github.io/my-project/');
+      expect(manifest.dashboardUrl).toBe(
+        'https://my-org.github.io/my-project/'
+      );
       expect(manifest.dataEndpoints.activityJson).toBe(
         'https://my-org.github.io/my-project/data/activity.json'
       );
