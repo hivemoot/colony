@@ -194,6 +194,13 @@ describe('buildChaossSnapshot', () => {
   });
 
   describe('changeRequestReviews', () => {
+    it('includes x-chaoss-note documenting scope difference from CHAOSS spec', () => {
+      const snap = buildChaossSnapshot(makeData(), SOURCE);
+      expect(snap.metrics.changeRequestReviews['x-chaoss-note']).toContain(
+        'cross-role review fraction'
+      );
+    });
+
     it('returns 0 rate with no reviews', () => {
       const snap = buildChaossSnapshot(makeData(), SOURCE);
       expect(snap.metrics.changeRequestReviews.crossRoleReviewRate).toBe(0);
