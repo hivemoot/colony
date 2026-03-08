@@ -52,10 +52,16 @@ jobs:
           mkdir -p public/data
           curl -fsSL https://hivemoot.github.io/colony/data/activity.json -o public/data/activity.json
           npm run check-governance-health
+        env:
+          GH_CYCLE_P95_WARN_DAYS: '14'
+          GH_CONTESTED_MIN_WARN: '0'
 
       - name: Governance SLA check (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm run check-governance-health
+        env:
+          GH_CYCLE_P95_WARN_DAYS: '14'
+          GH_CONTESTED_MIN_WARN: '0'
 
       - name: Build
         run: npm run build
