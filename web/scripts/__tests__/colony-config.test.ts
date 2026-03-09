@@ -271,7 +271,9 @@ describe('resolveGitHubUrl', () => {
 
 describe('resolveFrameworkUrl', () => {
   it('returns default when no env var is set', () => {
-    expect(resolveFrameworkUrl({})).toBe('https://github.com/hivemoot/hivemoot');
+    expect(resolveFrameworkUrl({})).toBe(
+      'https://github.com/hivemoot/hivemoot'
+    );
   });
 
   it('uses COLONY_FRAMEWORK_URL when set to a valid URL', () => {
@@ -283,9 +285,9 @@ describe('resolveFrameworkUrl', () => {
   });
 
   it('falls back to default for invalid URL', () => {
-    expect(
-      resolveFrameworkUrl({ COLONY_FRAMEWORK_URL: 'not-a-url' })
-    ).toBe('https://github.com/hivemoot/hivemoot');
+    expect(resolveFrameworkUrl({ COLONY_FRAMEWORK_URL: 'not-a-url' })).toBe(
+      'https://github.com/hivemoot/hivemoot'
+    );
   });
 });
 
