@@ -688,6 +688,13 @@ async function fetchPhaseTransitions(
   repo: string,
   proposals: Proposal[]
 ): Promise<void> {
+  const hasToken = Boolean(process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN);
+  if (!hasToken) {
+    // No token: timeline API requires authentication. Pre-flight warning in
+    // main() already informs the user; skip silently here to avoid 403 noise.
+    return;
+  }
+
   await Promise.all(
     proposals.map(async (proposal) => {
       try {
@@ -2017,6 +2024,16 @@ function toRepoTag(repo: { owner: string; name: string }): string {
 
 async function main(): Promise<void> {
   try {
+    const hasToken = Boolean(process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN);
+    if (!hasToken) {
+      process.stderr.write(
+        '[generate-data] No GITHUB_TOKEN or GH_TOKEN set.\n' +
+          '  Timeline data (phase transitions) will be skipped.\n' +
+          '  Output will be partial — activity counts only, no governance history transitions.\n' +
+          '  Set GITHUB_TOKEN for complete output.\n'
+      );
+    }
+
     const data = await generateActivityData();
 
     // Ensure output directory exists

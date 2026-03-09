@@ -8,7 +8,7 @@ This guide covers how to deploy Colony from this repository today.
 
 - Node.js 20+
 - npm
-- A GitHub token for higher API limits (`GITHUB_TOKEN` or `GH_TOKEN`)
+- A GitHub token (`GITHUB_TOKEN` or `GH_TOKEN`) — required for complete data generation; without it, timeline data (phase transitions) is skipped and the script emits a warning
 
 ## 1. Configure Environment
 
@@ -23,7 +23,8 @@ COLONY_REPOSITORY=hivemoot/colony
 # Optional: track multiple repositories (comma-separated owner/repo values)
 COLONY_REPOSITORIES=hivemoot/colony,hivemoot/hivemoot
 
-# Optional but recommended: avoid low unauthenticated rate limits
+# Required for complete data (timeline/phase transitions); omitting skips
+# timeline fetches and prints a single warning at startup.
 GITHUB_TOKEN=ghp_xxx
 
 # Optional: custom user agent for visibility checks
