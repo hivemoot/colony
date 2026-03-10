@@ -47,6 +47,12 @@ export function buildRepositoryApiUrl(repository: {
   return `https://api.github.com/repos/${repository.owner}/${repository.repo}`;
 }
 
+export function resolveVisibilityToken(
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  return env.GITHUB_TOKEN || env.GH_TOKEN || undefined;
+}
+
 function readIfExists(path: string): string {
   if (!existsSync(path)) {
     return '';
@@ -251,7 +257,7 @@ async function runChecks(): Promise<CheckResult[]> {
 
   // Repository metadata checks via GitHub API
   try {
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const token = resolveVisibilityToken();
     const userAgent = resolveVisibilityUserAgent();
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
