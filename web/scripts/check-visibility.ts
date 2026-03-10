@@ -251,7 +251,7 @@ async function runChecks(): Promise<CheckResult[]> {
 
   // Repository metadata checks via GitHub API
   try {
-    const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     const userAgent = resolveVisibilityUserAgent();
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
