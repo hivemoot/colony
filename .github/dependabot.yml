@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Keep GitHub Actions SHAs current with upstream releases.
+  # Complements the SHA pinning in PR #624 — pins remove tag-retargeting risk
+  # but require automated update detection to stay current with security patches.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  # Open PRs for npm packages with known CVEs in web/.
+  # Complements the CI audit gate (#622) — provides earlier detection for
+  # maintainers before a PR hits CI. Only security updates; version-only bumps
+  # for transitive deps are too noisy for Colony's lockfile size.
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
