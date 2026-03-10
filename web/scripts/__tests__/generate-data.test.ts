@@ -3,6 +3,7 @@ import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
+  resolveToken,
   resolveRepository,
   resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
@@ -168,6 +169,31 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('resolveToken', () => {
+  it('returns GITHUB_TOKEN when set', () => {
+    expect(resolveToken({ GITHUB_TOKEN: 'ghp_primary', GH_TOKEN: 'ghp_fallback' })).toBe(
+      'ghp_primary'
+    );
+  });
+
+  it('falls back to GH_TOKEN when GITHUB_TOKEN is absent', () => {
+    expect(resolveToken({ GH_TOKEN: 'ghp_fallback' })).toBe('ghp_fallback');
+  });
+
+  it('falls back to GH_TOKEN when GITHUB_TOKEN is an empty string', () => {
+    // This is the key ?? vs || difference: ?? treats "" as present, || does not.
+    expect(resolveToken({ GITHUB_TOKEN: '', GH_TOKEN: 'ghp_fallback' })).toBe('ghp_fallback');
+  });
+
+  it('returns undefined when neither is set', () => {
+    expect(resolveToken({})).toBeUndefined();
+  });
+
+  it('returns undefined when both are empty strings', () => {
+    expect(resolveToken({ GITHUB_TOKEN: '', GH_TOKEN: '' })).toBeUndefined();
   });
 });
 
