@@ -94,6 +94,8 @@ export interface HealthReport {
   };
   /** Human-readable warnings for metrics outside healthy thresholds */
   warnings: string[];
+  /** Actionable recommendations paired to each warning, in the same order */
+  recommendations: string[];
 }
 
 // ──────────────────────────────────────────────
@@ -276,6 +278,7 @@ export function buildHealthReport(data: ActivityData): HealthReport {
   );
 
   const warnings: string[] = [];
+  const recommendations: string[] = [];
 
   if (
     prCycleTime.p95 !== null &&
@@ -285,12 +288,18 @@ export function buildHealthReport(data: ActivityData): HealthReport {
     warnings.push(
       `PR cycle time p95 (${days}d) exceeds ${PR_CYCLE_P95_WARN_DAYS}d threshold`
     );
+    recommendations.push(
+      `Run 'gh pr list --label hivemoot:merge-ready' to identify approved PRs waiting for merge. High p95 often means a small number of PRs have been stuck for weeks.`
+    );
   }
 
   if (roleDiversity.topRoleShare > ROLE_CONCENTRATION_WARN) {
     const pct = Math.round(roleDiversity.topRoleShare * 100);
     warnings.push(
       `Role concentration: ${roleDiversity.topRole} accounts for ${pct}% of proposals (threshold: ${Math.round(ROLE_CONCENTRATION_WARN * 100)}%)`
+    );
+    recommendations.push(
+      `Encourage agents from underrepresented roles to submit proposals. Check 'gh issue list --label hivemoot:discussion' to see if roles other than ${roleDiversity.topRole} are participating.`
     );
   }
 
@@ -302,6 +311,9 @@ export function buildHealthReport(data: ActivityData): HealthReport {
     warnings.push(
       `Contested decision rate (${pct}%) below ${Math.round(CONTESTED_MIN_WARN * 100)}% — may indicate rubber-stamping`
     );
+    recommendations.push(
+      `Low contested rate may indicate rubber-stamping. Review recent voting comment threads to see if concerns are being raised in comments but not registered as votes.`
+    );
   }
 
   if (
@@ -311,6 +323,9 @@ export function buildHealthReport(data: ActivityData): HealthReport {
     const pct = Math.round(crossRoleReviewRate.rate * 100);
     warnings.push(
       `Cross-role review rate (${pct}%) below ${Math.round(CROSS_ROLE_MIN_WARN * 100)}% — reviews mostly within same role`
+    );
+    recommendations.push(
+      `Assign cross-role reviewers to active PRs: 'gh pr list --label hivemoot:candidate' shows candidates accepting new reviews. Cross-role review strengthens governance legitimacy.`
     );
   }
 
@@ -324,6 +339,7 @@ export function buildHealthReport(data: ActivityData): HealthReport {
       crossRoleReviewRate,
     },
     warnings,
+    recommendations,
   };
 }
 
@@ -388,6 +404,11 @@ function printReport(report: HealthReport): void {
     console.log('Warnings:');
     for (const w of report.warnings) {
       console.log(`  WARN ${w}`);
+    }
+    console.log('');
+    console.log('Recommendations:');
+    for (const r of report.recommendations) {
+      console.log(`  → ${r}`);
     }
   } else {
     console.log('No health warnings detected.');

@@ -438,6 +438,19 @@ describe('buildHealthReport', () => {
     expect(report.metrics.contestedDecisionRate).toBeDefined();
     expect(report.metrics.crossRoleReviewRate).toBeDefined();
     expect(report.warnings).toBeInstanceOf(Array);
+    expect(report.recommendations).toBeInstanceOf(Array);
+  });
+
+  it('recommendations and warnings have the same length', () => {
+    const longPrs = Array.from({ length: 5 }, (_, i) =>
+      makePr({
+        number: i + 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        mergedAt: '2026-02-15T00:00:00Z',
+      })
+    );
+    const report = buildHealthReport(minimalData({ pullRequests: longPrs }));
+    expect(report.recommendations).toHaveLength(report.warnings.length);
   });
 
   it('emits no warnings for healthy data', () => {
@@ -486,6 +499,7 @@ describe('buildHealthReport', () => {
       minimalData({ pullRequests: prs, proposals, comments })
     );
     expect(report.warnings).toHaveLength(0);
+    expect(report.recommendations).toHaveLength(0);
   });
 
   it('emits PR cycle time warning when p95 exceeds 7 days', () => {
@@ -498,6 +512,9 @@ describe('buildHealthReport', () => {
     );
     const report = buildHealthReport(minimalData({ pullRequests: longPrs }));
     expect(report.warnings.some((w) => w.includes('PR cycle time'))).toBe(true);
+    expect(
+      report.recommendations.some((r) => r.includes('hivemoot:merge-ready'))
+    ).toBe(true);
   });
 
   it('emits role concentration warning when top role > 60%', () => {
@@ -506,6 +523,12 @@ describe('buildHealthReport', () => {
     );
     const report = buildHealthReport(minimalData({ proposals }));
     expect(report.warnings.some((w) => w.includes('Role concentration'))).toBe(
+      true
+    );
+    expect(
+      report.recommendations.some((r) => r.includes('hivemoot:discussion'))
+    ).toBe(true);
+    expect(report.recommendations.some((r) => r.includes('builder'))).toBe(
       true
     );
   });
@@ -520,6 +543,9 @@ describe('buildHealthReport', () => {
     const report = buildHealthReport(minimalData({ proposals }));
     expect(
       report.warnings.some((w) => w.includes('Contested decision rate'))
+    ).toBe(true);
+    expect(
+      report.recommendations.some((r) => r.includes('rubber-stamping'))
     ).toBe(true);
   });
 
@@ -542,6 +568,9 @@ describe('buildHealthReport', () => {
     );
     expect(
       report.warnings.some((w) => w.includes('Cross-role review rate'))
+    ).toBe(true);
+    expect(
+      report.recommendations.some((r) => r.includes('hivemoot:candidate'))
     ).toBe(true);
   });
 
