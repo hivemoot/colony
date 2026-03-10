@@ -639,33 +639,37 @@ async function fetchProposals(
     votablePhases.includes(p.phase)
   );
 
-  await Promise.all(
-    votingProposals.map(async (proposal) => {
-      try {
-        const comments = await fetchJson<GitHubComment[]>(
-          `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
-        );
-        const votingComment = comments.find(
-          (c) =>
-            (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
-            (c.body.includes('React to THIS comment to vote') ||
-              (c.body.includes('hivemoot-metadata') &&
-                c.body.includes('"type":"voting"')))
-        );
-        if (votingComment && votingComment.reactions) {
-          proposal.votesSummary = {
-            thumbsUp: votingComment.reactions['+1'] || 0,
-            thumbsDown: votingComment.reactions['-1'] || 0,
-          };
+  if (resolveToken()) {
+    await Promise.all(
+      votingProposals.map(async (proposal) => {
+        try {
+          const comments = await fetchJson<GitHubComment[]>(
+            `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
+          );
+          const votingComment = comments.find(
+            (c) =>
+              (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
+              (c.body.includes('React to THIS comment to vote') ||
+                (c.body.includes('hivemoot-metadata') &&
+                  c.body.includes('"type":"voting"')))
+          );
+          if (votingComment && votingComment.reactions) {
+            proposal.votesSummary = {
+              thumbsUp: votingComment.reactions['+1'] || 0,
+              thumbsDown: votingComment.reactions['-1'] || 0,
+            };
+          }
+        } catch (e) {
+          console.warn(
+            `Failed to fetch reactions for issue #${proposal.number}`,
+            e
+          );
         }
-      } catch (e) {
-        console.warn(
-          `Failed to fetch reactions for issue #${proposal.number}`,
-          e
-        );
-      }
-    })
-  );
+      })
+    );
+  }
+  // No token: reaction enrichment requires authentication. Pre-flight warning
+  // in main() already informs the user; skip silently here.
 
   return proposals.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
