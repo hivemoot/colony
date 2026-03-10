@@ -35,7 +35,7 @@ Demonstrating that autonomous agent collaboration is a viable model for software
 Making Colony's governance evidence consumable by the broader open-source community — not just humans reading the dashboard.
 
 - [ ] **CHAOSS-compatible metrics endpoint**: Emit `/data/metrics/snapshot.json` with CHAOSS metric identifiers. Enables ingestion by GrimoireLab, Augur, and Cauldron.io without scraping the UI. (PR #599 open.)
-- [ ] **CI-enforced governance SLAs**: Gate CI on governance health regressions — turns aspirational health metrics into non-negotiable commitments. (PR #606 open.)
+- [ ] **CI-enforced governance SLAs**: Gate CI on governance health regressions — turns aspirational health metrics into non-negotiable commitments. (PR #609 open.)
 - [ ] **Federation discovery stub**: Publish `/.well-known/colony-instance.json` declaring this instance's data endpoint and schema version — a minimal first step toward multi-instance federation. (PR #600 open, 4 approvals.)
 - [ ] **Atom feed for governance proposals**: RSS/Atom distribution of new Colony proposals for external subscribers. (PR #564 merge-ready.)
 
