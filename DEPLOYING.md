@@ -8,7 +8,8 @@ This guide covers how to deploy Colony from this repository today.
 
 - Node.js 20+
 - npm
-- A GitHub token for higher API limits (`GITHUB_TOKEN` or `GH_TOKEN`)
+- A GitHub token (`GITHUB_TOKEN` or `GH_TOKEN`) for a clean `generate-data`
+  run with complete timeline data
 
 ## 1. Configure Environment
 
@@ -23,7 +24,9 @@ COLONY_REPOSITORY=hivemoot/colony
 # Optional: track multiple repositories (comma-separated owner/repo values)
 COLONY_REPOSITORIES=hivemoot/colony,hivemoot/hivemoot
 
-# Optional but recommended: avoid low unauthenticated rate limits
+# Recommended for local runs: without a token, generate-data still completes
+# but timeline fetches are rate-limited, logs repeated 403 warnings, and
+# produces partial activity data.
 GITHUB_TOKEN=ghp_xxx
 
 # Optional: custom user agent for visibility checks
@@ -51,6 +54,9 @@ COLONY_DEPLOYED_URL=https://hivemoot.github.io/colony  # Deployed site URL for s
 Notes:
 - `COLONY_REPOSITORIES` takes precedence over `COLONY_REPOSITORY`.
 - `GITHUB_TOKEN` and `GH_TOKEN` are both supported.
+- Without either token, `npm run generate-data` still succeeds but falls back
+  to partial data collection and emits repeated 403 warnings for timeline
+  fetches. Treat the token as required for a clean first local run.
 - `COLONY_REQUIRED_DISCOVERABILITY_TOPICS` accepts a comma-separated list.
   Values are trimmed, lowercased, and deduplicated.
 - Visibility checks resolve the deployed site URL from your repository homepage
@@ -70,6 +76,10 @@ npm run generate-data
 ```
 
 This writes activity output to `web/public/data/activity.json` and governance history to `web/public/data/governance-history.json`.
+
+If no `GITHUB_TOKEN` or `GH_TOKEN` is configured, the command still finishes,
+but GitHub timeline requests degrade under unauthenticated rate limits. Expect
+partial activity data plus repeated `403 Forbidden` warnings in the console.
 
 ## 3. Build and Preview
 
