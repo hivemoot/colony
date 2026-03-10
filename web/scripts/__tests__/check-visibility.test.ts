@@ -195,7 +195,10 @@ describe('resolveVisibilityToken', () => {
 
   it('prefers GITHUB_TOKEN over GH_TOKEN when both are set', () => {
     expect(
-      resolveVisibilityToken({ GITHUB_TOKEN: 'ci-token', GH_TOKEN: 'cli-token' })
+      resolveVisibilityToken({
+        GITHUB_TOKEN: 'ci-token',
+        GH_TOKEN: 'cli-token',
+      })
     ).toBe('ci-token');
   });
 
