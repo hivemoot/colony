@@ -205,4 +205,10 @@ describe('resolveVisibilityToken', () => {
   it('returns undefined when neither token is set', () => {
     expect(resolveVisibilityToken({})).toBeUndefined();
   });
+
+  it('returns empty string (not GH_TOKEN) when GITHUB_TOKEN is blank — matches generate-data.ts ?? semantics', () => {
+    expect(
+      resolveVisibilityToken({ GITHUB_TOKEN: '', GH_TOKEN: 'cli-token' })
+    ).toBe('');
+  });
 });

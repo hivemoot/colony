@@ -50,7 +50,7 @@ export function buildRepositoryApiUrl(repository: {
 export function resolveVisibilityToken(
   env: NodeJS.ProcessEnv = process.env
 ): string | undefined {
-  return env.GITHUB_TOKEN || env.GH_TOKEN || undefined;
+  return env.GITHUB_TOKEN ?? env.GH_TOKEN;
 }
 
 function readIfExists(path: string): string {
