@@ -71,7 +71,7 @@ interface IssueCommentApiResponse {
   body?: string;
 }
 
-function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
     baselineStars: null,
@@ -100,12 +100,14 @@ function parseArgs(argv: string[]): CliOptions {
     }
 
     if (arg.startsWith('--baseline-stars=')) {
-      const value = Number.parseInt(
-        arg.slice('--baseline-stars='.length).trim(),
-        10
-      );
+      const raw = arg.slice('--baseline-stars='.length).trim();
+      const value = Number.parseInt(raw, 10);
       if (Number.isFinite(value) && value >= 0) {
         options.baselineStars = value;
+      } else {
+        console.warn(
+          `Warning: --baseline-stars="${raw}" is not a valid non-negative integer. Ignored.`
+        );
       }
       continue;
     }

@@ -5,8 +5,36 @@ import {
   extractPullRequestRefsFromText,
   filterIgnoredPullRequestRefs,
   normalizePullState,
+  parseArgs,
   parsePullRequestRef,
 } from '../external-outreach-metrics';
+
+describe('parseArgs', () => {
+  it('accepts a valid --baseline-stars value', () => {
+    const opts = parseArgs(['--baseline-stars=5']);
+    expect(opts.baselineStars).toBe(5);
+  });
+
+  it('warns and ignores an invalid --baseline-stars value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--baseline-stars=abc']);
+    expect(opts.baselineStars).toBeNull(); // default unchanged
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--baseline-stars="abc"')
+    );
+    warn.mockRestore();
+  });
+
+  it('warns and ignores a negative --baseline-stars value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--baseline-stars=-1']);
+    expect(opts.baselineStars).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--baseline-stars="-1"')
+    );
+    warn.mockRestore();
+  });
+});
 
 describe('parsePullRequestRef', () => {
   it('parses a valid owner/repo#number ref', () => {
