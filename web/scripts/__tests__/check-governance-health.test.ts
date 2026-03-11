@@ -5,11 +5,11 @@ import type {
   Proposal,
   PullRequest,
 } from '../../shared/types';
+import { computeGini } from '../../shared/governance-snapshot';
 import {
   buildHealthReport,
   computeCrossRoleReviewRate,
   computeDataWindowDays,
-  computeGini,
   computeContestedRate,
   computePrCycleTime,
   computeRoleDiversity,
