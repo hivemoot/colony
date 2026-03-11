@@ -322,12 +322,14 @@ async function runChecks(): Promise<CheckResult[]> {
     }
   };
 
-  const [rootRes, robotsRes, sitemapRes, activityRes] = await Promise.all([
-    fetchWithTimeout(baseUrl),
-    fetchWithTimeout(`${baseUrl}/robots.txt`),
-    fetchWithTimeout(`${baseUrl}/sitemap.xml`),
-    fetchWithTimeout(`${baseUrl}/data/activity.json`),
-  ]);
+  const [rootRes, robotsRes, sitemapRes, activityRes, badgeRes] =
+    await Promise.all([
+      fetchWithTimeout(baseUrl),
+      fetchWithTimeout(`${baseUrl}/robots.txt`),
+      fetchWithTimeout(`${baseUrl}/sitemap.xml`),
+      fetchWithTimeout(`${baseUrl}/data/activity.json`),
+      fetchWithTimeout(`${baseUrl}/data/health-badge.json`),
+    ]);
 
   results.push({
     label: 'Deployed site is reachable',
@@ -701,6 +703,16 @@ async function runChecks(): Promise<CheckResult[]> {
     label: 'Deployed data freshness (<= 18h)',
     ok: freshnessOk,
     details: freshnessDetails,
+  });
+
+  const badgeUrl = `${baseUrl}/data/health-badge.json`;
+  const badgeOk = badgeRes?.status === 200;
+  results.push({
+    label: 'Deployed health-badge.json is reachable',
+    ok: badgeOk,
+    details: badgeOk
+      ? `GET ${badgeUrl} returned 200`
+      : `GET ${badgeUrl} returned ${badgeRes?.status ?? 'no response'}`,
   });
 
   return results;

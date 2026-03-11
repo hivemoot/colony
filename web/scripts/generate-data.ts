@@ -54,6 +54,7 @@ const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const BADGE_FILE = join(OUTPUT_DIR, 'health-badge.json');
 const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
@@ -2015,6 +2016,38 @@ function toRepoTag(repo: { owner: string; name: string }): string {
   return `${repo.owner}/${repo.name}`;
 }
 
+/**
+ * Return a shields.io endpoint badge color for a governance health score.
+ * Score is 0–100 (computed by computeGovernanceSnapshot, rounded to nearest 5).
+ */
+function badgeColor(score: number): string {
+  if (score >= 80) return 'brightgreen';
+  if (score >= 60) return 'yellow';
+  if (score >= 40) return 'orange';
+  return 'red';
+}
+
+/**
+ * Write a shields.io-compatible endpoint badge to `public/data/health-badge.json`.
+ * External consumers embed this as:
+ *   https://img.shields.io/endpoint?url=.../data/health-badge.json
+ */
+export function writeHealthBadge(
+  score: number,
+  badgePath: string = BADGE_FILE
+): void {
+  const badge = {
+    schemaVersion: 1,
+    label: 'colony health',
+    message: String(score),
+    color: badgeColor(score),
+  };
+  writeFileSync(badgePath, JSON.stringify(badge, null, 2));
+  console.log(
+    `Health badge written to ${badgePath} (score: ${score}, color: ${badge.color})`
+  );
+}
+
 async function main(): Promise<void> {
   try {
     const data = await generateActivityData();
@@ -2078,6 +2111,9 @@ async function main(): Promise<void> {
     console.log(
       `Governance snapshot appended (${updatedSnapshots.length} entries, score: ${snapshot.healthScore}, schema: v${updatedHistory.schemaVersion}, completeness: ${updatedHistory.completeness.status})`
     );
+
+    // Write shields.io-compatible badge for external embedding
+    writeHealthBadge(snapshot.healthScore);
   } catch (error) {
     console.error('Failed to generate activity data:', error);
     process.exit(1);

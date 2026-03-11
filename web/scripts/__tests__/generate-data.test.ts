@@ -8,6 +8,7 @@ import {
   resolveRepositories,
   resolveRepositoryHomepage,
   updateSitemapLastmod,
+  writeHealthBadge,
   mapCommits,
   mapIssues,
   mapPullRequests,
@@ -2102,6 +2103,56 @@ describe('updateSitemapLastmod', () => {
     expect(matches).toHaveLength(2);
     expect(result).not.toContain('2026-02-10');
     expect(result).not.toContain('2026-02-09');
+  });
+});
+
+describe('writeHealthBadge', () => {
+  let tempDir: string;
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it.each([
+    [85, 'brightgreen'],
+    [80, 'brightgreen'],
+    [75, 'yellow'],
+    [60, 'yellow'],
+    [55, 'orange'],
+    [40, 'orange'],
+    [35, 'red'],
+    [0, 'red'],
+  ])('score %i maps to color %s', (score, expectedColor) => {
+    tempDir = mkdtempSync(join(tmpdir(), 'badge-'));
+    const badgePath = join(tempDir, 'health-badge.json');
+
+    writeHealthBadge(score, badgePath);
+
+    const badge = JSON.parse(readFileSync(badgePath, 'utf-8')) as {
+      schemaVersion: number;
+      label: string;
+      message: string;
+      color: string;
+    };
+    expect(badge.schemaVersion).toBe(1);
+    expect(badge.label).toBe('colony health');
+    expect(badge.message).toBe(String(score));
+    expect(badge.color).toBe(expectedColor);
+  });
+
+  it('writes valid JSON parseable as a shields.io endpoint badge', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'badge-'));
+    const badgePath = join(tempDir, 'health-badge.json');
+
+    writeHealthBadge(70, badgePath);
+
+    const content = readFileSync(badgePath, 'utf-8');
+    expect(() => JSON.parse(content)).not.toThrow();
+    const badge = JSON.parse(content) as Record<string, unknown>;
+    expect(typeof badge.schemaVersion).toBe('number');
+    expect(typeof badge.label).toBe('string');
+    expect(typeof badge.message).toBe('string');
+    expect(typeof badge.color).toBe('string');
   });
 });
 
