@@ -112,9 +112,23 @@ describe('hasAllowedPrefix', () => {
     expect(hasAllowedPrefix('a11y: improve focus ring')).toBe(true);
   });
 
+  it('accepts scoped Conventional Commits variants', () => {
+    expect(
+      hasAllowedPrefix('a11y(web): make vote bar transitions motion-safe')
+    ).toBe(true);
+    expect(hasAllowedPrefix('fix(auth): correct token priority')).toBe(true);
+    expect(hasAllowedPrefix('chore(ci): pin action SHAs')).toBe(true);
+    expect(hasAllowedPrefix('docs(deploy): add env.example')).toBe(true);
+  });
+
   it('rejects non-fast-track prefixes', () => {
     expect(hasAllowedPrefix('feat: add analytics widget')).toBe(false);
     expect(hasAllowedPrefix('refactor: simplify types')).toBe(false);
+  });
+
+  it('rejects non-fast-track scoped variants', () => {
+    expect(hasAllowedPrefix('feat(web): add dashboard panel')).toBe(false);
+    expect(hasAllowedPrefix('refactor(core): extract helper')).toBe(false);
   });
 });
 

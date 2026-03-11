@@ -131,7 +131,9 @@ function printHelp(): void {
 
 export function hasAllowedPrefix(title: string): boolean {
   const normalized = title.trim().toLowerCase();
-  return FAST_TRACK_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  // Normalize Conventional Commits scoped variants: a11y(web): → a11y:
+  const withoutScope = normalized.replace(/^([a-z0-9]+)\([^)]*\):/, '$1:');
+  return FAST_TRACK_PREFIXES.some((prefix) => withoutScope.startsWith(prefix));
 }
 
 export function hasChangesRequested(
