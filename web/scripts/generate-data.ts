@@ -214,10 +214,8 @@ export function resolveRepository(env = process.env): {
 
   if (!normalizedRepository) {
     console.warn(
-      `⚠  COLONY_REPOSITORY not set — using default ${DEFAULT_OWNER}/${DEFAULT_REPO}.`
-    );
-    console.warn(
-      `   Set COLONY_REPOSITORY=your-org/your-repo to track a different repository.`
+      `⚠  COLONY_REPOSITORY not set — using default ${DEFAULT_OWNER}/${DEFAULT_REPO}.\n` +
+        `   Set COLONY_REPOSITORY=your-org/your-repo to track a different repository.`
     );
     return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
   }
