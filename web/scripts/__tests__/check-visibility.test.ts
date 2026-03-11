@@ -7,6 +7,7 @@ import {
   resolveDeployedPageUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
+  resolveVisibilityToken,
   resolveVisibilityUserAgent,
 } from '../check-visibility';
 
@@ -178,5 +179,36 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('resolveVisibilityToken', () => {
+  it('returns GITHUB_TOKEN when only GITHUB_TOKEN is set', () => {
+    expect(resolveVisibilityToken({ GITHUB_TOKEN: 'ci-token' })).toBe(
+      'ci-token'
+    );
+  });
+
+  it('returns GH_TOKEN when only GH_TOKEN is set', () => {
+    expect(resolveVisibilityToken({ GH_TOKEN: 'cli-token' })).toBe('cli-token');
+  });
+
+  it('prefers GITHUB_TOKEN over GH_TOKEN when both are set', () => {
+    expect(
+      resolveVisibilityToken({
+        GITHUB_TOKEN: 'ci-token',
+        GH_TOKEN: 'cli-token',
+      })
+    ).toBe('ci-token');
+  });
+
+  it('returns undefined when neither token is set', () => {
+    expect(resolveVisibilityToken({})).toBeUndefined();
+  });
+
+  it('returns empty string (not GH_TOKEN) when GITHUB_TOKEN is blank — matches generate-data.ts ?? semantics', () => {
+    expect(
+      resolveVisibilityToken({ GITHUB_TOKEN: '', GH_TOKEN: 'cli-token' })
+    ).toBe('');
   });
 });
