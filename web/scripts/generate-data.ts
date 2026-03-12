@@ -1427,7 +1427,10 @@ export async function buildExternalVisibility(
     'og:image:type',
     'content'
   );
-  const hasOgImageType = ogImageTypeRaw.trim().toLowerCase().startsWith('image/');
+  const hasOgImageType = ogImageTypeRaw
+    .trim()
+    .toLowerCase()
+    .startsWith('image/');
   checks.push({
     id: 'deployed-og-image-type',
     label: 'Deployed Open Graph image type is declared',

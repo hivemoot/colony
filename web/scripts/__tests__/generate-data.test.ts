@@ -1325,7 +1325,10 @@ describe('buildExternalVisibility', () => {
             { status: 200 }
           );
         }
-        if (url === `${baseUrl}/og-image.png` || url === `${baseUrl}/twitter-image.png`) {
+        if (
+          url === `${baseUrl}/og-image.png` ||
+          url === `${baseUrl}/twitter-image.png`
+        ) {
           return new Response('image-bytes', { status: 200 });
         }
         return new Response('ok', { status: 200 });
@@ -1379,7 +1382,10 @@ describe('buildExternalVisibility', () => {
             { status: 200 }
           );
         }
-        if (url === `${baseUrl}/og-image.png` || url === `${baseUrl}/twitter-image.png`) {
+        if (
+          url === `${baseUrl}/og-image.png` ||
+          url === `${baseUrl}/twitter-image.png`
+        ) {
           return new Response('image-bytes', { status: 200 });
         }
         return new Response('ok', { status: 200 });
