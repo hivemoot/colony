@@ -13,7 +13,10 @@ import {
   computeContestedRate,
   computePrCycleTime,
   computeRoleDiversity,
+  computeVoterParticipationRate,
   extractRole,
+  hadQuorumFailure,
+  inferEligibleVoterCount,
   percentile,
   resolveActivityFile,
 } from '../check-governance-health';
@@ -425,6 +428,139 @@ describe('computeDataWindowDays', () => {
 });
 
 // ──────────────────────────────────────────────
+// hadQuorumFailure
+// ──────────────────────────────────────────────
+
+describe('hadQuorumFailure', () => {
+  it('returns true when current phase is extended-voting', () => {
+    expect(hadQuorumFailure(makeProposal({ phase: 'extended-voting' }))).toBe(
+      true
+    );
+  });
+
+  it('returns true when phaseTransitions includes extended-voting', () => {
+    expect(
+      hadQuorumFailure(
+        makeProposal({
+          phase: 'ready-to-implement',
+          phaseTransitions: [
+            { phase: 'voting', enteredAt: '2026-02-01T00:00:00Z' },
+            { phase: 'extended-voting', enteredAt: '2026-02-03T00:00:00Z' },
+            { phase: 'ready-to-implement', enteredAt: '2026-02-05T00:00:00Z' },
+          ],
+        })
+      )
+    ).toBe(true);
+  });
+
+  it('returns false when extended-voting is absent from transitions', () => {
+    expect(
+      hadQuorumFailure(
+        makeProposal({
+          phase: 'ready-to-implement',
+          phaseTransitions: [
+            { phase: 'voting', enteredAt: '2026-02-01T00:00:00Z' },
+            { phase: 'ready-to-implement', enteredAt: '2026-02-03T00:00:00Z' },
+          ],
+        })
+      )
+    ).toBe(false);
+  });
+
+  it('returns false when phaseTransitions is absent', () => {
+    expect(hadQuorumFailure(makeProposal({ phase: 'implemented' }))).toBe(
+      false
+    );
+  });
+});
+
+// ──────────────────────────────────────────────
+// inferEligibleVoterCount
+// ──────────────────────────────────────────────
+
+describe('inferEligibleVoterCount', () => {
+  it('returns 1 for empty proposals', () => {
+    expect(inferEligibleVoterCount([])).toBe(1);
+  });
+
+  it('returns 1 when no proposals have votesSummary', () => {
+    expect(inferEligibleVoterCount([makeProposal()])).toBe(1);
+  });
+
+  it('returns max total votes across cycles', () => {
+    const proposals = [
+      makeProposal({ votesSummary: { thumbsUp: 2, thumbsDown: 0 } }),
+      makeProposal({ votesSummary: { thumbsUp: 3, thumbsDown: 1 } }), // 4 total
+      makeProposal({ votesSummary: { thumbsUp: 1, thumbsDown: 0 } }),
+    ];
+    expect(inferEligibleVoterCount(proposals)).toBe(4);
+  });
+});
+
+// ──────────────────────────────────────────────
+// computeVoterParticipationRate
+// ──────────────────────────────────────────────
+
+describe('computeVoterParticipationRate', () => {
+  it('returns null averageParticipationRate and zero quorumFailureRate for no voted proposals', () => {
+    const result = computeVoterParticipationRate([], 2);
+    expect(result.votingCyclesAnalyzed).toBe(0);
+    expect(result.averageParticipationRate).toBeNull();
+    expect(result.quorumFailureRate).toBe(0);
+    expect(result.eligibleVoterCount).toBe(2);
+  });
+
+  it('excludes proposals without votesSummary', () => {
+    const result = computeVoterParticipationRate(
+      [makeProposal({ phase: 'discussion' })],
+      2
+    );
+    expect(result.votingCyclesAnalyzed).toBe(0);
+  });
+
+  it('computes correct averageParticipationRate', () => {
+    const proposals = [
+      makeProposal({ votesSummary: { thumbsUp: 2, thumbsDown: 0 } }), // 2/4 = 0.5
+      makeProposal({ votesSummary: { thumbsUp: 4, thumbsDown: 0 } }), // 4/4 = 1.0
+    ];
+    const result = computeVoterParticipationRate(proposals, 4);
+    expect(result.votingCyclesAnalyzed).toBe(2);
+    expect(result.averageParticipationRate).toBeCloseTo(0.75);
+    expect(result.quorumFailureRate).toBe(0);
+  });
+
+  it('caps participation rate at 1 when votes exceed eligibleVoterCount', () => {
+    const proposals = [
+      makeProposal({ votesSummary: { thumbsUp: 5, thumbsDown: 0 } }),
+    ];
+    const result = computeVoterParticipationRate(proposals, 2);
+    expect(result.averageParticipationRate).toBe(1);
+  });
+
+  it('computes quorumFailureRate from extended-voting transitions', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+        phaseTransitions: [
+          { phase: 'voting', enteredAt: '2026-02-01T00:00:00Z' },
+          { phase: 'extended-voting', enteredAt: '2026-02-03T00:00:00Z' },
+          { phase: 'ready-to-implement', enteredAt: '2026-02-05T00:00:00Z' },
+        ],
+        phase: 'ready-to-implement',
+      }),
+      makeProposal({
+        number: 2,
+        votesSummary: { thumbsUp: 3, thumbsDown: 0 },
+        phase: 'ready-to-implement',
+      }),
+    ];
+    const result = computeVoterParticipationRate(proposals, 3);
+    expect(result.quorumFailureRate).toBeCloseTo(0.5);
+  });
+});
+
+// ──────────────────────────────────────────────
 // buildHealthReport
 // ──────────────────────────────────────────────
 
@@ -437,6 +573,7 @@ describe('buildHealthReport', () => {
     expect(report.metrics.roleDiversity).toBeDefined();
     expect(report.metrics.contestedDecisionRate).toBeDefined();
     expect(report.metrics.crossRoleReviewRate).toBeDefined();
+    expect(report.metrics.voterParticipationRate).toBeDefined();
     expect(report.warnings).toBeInstanceOf(Array);
   });
 
@@ -543,6 +680,52 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Cross-role review rate'))
     ).toBe(true);
+  });
+
+  it('emits voter participation warning when avg rate < 50% with enough cycles', () => {
+    // 3 cycles, each with 1 out of 4 eligible voters participating (25%)
+    const proposals = Array.from({ length: 3 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 1, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(minimalData({ proposals }), {
+      COLONY_ELIGIBLE_VOTERS: '4',
+    });
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(true);
+  });
+
+  it('does not emit voter participation warning when avg rate >= 50%', () => {
+    const proposals = Array.from({ length: 3 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(minimalData({ proposals }), {
+      COLONY_ELIGIBLE_VOTERS: '2',
+    });
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(false);
+  });
+
+  it('does not emit voter participation warning with fewer than 3 voting cycles', () => {
+    const proposals = Array.from({ length: 2 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 1, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(minimalData({ proposals }), {
+      COLONY_ELIGIBLE_VOTERS: '4',
+    });
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(false);
   });
 
   it('does not emit contested warning with fewer than 5 voted proposals', () => {
