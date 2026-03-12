@@ -287,6 +287,14 @@ export function resolveRepositories(
   return result;
 }
 
+/**
+ * Returns true if a GitHub token is available in the environment.
+ * Timeline fetches require authentication — without a token, the API returns 403.
+ */
+export function hasGitHubToken(env: NodeJS.ProcessEnv = process.env): boolean {
+  return Boolean(env.GITHUB_TOKEN ?? env.GH_TOKEN);
+}
+
 function parseOwnerRepo(
   input: string,
   invalidMessage: string
@@ -686,8 +694,16 @@ export function extractPhaseTransitions(
 async function fetchPhaseTransitions(
   owner: string,
   repo: string,
-  proposals: Proposal[]
+  proposals: Proposal[],
+  env: NodeJS.ProcessEnv = process.env
 ): Promise<void> {
+  if (!hasGitHubToken(env)) {
+    console.warn(
+      `[generate-data] Skipping timeline fetch for ${proposals.length} proposal(s) — no GITHUB_TOKEN set. Phase transitions will be empty.`
+    );
+    return;
+  }
+
   await Promise.all(
     proposals.map(async (proposal) => {
       try {
@@ -2016,6 +2032,12 @@ function toRepoTag(repo: { owner: string; name: string }): string {
 }
 
 async function main(): Promise<void> {
+  if (!hasGitHubToken()) {
+    console.warn(
+      '[generate-data] No GITHUB_TOKEN or GH_TOKEN set — timeline fetches will be skipped and API responses may be rate-limited. Set GITHUB_TOKEN for complete output.'
+    );
+  }
+
   try {
     const data = await generateActivityData();
 

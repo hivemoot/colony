@@ -7,6 +7,7 @@ import {
   resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
   resolveRepositoryHomepage,
+  hasGitHubToken,
   updateSitemapLastmod,
   mapCommits,
   mapIssues,
@@ -226,6 +227,30 @@ describe('resolveRequiredDiscoverabilityTopics', () => {
         COLONY_REQUIRED_DISCOVERABILITY_TOPICS: ' , , ',
       })
     ).toEqual(REQUIRED_DISCOVERABILITY_TOPICS);
+  });
+});
+
+describe('hasGitHubToken', () => {
+  it('returns true when GITHUB_TOKEN is set', () => {
+    expect(hasGitHubToken({ GITHUB_TOKEN: 'ghp_abc123' })).toBe(true);
+  });
+
+  it('returns true when GH_TOKEN is set', () => {
+    expect(hasGitHubToken({ GH_TOKEN: 'ghp_abc123' })).toBe(true);
+  });
+
+  it('returns true when both are set', () => {
+    expect(hasGitHubToken({ GITHUB_TOKEN: 'tok1', GH_TOKEN: 'tok2' })).toBe(
+      true
+    );
+  });
+
+  it('returns false when neither token is set', () => {
+    expect(hasGitHubToken({})).toBe(false);
+  });
+
+  it('returns false when token is an empty string', () => {
+    expect(hasGitHubToken({ GITHUB_TOKEN: '' })).toBe(false);
   });
 });
 
