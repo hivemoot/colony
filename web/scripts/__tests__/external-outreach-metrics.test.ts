@@ -44,6 +44,29 @@ describe('parseArgs', () => {
     );
     warn.mockRestore();
   });
+
+  it('accepts a valid --issue value', () => {
+    const opts = parseArgs(['--issue=298']);
+    expect(opts.issue).toBe(298);
+  });
+
+  it('warns and ignores an invalid --issue value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--issue=abc']);
+    expect(opts.issue).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--issue="abc"'));
+    warn.mockRestore();
+  });
+
+  it('warns and ignores a partial-numeric --issue value (123abc)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--issue=123abc']);
+    expect(opts.issue).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--issue="123abc"')
+    );
+    warn.mockRestore();
+  });
 });
 
 describe('parsePullRequestRef', () => {
