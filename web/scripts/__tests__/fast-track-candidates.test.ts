@@ -1,12 +1,14 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   countDistinctApprovals,
+  DEFAULT_LIMIT,
   evaluateEligibility,
   hasAllowedPrefix,
   hasChangesRequested,
   HIGH_APPROVAL_WAIVER_THRESHOLD,
   isMergeReady,
   normalizeMergeStateStatus,
+  parseArgs,
   printHumanReport,
 } from '../fast-track-candidates';
 
@@ -363,5 +365,39 @@ describe('evaluateEligibility', () => {
 
     expect(result.eligible).toBe(true);
     expect(result.reasons).toHaveLength(0);
+  });
+});
+
+describe('parseArgs', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('accepts a valid --limit value', () => {
+    const opts = parseArgs(['--limit=50']);
+    expect(opts.limit).toBe(50);
+  });
+
+  it('warns and ignores a partial-numeric --limit value (5oops)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=5oops']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--limit="5oops"')
+    );
+  });
+
+  it('warns and ignores a non-numeric --limit value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=abc']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--limit="abc"'));
+  });
+
+  it('warns and ignores --limit=0 (not a positive integer)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=0']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--limit="0"'));
   });
 });

@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 const DEFAULT_REPO = 'hivemoot/colony';
-const DEFAULT_LIMIT = 200;
+export const DEFAULT_LIMIT = 200;
 
 export const FAST_TRACK_PREFIXES = [
   'fix:',
@@ -88,7 +88,7 @@ interface CliOptions {
   json: boolean;
 }
 
-function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
     limit: DEFAULT_LIMIT,
@@ -107,9 +107,14 @@ function parseArgs(argv: string[]): CliOptions {
     }
 
     if (arg.startsWith('--limit=')) {
-      const value = Number.parseInt(arg.slice('--limit='.length), 10);
+      const raw = arg.slice('--limit='.length).trim();
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value > 0) {
         options.limit = value;
+      } else {
+        console.warn(
+          `Warning: --limit="${raw}" is not a valid positive integer. Ignored.`
+        );
       }
       continue;
     }
