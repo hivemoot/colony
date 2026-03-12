@@ -118,7 +118,9 @@ export function parseArgs(argv: string[]): CliOptions {
       if (Number.isFinite(value) && value > 0) {
         options.issue = value;
       } else {
-        console.warn(`Warning: --issue="${raw}" is not a valid positive integer. Ignored.`);
+        console.warn(
+          `Warning: --issue="${raw}" is not a valid positive integer. Ignored.`
+        );
       }
       continue;
     }
