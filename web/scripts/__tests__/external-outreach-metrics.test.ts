@@ -25,6 +25,16 @@ describe('parseArgs', () => {
     warn.mockRestore();
   });
 
+  it('warns and ignores a partial-numeric --baseline-stars value (5oops)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--baseline-stars=5oops']);
+    expect(opts.baselineStars).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--baseline-stars="5oops"')
+    );
+    warn.mockRestore();
+  });
+
   it('warns and ignores a negative --baseline-stars value', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const opts = parseArgs(['--baseline-stars=-1']);

@@ -101,7 +101,7 @@ export function parseArgs(argv: string[]): CliOptions {
 
     if (arg.startsWith('--baseline-stars=')) {
       const raw = arg.slice('--baseline-stars='.length).trim();
-      const value = Number.parseInt(raw, 10);
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value >= 0) {
         options.baselineStars = value;
       } else {
