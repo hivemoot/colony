@@ -728,6 +728,31 @@ describe('buildHealthReport', () => {
     ).toBe(false);
   });
 
+  it('uses agents.length as denominator when COLONY_ELIGIBLE_VOTERS is unset', () => {
+    // 7 agents configured, every proposal gets exactly 2 votes.
+    // With the old peak-votes fallback, eligible = 2, participation = 100% — no warning.
+    // With agents.length fallback, eligible = 7, participation ≈ 29% — warning fires.
+    const agents = Array.from({ length: 7 }, (_, i) => ({
+      login: `hivemoot-agent-${i}`,
+    }));
+    const proposals = Array.from({ length: 3 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(
+      minimalData({ agents, proposals }),
+      {} // no COLONY_ELIGIBLE_VOTERS
+    );
+    const metric = report.metrics.voterParticipationRate;
+    expect(metric.eligibleVoterCount).toBe(7);
+    expect(metric.averageParticipationRate).toBeCloseTo(2 / 7);
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(true);
+  });
+
   it('does not emit contested warning with fewer than 5 voted proposals', () => {
     const proposals = Array.from({ length: 4 }, (_, i) =>
       makeProposal({

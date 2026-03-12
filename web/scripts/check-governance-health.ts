@@ -384,7 +384,7 @@ export function buildHealthReport(
   const eligibleVoterCount =
     Number.isFinite(rawEligible) && rawEligible > 0
       ? rawEligible
-      : inferEligibleVoterCount(data.proposals);
+      : Math.max(1, data.agents.length);
 
   const voterParticipationRate = computeVoterParticipationRate(
     data.proposals,
