@@ -770,5 +770,9 @@ function isDirectExecution(): boolean {
 }
 
 if (isDirectExecution()) {
+  if (process.argv.includes('--help')) {
+    console.log('Usage: npm run check-visibility');
+    process.exit(0);
+  }
   void main();
 }

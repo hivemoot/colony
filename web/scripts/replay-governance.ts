@@ -317,7 +317,7 @@ async function main(): Promise<void> {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error('Replay failed:', error);
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }
