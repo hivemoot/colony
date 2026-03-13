@@ -183,6 +183,15 @@ export interface GitHubTimelineEvent {
   created_at: string;
 }
 
+/**
+ * Resolves a GitHub token from the environment, treating empty strings as
+ * absent. Falls back from GITHUB_TOKEN to GH_TOKEN, returns undefined if
+ * neither is set or both are empty.
+ */
+export function resolveToken(env = process.env): string | undefined {
+  return env.GITHUB_TOKEN || env.GH_TOKEN || undefined;
+}
+
 export async function fetchJson<T>(endpoint: string): Promise<T> {
   const url = `${GITHUB_API}${endpoint}`;
   const headers: Record<string, string> = {
@@ -191,7 +200,7 @@ export async function fetchJson<T>(endpoint: string): Promise<T> {
   };
 
   // Use GITHUB_TOKEN/GH_TOKEN if available (CI or local environment)
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  const token = resolveToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -638,33 +647,37 @@ async function fetchProposals(
     votablePhases.includes(p.phase)
   );
 
-  await Promise.all(
-    votingProposals.map(async (proposal) => {
-      try {
-        const comments = await fetchJson<GitHubComment[]>(
-          `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
-        );
-        const votingComment = comments.find(
-          (c) =>
-            (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
-            (c.body.includes('React to THIS comment to vote') ||
-              (c.body.includes('hivemoot-metadata') &&
-                c.body.includes('"type":"voting"')))
-        );
-        if (votingComment && votingComment.reactions) {
-          proposal.votesSummary = {
-            thumbsUp: votingComment.reactions['+1'] || 0,
-            thumbsDown: votingComment.reactions['-1'] || 0,
-          };
+  if (resolveToken()) {
+    await Promise.all(
+      votingProposals.map(async (proposal) => {
+        try {
+          const comments = await fetchJson<GitHubComment[]>(
+            `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
+          );
+          const votingComment = comments.find(
+            (c) =>
+              (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
+              (c.body.includes('React to THIS comment to vote') ||
+                (c.body.includes('hivemoot-metadata') &&
+                  c.body.includes('"type":"voting"')))
+          );
+          if (votingComment && votingComment.reactions) {
+            proposal.votesSummary = {
+              thumbsUp: votingComment.reactions['+1'] || 0,
+              thumbsDown: votingComment.reactions['-1'] || 0,
+            };
+          }
+        } catch (e) {
+          console.warn(
+            `Failed to fetch reactions for issue #${proposal.number}`,
+            e
+          );
         }
-      } catch (e) {
-        console.warn(
-          `Failed to fetch reactions for issue #${proposal.number}`,
-          e
-        );
-      }
-    })
-  );
+      })
+    );
+  }
+  // No token: reaction enrichment requires authentication. Pre-flight warning
+  // in main() already informs the user; skip silently here.
 
   return proposals.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -696,6 +709,13 @@ async function fetchPhaseTransitions(
   repo: string,
   proposals: Proposal[]
 ): Promise<void> {
+  const hasToken = Boolean(resolveToken());
+  if (!hasToken) {
+    // No token: timeline API requires authentication. Pre-flight warning in
+    // main() already informs the user; skip silently here to avoid 403 noise.
+    return;
+  }
+
   await Promise.all(
     proposals.map(async (proposal) => {
       try {
@@ -2025,6 +2045,16 @@ function toRepoTag(repo: { owner: string; name: string }): string {
 
 async function main(): Promise<void> {
   try {
+    const hasToken = Boolean(resolveToken());
+    if (!hasToken) {
+      process.stderr.write(
+        '[generate-data] No GITHUB_TOKEN or GH_TOKEN set.\n' +
+          '  Timeline data (phase transitions) will be skipped.\n' +
+          '  Output will be partial — activity counts only, no governance history transitions.\n' +
+          '  Set GITHUB_TOKEN for complete output.\n'
+      );
+    }
+
     const data = await generateActivityData();
 
     // Ensure output directory exists
