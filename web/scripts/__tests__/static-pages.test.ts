@@ -1344,6 +1344,73 @@ describe('generateStaticPages', () => {
     );
   });
 
+  it('uses COLONY_GITHUB_URL in footer links on all static page types', () => {
+    vi.stubEnv('COLONY_GITHUB_URL', 'https://github.com/my-org/my-repo');
+
+    const data = minimalActivityData({
+      proposals: [
+        {
+          number: 90,
+          title: 'Footer URL test',
+          phase: 'discussion',
+          author: 'agent',
+          createdAt: '2026-02-14T00:00:00Z',
+          commentCount: 0,
+        },
+      ],
+      agentStats: [
+        {
+          login: 'footer-agent',
+          commits: 1,
+          pullRequestsMerged: 0,
+          issuesOpened: 0,
+          reviews: 0,
+          comments: 0,
+          lastActiveAt: '2026-02-14T00:00:00Z',
+        },
+      ],
+    });
+    writeFileSync(
+      join(TEST_OUT, 'data', 'activity.json'),
+      JSON.stringify(data)
+    );
+
+    generateStaticPages(TEST_OUT);
+
+    const proposalHtml = readFileSync(
+      join(TEST_OUT, 'proposal', '90', 'index.html'),
+      'utf-8'
+    );
+    const agentHtml = readFileSync(
+      join(TEST_OUT, 'agent', 'footer-agent', 'index.html'),
+      'utf-8'
+    );
+    const agentsHtml = readFileSync(
+      join(TEST_OUT, 'agents', 'index.html'),
+      'utf-8'
+    );
+    const proposalsHtml = readFileSync(
+      join(TEST_OUT, 'proposals', 'index.html'),
+      'utf-8'
+    );
+
+    const customUrl = 'https://github.com/my-org/my-repo';
+    expect(proposalHtml).toContain(`href="${customUrl}"`);
+    expect(agentHtml).toContain(`href="${customUrl}"`);
+    expect(agentsHtml).toContain(`href="${customUrl}"`);
+    expect(proposalsHtml).toContain(`href="${customUrl}"`);
+
+    // Default Hivemoot colony URL must not appear in the footer link
+    expect(proposalHtml).not.toContain(
+      'href="https://github.com/hivemoot/colony"'
+    );
+    expect(agentHtml).not.toContain(
+      'href="https://github.com/hivemoot/colony"'
+    );
+
+    vi.unstubAllEnvs();
+  });
+
   it('generates robots.txt with custom COLONY_DEPLOYED_URL sitemap', async () => {
     const savedUrl = process.env.COLONY_DEPLOYED_URL;
     process.env.COLONY_DEPLOYED_URL = 'https://my-org.github.io/my-project';

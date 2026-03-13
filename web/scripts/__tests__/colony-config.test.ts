@@ -8,6 +8,8 @@ import {
   resolveSiteUrl,
   resolveSiteDescription,
   resolveGitHubUrl,
+  resolveFrameworkUrl,
+  resolveFrameworkName,
   resolveBasePath,
   resolveColonyConfig,
 } from '../colony-config';
@@ -267,6 +269,46 @@ describe('resolveGitHubUrl', () => {
   });
 });
 
+describe('resolveFrameworkUrl', () => {
+  it('returns default when no env var is set', () => {
+    expect(resolveFrameworkUrl({})).toBe(
+      'https://github.com/hivemoot/hivemoot'
+    );
+  });
+
+  it('uses COLONY_FRAMEWORK_URL when set to a valid URL', () => {
+    expect(
+      resolveFrameworkUrl({
+        COLONY_FRAMEWORK_URL: 'https://github.com/acme/framework',
+      })
+    ).toBe('https://github.com/acme/framework');
+  });
+
+  it('falls back to default for invalid URL', () => {
+    expect(resolveFrameworkUrl({ COLONY_FRAMEWORK_URL: 'not-a-url' })).toBe(
+      'https://github.com/hivemoot/hivemoot'
+    );
+  });
+});
+
+describe('resolveFrameworkName', () => {
+  it('returns default when no env var is set', () => {
+    expect(resolveFrameworkName({})).toBe('Hivemoot');
+  });
+
+  it('uses COLONY_FRAMEWORK_NAME when set', () => {
+    expect(
+      resolveFrameworkName({ COLONY_FRAMEWORK_NAME: 'AcmeFramework' })
+    ).toBe('AcmeFramework');
+  });
+
+  it('falls back to default for whitespace-only', () => {
+    expect(resolveFrameworkName({ COLONY_FRAMEWORK_NAME: '   ' })).toBe(
+      'Hivemoot'
+    );
+  });
+});
+
 describe('resolveBasePath', () => {
   it('returns default when no env var is set', () => {
     expect(resolveBasePath({})).toBe('/colony/');
@@ -308,6 +350,8 @@ describe('resolveColonyConfig', () => {
       siteUrl: 'https://hivemoot.github.io/colony',
       siteDescription: expect.stringContaining('autonomous agents'),
       githubUrl: 'https://github.com/hivemoot/colony',
+      frameworkUrl: 'https://github.com/hivemoot/hivemoot',
+      frameworkName: 'Hivemoot',
       basePath: '/colony/',
     });
   });
@@ -319,6 +363,8 @@ describe('resolveColonyConfig', () => {
       COLONY_SITE_URL: 'https://acme.github.io/swarm',
       COLONY_SITE_DESCRIPTION: 'Agent dashboard for Acme',
       COLONY_GITHUB_URL: 'https://github.com/acme/swarm',
+      COLONY_FRAMEWORK_URL: 'https://github.com/acme/framework',
+      COLONY_FRAMEWORK_NAME: 'AcmeFramework',
       COLONY_BASE_PATH: '/swarm/',
     };
 
@@ -329,6 +375,8 @@ describe('resolveColonyConfig', () => {
       siteUrl: 'https://acme.github.io/swarm',
       siteDescription: 'Agent dashboard for Acme',
       githubUrl: 'https://github.com/acme/swarm',
+      frameworkUrl: 'https://github.com/acme/framework',
+      frameworkName: 'AcmeFramework',
       basePath: '/swarm/',
     });
   });

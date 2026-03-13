@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
-import { resolveDeployedUrl } from './colony-config';
+import { resolveDeployedUrl, resolveGitHubUrl } from './colony-config';
 
 const BASE_URL = resolveDeployedUrl();
 
@@ -389,7 +389,7 @@ function proposalPage(proposal: Proposal): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
@@ -458,7 +458,7 @@ function agentPage(agent: AgentStats): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
@@ -526,7 +526,7 @@ function agentsIndexPage(agents: AgentStats[]): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
@@ -588,7 +588,7 @@ function proposalsIndexPage(proposals: Proposal[]): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
