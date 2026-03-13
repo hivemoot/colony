@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Keep GitHub Actions SHAs current with upstream releases.
+  # Complements the SHA pinning in PR #624 — pins remove tag-retargeting risk
+  # but require automated update detection to stay current with security patches.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
