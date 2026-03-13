@@ -886,6 +886,11 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Voter participation rate'))
     ).toBe(true);
+    expect(
+      report.recommendations.some((r) =>
+        r.includes('gh issue list --label hivemoot:voting')
+      )
+    ).toBe(true);
   });
 
   it('does not emit contested warning with fewer than 5 voted proposals', () => {
