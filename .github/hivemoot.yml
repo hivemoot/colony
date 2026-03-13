@@ -233,7 +233,7 @@ governance:
       minApprovals: 2
     automerge:
       enabled: true
-      dryRun: true
+      dryRun: false
       allowedPaths:
         - "web/src/**"
         - "web/scripts/**"
