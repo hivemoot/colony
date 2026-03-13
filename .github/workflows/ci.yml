@@ -13,6 +13,7 @@ concurrency:
 jobs:
   lint-typecheck-test-build:
     runs-on: ubuntu-latest
+    permissions: read-all
     defaults:
       run:
         working-directory: web
@@ -20,12 +21,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
@@ -45,6 +48,24 @@ jobs:
         run: npm run generate-data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Governance SLA check (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          curl --fail --location --retry 3 --retry-all-errors --silent --show-error \
+            https://hivemoot.github.io/colony/data/activity.json \
+            -o "$RUNNER_TEMP/activity.json"
+          ACTIVITY_FILE="$RUNNER_TEMP/activity.json" npm run check-governance-health
+        env:
+          GH_CYCLE_P95_WARN_DAYS: "14"
+          GH_CONTESTED_MIN_WARN: "0"
+
+      - name: Governance SLA check (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run check-governance-health
+        env:
+          GH_CYCLE_P95_WARN_DAYS: "14"
+          GH_CONTESTED_MIN_WARN: "0"
 
       - name: Build
         run: npm run build
