@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type {
   ActivityData,
   Comment,
@@ -105,6 +105,21 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['somefile.json'])).toThrow(
       'Unknown argument: somefile.json'
     );
+  });
+
+  it('prints usage and exits with code 0 for --help', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+    try {
+      expect(() => parseArgs(['--help'])).toThrow('process.exit');
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('Usage:'));
+      expect(exit).toHaveBeenCalledWith(0);
+    } finally {
+      log.mockRestore();
+      exit.mockRestore();
+    }
   });
 });
 
