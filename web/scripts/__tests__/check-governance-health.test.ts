@@ -12,6 +12,7 @@ import {
   computeGini,
   computeContestedRate,
   computePrCycleTime,
+  computeProposalLifecycleTiming,
   computeRoleDiversity,
   extractRole,
   percentile,
@@ -44,6 +45,19 @@ function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
     commentCount: 3,
     ...overrides,
   };
+}
+
+function makePhaseTransitions(
+  discussionAt: string,
+  votingAt: string,
+  terminalAt?: string,
+  terminalPhase: Proposal['phase'] = 'implemented'
+): NonNullable<Proposal['phaseTransitions']> {
+  return [
+    { phase: 'discussion', enteredAt: discussionAt },
+    { phase: 'voting', enteredAt: votingAt },
+    ...(terminalAt ? [{ phase: terminalPhase, enteredAt: terminalAt }] : []),
+  ];
 }
 
 function makeComment(overrides: Partial<Comment> = {}): Comment {
@@ -403,6 +417,106 @@ describe('computeCrossRoleReviewRate', () => {
 });
 
 // ──────────────────────────────────────────────
+// computeProposalLifecycleTiming
+// ──────────────────────────────────────────────
+
+describe('computeProposalLifecycleTiming', () => {
+  it('returns null medians and zero samples for proposals without transitions', () => {
+    const result = computeProposalLifecycleTiming([makeProposal()]);
+    expect(result.medianDiscussionHours).toBeNull();
+    expect(result.medianVotingHours).toBeNull();
+    expect(result.medianCycleHours).toBeNull();
+    expect(result.sampleSize).toBe(0);
+    expect(result.resolvedSampleSize).toBe(0);
+  });
+
+  it('computes median discussion, voting, and cycle hours from transitions', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-02T00:00:00Z',
+          '2026-02-03T00:00:00Z'
+        ),
+      }),
+      makeProposal({
+        number: 2,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-03T00:00:00Z',
+          '2026-02-05T00:00:00Z'
+        ),
+      }),
+      makeProposal({
+        number: 3,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-04T00:00:00Z',
+          '2026-02-07T00:00:00Z'
+        ),
+      }),
+    ];
+
+    const result = computeProposalLifecycleTiming(proposals);
+    expect(result.medianDiscussionHours).toBe(48);
+    expect(result.medianVotingHours).toBe(48);
+    expect(result.medianCycleHours).toBe(96);
+    expect(result.sampleSize).toBe(3);
+    expect(result.resolvedSampleSize).toBe(3);
+  });
+
+  it('counts active proposals in sampleSize without adding terminal-cycle data', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        phase: 'voting',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-02T00:00:00Z'
+        ),
+      }),
+      makeProposal({
+        number: 2,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-03T00:00:00Z',
+          '2026-02-05T00:00:00Z'
+        ),
+      }),
+    ];
+
+    const result = computeProposalLifecycleTiming(proposals);
+    expect(result.sampleSize).toBe(2);
+    expect(result.resolvedSampleSize).toBe(1);
+    expect(result.medianDiscussionHours).toBe(36);
+    expect(result.medianVotingHours).toBe(48);
+    expect(result.medianCycleHours).toBe(96);
+  });
+
+  it('uses extended-voting as the voting start when standard voting is absent', () => {
+    const result = computeProposalLifecycleTiming([
+      makeProposal({
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: [
+          { phase: 'discussion', enteredAt: '2026-02-01T00:00:00Z' },
+          { phase: 'extended-voting', enteredAt: '2026-02-03T00:00:00Z' },
+          { phase: 'implemented', enteredAt: '2026-02-05T00:00:00Z' },
+        ],
+      }),
+    ]);
+
+    expect(result.medianDiscussionHours).toBe(48);
+    expect(result.medianVotingHours).toBe(48);
+    expect(result.medianCycleHours).toBe(96);
+  });
+});
+
+// ──────────────────────────────────────────────
 // computeDataWindowDays
 // ──────────────────────────────────────────────
 
@@ -437,6 +551,7 @@ describe('buildHealthReport', () => {
     expect(report.metrics.roleDiversity).toBeDefined();
     expect(report.metrics.contestedDecisionRate).toBeDefined();
     expect(report.metrics.crossRoleReviewRate).toBeDefined();
+    expect(report.metrics.proposalLifecycleTiming).toBeDefined();
     expect(report.warnings).toBeInstanceOf(Array);
   });
 
@@ -545,6 +660,44 @@ describe('buildHealthReport', () => {
     ).toBe(true);
   });
 
+  it('emits proposal discussion warning when median discussion time exceeds 72 hours', () => {
+    const proposals = Array.from({ length: 5 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-05T00:00:00Z',
+          '2026-02-06T00:00:00Z'
+        ),
+      })
+    );
+
+    const report = buildHealthReport(minimalData({ proposals }));
+    expect(
+      report.warnings.some((w) => w.includes('Proposal discussion median'))
+    ).toBe(true);
+  });
+
+  it('emits proposal lifecycle warning when median cycle time exceeds 14 days', () => {
+    const proposals = Array.from({ length: 5 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-03T00:00:00Z',
+          '2026-02-18T00:00:00Z'
+        ),
+      })
+    );
+
+    const report = buildHealthReport(minimalData({ proposals }));
+    expect(
+      report.warnings.some((w) => w.includes('Proposal lifecycle median'))
+    ).toBe(true);
+  });
+
   it('does not emit contested warning with fewer than 5 voted proposals', () => {
     const proposals = Array.from({ length: 4 }, (_, i) =>
       makeProposal({
@@ -555,6 +708,28 @@ describe('buildHealthReport', () => {
     const report = buildHealthReport(minimalData({ proposals }));
     expect(
       report.warnings.some((w) => w.includes('Contested decision rate'))
+    ).toBe(false);
+  });
+
+  it('does not emit lifecycle warnings with fewer than 5 resolved proposals', () => {
+    const proposals = Array.from({ length: 4 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        phaseTransitions: makePhaseTransitions(
+          '2026-02-01T00:00:00Z',
+          '2026-02-10T00:00:00Z',
+          '2026-02-20T00:00:00Z'
+        ),
+      })
+    );
+
+    const report = buildHealthReport(minimalData({ proposals }));
+    expect(
+      report.warnings.some((w) => w.includes('Proposal discussion median'))
+    ).toBe(false);
+    expect(
+      report.warnings.some((w) => w.includes('Proposal lifecycle median'))
     ).toBe(false);
   });
 });
