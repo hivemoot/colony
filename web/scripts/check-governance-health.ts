@@ -94,6 +94,34 @@ export interface CrossRoleReviewMetric {
   rate: number;
 }
 
+/**
+ * Voter participation metric — approximates CHAOSS "Governance Responsiveness".
+ *
+ * x-chaoss-note: Colony uses a defined voter list while CHAOSS defines
+ * "eligible" more broadly. The metric here captures participation relative
+ * to the peak observed or configured eligible voter count.
+ */
+export interface VoterParticipationMetric {
+  /** Number of proposals that reached the voting phase (have a votesSummary) */
+  votingCyclesAnalyzed: number;
+  /**
+   * Average fraction of eligible voters who cast a vote across all cycles.
+   * 0–1. Null when no voting cycles are available.
+   */
+  averageParticipationRate: number | null;
+  /**
+   * Fraction of voting cycles that required extended voting (quorum failure).
+   * 0–1. 0 when no voting cycles are available.
+   */
+  quorumFailureRate: number;
+  /**
+   * Eligible voter count used as the denominator.
+   * Sourced from COLONY_ELIGIBLE_VOTERS env var, or inferred as the maximum
+   * observed total votes in any single voting cycle.
+   */
+  eligibleVoterCount: number;
+}
+
 export interface HealthReport {
   generatedAt: string;
   /** Days spanned by the earliest to latest proposal */
@@ -106,6 +134,7 @@ export interface HealthReport {
     roleDiversity: RoleDiversityMetric;
     contestedDecisionRate: ContestedRateMetric;
     crossRoleReviewRate: CrossRoleReviewMetric;
+    voterParticipationRate: VoterParticipationMetric;
   };
   /** Human-readable warnings for metrics outside healthy thresholds */
   warnings: string[];
@@ -289,6 +318,73 @@ export function computeCrossRoleReviewRate(
   };
 }
 
+/**
+ * Returns true when a proposal passed through the extended-voting phase,
+ * indicating a quorum failure in the original voting window.
+ */
+export function hadQuorumFailure(proposal: Proposal): boolean {
+  if (proposal.phase === 'extended-voting') return true;
+  return (
+    proposal.phaseTransitions?.some((t) => t.phase === 'extended-voting') ??
+    false
+  );
+}
+
+/**
+ * Compute voter participation rate across all proposals that reached voting.
+ *
+ * Eligible voter count is taken from the `eligibleVoterCount` parameter,
+ * which callers should source from the COLONY_ELIGIBLE_VOTERS env var or
+ * infer from the data (see `inferEligibleVoterCount`).
+ */
+export function computeVoterParticipationRate(
+  proposals: Proposal[],
+  eligibleVoterCount: number
+): VoterParticipationMetric {
+  const voted = proposals.filter((p) => p.votesSummary !== undefined);
+  const failures = voted.filter(hadQuorumFailure);
+
+  if (voted.length === 0) {
+    return {
+      votingCyclesAnalyzed: 0,
+      averageParticipationRate: null,
+      quorumFailureRate: 0,
+      eligibleVoterCount,
+    };
+  }
+
+  const participationRates = voted.map((p) => {
+    const total =
+      (p.votesSummary?.thumbsUp ?? 0) + (p.votesSummary?.thumbsDown ?? 0);
+    return eligibleVoterCount > 0 ? Math.min(1, total / eligibleVoterCount) : 0;
+  });
+
+  const averageParticipationRate =
+    participationRates.reduce((a, b) => a + b, 0) / participationRates.length;
+
+  return {
+    votingCyclesAnalyzed: voted.length,
+    averageParticipationRate,
+    quorumFailureRate: failures.length / voted.length,
+    eligibleVoterCount,
+  };
+}
+
+/**
+ * Infer eligible voter count from the peak observed total votes in any cycle.
+ * Falls back to 1 if no voted proposals exist.
+ */
+export function inferEligibleVoterCount(proposals: Proposal[]): number {
+  const voted = proposals.filter((p) => p.votesSummary !== undefined);
+  if (voted.length === 0) return 1;
+  return Math.max(
+    1,
+    ...voted.map(
+      (p) => (p.votesSummary?.thumbsUp ?? 0) + (p.votesSummary?.thumbsDown ?? 0)
+    )
+  );
+}
+
 export function computeDataWindowDays(proposals: Proposal[]): number {
   if (proposals.length === 0) return 0;
   const times = proposals.map((p) => new Date(p.createdAt).getTime());
@@ -317,8 +413,17 @@ const CROSS_ROLE_MIN_WARN = Number(process.env.GH_CROSS_ROLE_MIN_WARN ?? '0.3');
 const CROSS_ROLE_MIN_SAMPLE = Number(
   process.env.GH_CROSS_ROLE_MIN_SAMPLE ?? '10'
 );
+const VOTER_PARTICIPATION_WARN = Number(
+  process.env.GH_VOTER_PARTICIPATION_WARN ?? '0.5'
+);
+const VOTER_PARTICIPATION_MIN_SAMPLE = Number(
+  process.env.GH_VOTER_PARTICIPATION_MIN_SAMPLE ?? '3'
+);
 
-export function buildHealthReport(data: ActivityData): HealthReport {
+export function buildHealthReport(
+  data: ActivityData,
+  env: NodeJS.ProcessEnv = process.env
+): HealthReport {
   const prCycleTime = computePrCycleTime(data.pullRequests);
   const reviewLatency = computeReviewLatency(data.pullRequests);
   const mergeLatency = computeMergeLatency(data.pullRequests);
@@ -331,6 +436,17 @@ export function buildHealthReport(data: ActivityData): HealthReport {
   const crossRoleReviewRate = computeCrossRoleReviewRate(
     data.pullRequests,
     data.comments
+  );
+
+  const rawEligible = Number(env.COLONY_ELIGIBLE_VOTERS);
+  const eligibleVoterCount =
+    Number.isFinite(rawEligible) && rawEligible > 0
+      ? rawEligible
+      : Math.max(1, data.agents.length);
+
+  const voterParticipationRate = computeVoterParticipationRate(
+    data.proposals,
+    eligibleVoterCount
   );
 
   const warnings: string[] = [];
@@ -400,6 +516,20 @@ export function buildHealthReport(data: ActivityData): HealthReport {
     );
   }
 
+  if (
+    voterParticipationRate.votingCyclesAnalyzed >=
+      VOTER_PARTICIPATION_MIN_SAMPLE &&
+    voterParticipationRate.averageParticipationRate !== null &&
+    voterParticipationRate.averageParticipationRate < VOTER_PARTICIPATION_WARN
+  ) {
+    const pct = Math.round(
+      voterParticipationRate.averageParticipationRate * 100
+    );
+    warnings.push(
+      `Voter participation rate (${pct}%) below ${Math.round(VOTER_PARTICIPATION_WARN * 100)}% — fewer than half of eligible voters participating on average`
+    );
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     dataWindowDays: computeDataWindowDays(data.proposals),
@@ -411,6 +541,7 @@ export function buildHealthReport(data: ActivityData): HealthReport {
       roleDiversity,
       contestedDecisionRate,
       crossRoleReviewRate,
+      voterParticipationRate,
     },
     warnings,
     recommendations,
@@ -473,6 +604,7 @@ function printReport(report: HealthReport): void {
     roleDiversity,
     contestedDecisionRate,
     crossRoleReviewRate,
+    voterParticipationRate,
   } = report.metrics;
 
   console.log(`Governance Health Report`);
@@ -528,6 +660,23 @@ function printReport(report: HealthReport): void {
     `  ${crossRoleReviewRate.crossRoleCount}/${crossRoleReviewRate.totalReviews} reviews are cross-role`
   );
   console.log(`  rate: ${Math.round(crossRoleReviewRate.rate * 100)}%`);
+  console.log('');
+
+  console.log('Voter Participation Rate');
+  console.log(
+    `  cycles analyzed: ${voterParticipationRate.votingCyclesAnalyzed}`
+  );
+  console.log(
+    `  eligible voters: ${voterParticipationRate.eligibleVoterCount}`
+  );
+  const avgPct =
+    voterParticipationRate.averageParticipationRate !== null
+      ? `${Math.round(voterParticipationRate.averageParticipationRate * 100)}%`
+      : 'N/A';
+  console.log(`  avg participation: ${avgPct}`);
+  console.log(
+    `  quorum failure rate: ${Math.round(voterParticipationRate.quorumFailureRate * 100)}%`
+  );
   console.log('');
 
   if (report.warnings.length > 0) {
