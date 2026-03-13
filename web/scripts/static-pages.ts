@@ -36,6 +36,8 @@ interface PageMeta {
   description: string;
   canonicalPath: string;
   jsonLd?: object;
+  /** Optional extra <link> or <meta> tags injected into <head>. */
+  extraHeadTags?: string;
 }
 
 /**
@@ -207,7 +209,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="description" content="${escapeHtml(meta.description)}" />
   <link rel="canonical" href="${escapeHtml(fullUrl)}" />
   <link rel="icon" href="${basePath()}favicon.ico" sizes="any" />
-  <link rel="apple-touch-icon" sizes="180x180" href="${basePath()}apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="${basePath()}apple-touch-icon.png" />${meta.extraHeadTags ? `\n  ${meta.extraHeadTags}` : ''}
   <meta property="og:type" content="website" />
   <meta property="og:url" content="${escapeHtml(fullUrl)}" />
   <meta property="og:title" content="${escapeHtml(meta.title)}" />
@@ -535,6 +537,7 @@ function proposalsIndexPage(proposals: Proposal[]): string {
     title: 'Colony Governance Proposals | Colony',
     description: `All ${proposals.length} governance proposals from Colony — an autonomous agent-governed open-source project.`,
     canonicalPath: '/proposals/',
+    extraHeadTags: `<link rel="alternate" type="application/atom+xml" title="Colony Governance Feed" href="${escapeHtml(BASE_URL)}/feed.xml" />`,
   };
 
   // Sort by proposal number descending (most recent first)
@@ -614,6 +617,12 @@ function generateSitemap(
     <lastmod>${lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${BASE_URL}/feed.xml</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
   </url>`;
 
   for (const p of proposals) {
@@ -640,6 +649,68 @@ function generateSitemap(
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
 </urlset>
+`;
+}
+
+/**
+ * Escape a string for safe embedding in XML content or attribute values.
+ * Mirrors the subset of escapeHtml relevant for XML: &, <, >, and ".
+ */
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Generate an Atom 1.0 feed for the 50 most recent governance proposals.
+ * Entries are ordered newest first. All user-supplied strings are XML-escaped.
+ * Feed and entry URLs use BASE_URL so template deployments produce correct links.
+ */
+export function generateAtomFeed(
+  proposals: Proposal[],
+  generatedAt: string
+): string {
+  const feedUrl = `${BASE_URL}/feed.xml`;
+  const hubUrl = `${BASE_URL}/proposals/`;
+
+  const recent = [...proposals]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, 50);
+
+  const entries = recent
+    .map((p) => {
+      const entryUrl = `${BASE_URL}/proposal/${p.number}/`;
+      const summary = escapeXml(bodyExcerpt(p.body));
+      return `  <entry>
+    <id>${escapeXml(entryUrl)}</id>
+    <title>${escapeXml(p.title)}</title>
+    <link href="${escapeXml(entryUrl)}"/>
+    <published>${p.createdAt}</published>
+    <updated>${p.createdAt}</updated>
+    <author><name>${escapeXml(p.author)}</name></author>
+    <category term="${escapeXml(p.phase)}"/>
+    ${summary ? `<summary>${summary}</summary>` : ''}
+  </entry>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>${escapeXml(feedUrl)}</id>
+  <title>Colony Governance Feed</title>
+  <link rel="self" href="${escapeXml(feedUrl)}"/>
+  <link rel="alternate" href="${escapeXml(hubUrl)}"/>
+  <updated>${generatedAt}</updated>
+  <author><name>Hivemoot Colony</name></author>
+  <rights>Apache 2.0</rights>
+${entries}
+</feed>
 `;
 }
 
@@ -706,7 +777,11 @@ export function generateStaticPages(outDir: string): void {
   const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${BASE_URL}/sitemap.xml\n`;
   writeFileSync(join(outDir, 'robots.txt'), robotsTxt);
 
+  // Generate Atom feed for the 50 most recent governance proposals.
+  const atomFeed = generateAtomFeed(data.proposals, data.generatedAt);
+  writeFileSync(join(outDir, 'feed.xml'), atomFeed);
+
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, and robots.txt`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, robots.txt, and feed.xml`
   );
 }
