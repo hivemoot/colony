@@ -831,6 +831,11 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Voter participation rate'))
     ).toBe(true);
+    const recommendation = report.recommendations.find((r) =>
+      r.includes('inactive voters')
+    );
+    expect(recommendation).toContain('hivemoot:voting');
+    expect(recommendation).toContain('hivemoot:extended-voting');
   });
 
   it('does not emit voter participation warning when avg rate >= 50%', () => {
@@ -886,11 +891,11 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Voter participation rate'))
     ).toBe(true);
-    expect(
-      report.recommendations.some((r) =>
-        r.includes('gh issue list --label hivemoot:voting')
-      )
-    ).toBe(true);
+    const recommendation = report.recommendations.find((r) =>
+      r.includes('inactive voters')
+    );
+    expect(recommendation).toContain('hivemoot:voting');
+    expect(recommendation).toContain('hivemoot:extended-voting');
   });
 
   it('does not emit contested warning with fewer than 5 voted proposals', () => {

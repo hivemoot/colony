@@ -530,7 +530,7 @@ export function buildHealthReport(
       `Voter participation rate (${pct}%) below ${Math.round(VOTER_PARTICIPATION_WARN * 100)}% — fewer than half of eligible voters participating on average`
     );
     recommendations.push(
-      `Reach out to inactive voters on active governance decisions. Run 'gh issue list --label hivemoot:voting' to find open votes and share the current voting thread link.`
+      `Reach out to inactive voters on active governance decisions. Check open issues labeled 'hivemoot:voting' and 'hivemoot:extended-voting', then share the current voting thread link.`
     );
   }
 
