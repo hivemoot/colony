@@ -14,6 +14,7 @@ import {
   computePrCycleTime,
   computeRoleDiversity,
   extractRole,
+  parseArgs,
   percentile,
   resolveActivityFile,
 } from '../check-governance-health';
@@ -80,6 +81,32 @@ function minimalData(overrides: Partial<ActivityData> = {}): ActivityData {
     ...overrides,
   };
 }
+
+// ──────────────────────────────────────────────
+// parseArgs
+// ──────────────────────────────────────────────
+
+describe('parseArgs', () => {
+  it('defaults to json=false with no args', () => {
+    expect(parseArgs([])).toEqual({ json: false });
+  });
+
+  it('sets json=true for --json flag', () => {
+    expect(parseArgs(['--json'])).toEqual({ json: true });
+  });
+
+  it('throws on unknown flags', () => {
+    expect(() => parseArgs(['--unknown'])).toThrow(
+      'Unknown argument: --unknown'
+    );
+  });
+
+  it('throws on unrecognised positional args', () => {
+    expect(() => parseArgs(['somefile.json'])).toThrow(
+      'Unknown argument: somefile.json'
+    );
+  });
+});
 
 // ──────────────────────────────────────────────
 // extractRole
