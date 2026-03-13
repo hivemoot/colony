@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   countDistinctApprovals,
   evaluateEligibility,
+  getWorkflowApprovalBlocker,
   hasAllowedPrefix,
   hasChangesRequested,
   HIGH_APPROVAL_WAIVER_THRESHOLD,
@@ -32,6 +33,9 @@ function makeBlockedReport(
     approvals: pr.approvals,
     ciState: 'SUCCESS',
     linkedOpenIssues: [] as number[],
+    highApprovalWaiver: false,
+    workflowApprovalBlocked: false,
+    workflowApprovalOwner: null,
   }));
 
   return {
@@ -42,6 +46,42 @@ function makeBlockedReport(
       totalOpenPrs: candidates.length,
       eligiblePrs: 0,
       mergeReadyEligiblePrs: 0,
+      workflowApprovalBlockedPrs: 0,
+    },
+    candidates,
+  };
+}
+
+function makeWorkflowApprovalBlockedReport(
+  blockedPrs: Array<{ number: number; approvals: number; owner: string }>
+): Parameters<typeof printHumanReport>[0] {
+  const candidates = blockedPrs.map((pr) => ({
+    number: pr.number,
+    title: `fix: pr ${pr.number}`,
+    url: `https://github.com/hivemoot/colony/pull/${pr.number}`,
+    mergeStateStatus: 'UNSTABLE',
+    eligible: false,
+    reasons: [
+      'CI checks must be SUCCESS (found UNKNOWN)',
+      `likely waiting on first-time fork workflow approval for ${pr.owner}`,
+    ],
+    approvals: pr.approvals,
+    ciState: 'UNKNOWN',
+    linkedOpenIssues: [] as number[],
+    highApprovalWaiver: false,
+    workflowApprovalBlocked: true,
+    workflowApprovalOwner: pr.owner,
+  }));
+
+  return {
+    generatedAt: '2026-03-13T00:00:00Z',
+    repo: 'hivemoot/colony',
+    allowedPrefixes: ALLOWED_PREFIXES,
+    summary: {
+      totalOpenPrs: candidates.length,
+      eligiblePrs: 0,
+      mergeReadyEligiblePrs: 0,
+      workflowApprovalBlockedPrs: candidates.length,
     },
     candidates,
   };
@@ -102,6 +142,26 @@ describe('printHumanReport — blocked PR display', () => {
 
     const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
     expect(output).toContain('#200 (7 approvals):');
+  });
+
+  it('surfaces likely fork workflow approval blockers with maintainer action', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeWorkflowApprovalBlockedReport([
+      { number: 536, approvals: 5, owner: 'hivemoot-heater' },
+      { number: 572, approvals: 4, owner: 'hivemoot-heater' },
+    ]);
+
+    printHumanReport(report);
+
+    const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
+    expect(output).toContain('Workflow approval blockers: 2');
+    expect(output).toContain(
+      'likely waiting on first-time fork workflow approval'
+    );
+    expect(output).toContain('Approve and run workflows');
+    expect(output).toContain('Fork owners: hivemoot-heater');
+    expect(output).toContain('#536 (5 approvals, owner hivemoot-heater');
+    expect(output).toContain('#572 (4 approvals, owner hivemoot-heater');
   });
 });
 
@@ -237,6 +297,31 @@ describe('evaluateEligibility', () => {
     );
   });
 
+  it('flags likely first-time fork workflow approval blockers', () => {
+    const result = evaluateEligibility({
+      number: 109,
+      title: 'fix: unblock queue visibility',
+      url: 'https://example.test/pr/109',
+      mergeStateStatus: 'UNSTABLE',
+      headRepositoryOwner: { login: 'hivemoot-heater' },
+      latestReviews: [
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+      ],
+      statusCheckRollup: [],
+      closingIssuesReferences: [{ number: 662, state: 'OPEN' }],
+    });
+
+    expect(result.workflowApprovalBlocked).toBe(true);
+    expect(result.workflowApprovalOwner).toBe('hivemoot-heater');
+    expect(result.reasons).toContain(
+      'CI checks must be SUCCESS (found UNKNOWN)'
+    );
+    expect(result.reasons).toContain(
+      'likely waiting on first-time fork workflow approval for hivemoot-heater'
+    );
+  });
+
   it('applies high-approval waiver when 6+ approvals and no linked open issue', () => {
     const approvers = Array.from(
       { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
@@ -363,5 +448,44 @@ describe('evaluateEligibility', () => {
 
     expect(result.eligible).toBe(true);
     expect(result.reasons).toHaveLength(0);
+  });
+});
+
+describe('getWorkflowApprovalBlocker', () => {
+  it('detects cross-repo PRs with no checks and unstable merge state', () => {
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 200,
+        title: 'fix: queue blocker',
+        url: 'https://example.test/pr/200',
+        mergeStateStatus: 'UNSTABLE',
+        headRepositoryOwner: { login: 'hivemoot-heater' },
+        statusCheckRollup: [],
+      })
+    ).toBe('hivemoot-heater');
+  });
+
+  it('does not flag same-owner PRs or PRs that already have checks', () => {
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 201,
+        title: 'fix: local branch',
+        url: 'https://example.test/pr/201',
+        mergeStateStatus: 'UNSTABLE',
+        headRepositoryOwner: { login: 'hivemoot' },
+        statusCheckRollup: [],
+      })
+    ).toBeNull();
+
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 202,
+        title: 'fix: checks already ran',
+        url: 'https://example.test/pr/202',
+        mergeStateStatus: 'UNSTABLE',
+        headRepositoryOwner: { login: 'hivemoot-heater' },
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    ).toBeNull();
   });
 });
