@@ -10,8 +10,11 @@ import {
   computeCrossRoleReviewRate,
   computeDataWindowDays,
   computeGini,
+  computeMergeBacklogDepth,
+  computeMergeLatency,
   computeContestedRate,
   computePrCycleTime,
+  computeReviewLatency,
   computeRoleDiversity,
   extractRole,
   percentile,
@@ -217,6 +220,106 @@ describe('computePrCycleTime', () => {
     });
     const result = computePrCycleTime([pr]);
     expect(result.sampleSize).toBe(0);
+  });
+});
+
+describe('computeReviewLatency', () => {
+  it('computes open-to-first-approval latency for merged PRs', () => {
+    const prs = [
+      makePr({
+        number: 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        firstApprovalAt: '2026-02-01T12:00:00Z',
+      }),
+      makePr({
+        number: 2,
+        createdAt: '2026-02-01T00:00:00Z',
+        firstApprovalAt: '2026-02-02T00:00:00Z',
+      }),
+    ];
+
+    const result = computeReviewLatency(prs);
+    expect(result.sampleSize).toBe(2);
+    expect(result.p50).toBe(720);
+    expect(result.p95).toBe(1440);
+  });
+
+  it('ignores PRs without approval timestamps', () => {
+    const result = computeReviewLatency([makePr({ firstApprovalAt: null })]);
+    expect(result.sampleSize).toBe(0);
+    expect(result.p50).toBeNull();
+  });
+});
+
+describe('computeMergeLatency', () => {
+  it('computes first-approval-to-merge latency for merged PRs', () => {
+    const prs = [
+      makePr({
+        number: 1,
+        firstApprovalAt: '2026-02-01T12:00:00Z',
+        mergedAt: '2026-02-02T00:00:00Z',
+      }),
+      makePr({
+        number: 2,
+        firstApprovalAt: '2026-02-01T06:00:00Z',
+        mergedAt: '2026-02-03T00:00:00Z',
+      }),
+    ];
+
+    const result = computeMergeLatency(prs);
+    expect(result.sampleSize).toBe(2);
+    expect(result.p50).toBe(720);
+    expect(result.p95).toBe(2520);
+  });
+
+  it('ignores negative approval-to-merge durations', () => {
+    const result = computeMergeLatency([
+      makePr({
+        firstApprovalAt: '2026-02-03T00:00:00Z',
+        mergedAt: '2026-02-02T00:00:00Z',
+      }),
+    ]);
+    expect(result.sampleSize).toBe(0);
+  });
+});
+
+describe('computeMergeBacklogDepth', () => {
+  it('counts approved open PRs and reports the oldest age in hours', () => {
+    const result = computeMergeBacklogDepth(
+      [
+        makePr({
+          number: 1,
+          state: 'open',
+          mergedAt: null,
+          firstApprovalAt: '2026-02-02T00:00:00Z',
+        }),
+        makePr({
+          number: 2,
+          state: 'open',
+          mergedAt: null,
+          firstApprovalAt: '2026-02-04T00:00:00Z',
+        }),
+        makePr({
+          number: 3,
+          state: 'open',
+          mergedAt: null,
+          firstApprovalAt: null,
+        }),
+      ],
+      '2026-02-05T00:00:00Z'
+    );
+
+    expect(result.depth).toBe(2);
+    expect(result.eldestApprovedHours).toBe(72);
+  });
+
+  it('returns null eldest age when no approved open PRs exist', () => {
+    const result = computeMergeBacklogDepth(
+      [makePr({ state: 'open', mergedAt: null, firstApprovalAt: null })],
+      '2026-02-05T00:00:00Z'
+    );
+    expect(result.depth).toBe(0);
+    expect(result.eldestApprovedHours).toBeNull();
   });
 });
 
@@ -434,6 +537,9 @@ describe('buildHealthReport', () => {
     expect(report.generatedAt).toBeTruthy();
     expect(report.dataWindowDays).toBe(0);
     expect(report.metrics.prCycleTime).toBeDefined();
+    expect(report.metrics.reviewLatency).toBeDefined();
+    expect(report.metrics.mergeLatency).toBeDefined();
+    expect(report.metrics.mergeBacklogDepth).toBeDefined();
     expect(report.metrics.roleDiversity).toBeDefined();
     expect(report.metrics.contestedDecisionRate).toBeDefined();
     expect(report.metrics.crossRoleReviewRate).toBeDefined();
@@ -556,6 +662,38 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Contested decision rate'))
     ).toBe(false);
+  });
+
+  it('emits merge latency warning when p95 exceeds 48 hours', () => {
+    const prs = Array.from({ length: 3 }, (_, i) =>
+      makePr({
+        number: i + 1,
+        firstApprovalAt: '2026-02-01T00:00:00Z',
+        mergedAt: '2026-02-04T00:00:00Z',
+      })
+    );
+    const report = buildHealthReport(minimalData({ pullRequests: prs }));
+    expect(report.warnings.some((w) => w.includes('Merge latency'))).toBe(true);
+  });
+
+  it('emits merge backlog warning when approved open PR depth exceeds threshold', () => {
+    const prs = Array.from({ length: 11 }, (_, i) =>
+      makePr({
+        number: i + 1,
+        state: 'open',
+        mergedAt: null,
+        firstApprovalAt: '2026-02-10T00:00:00Z',
+      })
+    );
+    const report = buildHealthReport(
+      minimalData({
+        generatedAt: '2026-02-14T01:00:00Z',
+        pullRequests: prs,
+      })
+    );
+    expect(report.warnings.some((w) => w.includes('Merge backlog depth'))).toBe(
+      true
+    );
   });
 });
 

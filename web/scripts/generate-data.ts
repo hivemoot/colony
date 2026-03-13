@@ -583,15 +583,20 @@ async function fetchFirstApprovalAt(
 }
 
 /**
- * Enrich the most recent merged PRs with their first approval timestamp.
- * Capped at 20 PRs to limit additional API calls.
+ * Enrich open PRs and the most recent merged PRs with first approval times.
+ *
+ * Open PRs need approval timestamps so current merge backlog metrics can
+ * identify approved-but-unmerged work. Recent merged PRs keep historical
+ * review/merge latency metrics representative without fetching approval data
+ * for the entire closed backlog.
  */
-export async function enrichMergedPRsWithApprovalTimes(
+export async function enrichPullRequestsWithApprovalTimes(
   owner: string,
   repo: string,
   pullRequests: PullRequest[]
 ): Promise<void> {
-  const MAX_ENRICHED = 20;
+  const MAX_ENRICHED_MERGED = 20;
+  const openPRs = pullRequests.filter((pr) => pr.state === 'open');
   const mergedPRs = pullRequests
     .filter(
       (pr): pr is PullRequest & { mergedAt: string } =>
@@ -600,10 +605,11 @@ export async function enrichMergedPRsWithApprovalTimes(
     .sort(
       (a, b) => new Date(b.mergedAt).getTime() - new Date(a.mergedAt).getTime()
     )
-    .slice(0, MAX_ENRICHED);
+    .slice(0, MAX_ENRICHED_MERGED);
+  const prsToEnrich = [...openPRs, ...mergedPRs];
 
   await Promise.all(
-    mergedPRs.map(async (pr) => {
+    prsToEnrich.map(async (pr) => {
       pr.firstApprovalAt = await fetchFirstApprovalAt(owner, repo, pr.number);
     })
   );
@@ -1814,7 +1820,7 @@ async function fetchRepoActivity(
     repoTag
   );
   await fetchPhaseTransitions(owner, repo, proposals);
-  await enrichMergedPRsWithApprovalTimes(owner, repo, prResult.pullRequests);
+  await enrichPullRequestsWithApprovalTimes(owner, repo, prResult.pullRequests);
 
   const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
 
