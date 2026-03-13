@@ -11,6 +11,7 @@
  *   6. Contested decision rate — proposals with any 👎 / total voted
  *   7. Cross-role review rate — reviews where reviewer role ≠ PR author role
  *   8. Voter participation rate — average turnout across governance votes
+ *   9. Proposal lifecycle timing — median discussion, voting, and full-cycle duration
  *
  * Usage:
  *   npm run check-governance-health
@@ -123,6 +124,19 @@ export interface VoterParticipationMetric {
   eligibleVoterCount: number;
 }
 
+export interface ProposalLifecycleTimingMetric {
+  /** Median hours from proposal creation to entering voting, or null if no data */
+  medianDiscussionHours: number | null;
+  /** Median hours from entering voting to terminal phase, or null if no data */
+  medianVotingHours: number | null;
+  /** Median hours from proposal creation to terminal phase, or null if no data */
+  medianCycleHours: number | null;
+  /** Number of proposals that include at least one phase transition */
+  sampleSize: number;
+  /** Number of proposals that reached a terminal phase */
+  resolvedSampleSize: number;
+}
+
 export interface HealthReport {
   generatedAt: string;
   /** Days spanned by the earliest to latest proposal */
@@ -136,6 +150,7 @@ export interface HealthReport {
     contestedDecisionRate: ContestedRateMetric;
     crossRoleReviewRate: CrossRoleReviewMetric;
     voterParticipationRate: VoterParticipationMetric;
+    proposalLifecycleTiming: ProposalLifecycleTimingMetric;
   };
   /** Human-readable warnings for metrics outside healthy thresholds */
   warnings: string[];
@@ -182,6 +197,22 @@ export function computeGini(values: number[]): number {
   }
   return sumOfDiffs / (n * total);
 }
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+const TERMINAL_PHASES = new Set([
+  'ready-to-implement',
+  'implemented',
+  'rejected',
+  'inconclusive',
+]);
 
 // ──────────────────────────────────────────────
 // Metric computation
@@ -385,7 +416,77 @@ export function inferEligibleVoterCount(proposals: Proposal[]): number {
     )
   );
 }
+export function computeProposalLifecycleTiming(
+  proposals: Proposal[]
+): ProposalLifecycleTimingMetric {
+  const discussionDurations: number[] = [];
+  const votingDurations: number[] = [];
+  const cycleDurations: number[] = [];
 
+  let sampleSize = 0;
+  let resolvedSampleSize = 0;
+
+  for (const proposal of proposals) {
+    const transitions = proposal.phaseTransitions;
+    if (!transitions || transitions.length === 0) continue;
+
+    sampleSize++;
+
+    const phaseTimestamps = new Map<string, number>();
+    for (const transition of transitions) {
+      if (!phaseTimestamps.has(transition.phase)) {
+        phaseTimestamps.set(
+          transition.phase,
+          new Date(transition.enteredAt).getTime()
+        );
+      }
+    }
+
+    const discussionStart = phaseTimestamps.get('discussion');
+    const votingStart =
+      phaseTimestamps.get('voting') ?? phaseTimestamps.get('extended-voting');
+
+    let terminalTime: number | undefined;
+    for (const transition of transitions) {
+      if (TERMINAL_PHASES.has(transition.phase)) {
+        terminalTime = new Date(transition.enteredAt).getTime();
+        break;
+      }
+    }
+
+    if (discussionStart !== undefined && votingStart !== undefined) {
+      const discussionHours =
+        (votingStart - discussionStart) / (1000 * 60 * 60);
+      if (discussionHours >= 0) {
+        discussionDurations.push(discussionHours);
+      }
+    }
+
+    if (votingStart !== undefined && terminalTime !== undefined) {
+      const votingHours = (terminalTime - votingStart) / (1000 * 60 * 60);
+      if (votingHours >= 0) {
+        votingDurations.push(votingHours);
+      }
+    }
+
+    if (terminalTime !== undefined) {
+      const createdTime = new Date(proposal.createdAt).getTime();
+      const cycleHours = (terminalTime - createdTime) / (1000 * 60 * 60);
+      if (cycleHours >= 0) {
+        cycleDurations.push(cycleHours);
+      }
+      resolvedSampleSize++;
+    }
+  }
+
+  return {
+    medianDiscussionHours: median(discussionDurations),
+    medianVotingHours: median(votingDurations),
+    medianCycleHours: median(cycleDurations),
+    sampleSize,
+    resolvedSampleSize,
+  };
+}
 export function computeDataWindowDays(proposals: Proposal[]): number {
   if (proposals.length === 0) return 0;
   const times = proposals.map((p) => new Date(p.createdAt).getTime());
@@ -420,6 +521,13 @@ const VOTER_PARTICIPATION_WARN = Number(
 const VOTER_PARTICIPATION_MIN_SAMPLE = Number(
   process.env.GH_VOTER_PARTICIPATION_MIN_SAMPLE ?? '3'
 );
+const DISCUSSION_HOURS_WARN = Number(
+  process.env.GH_DISCUSSION_HOURS_WARN ?? '72'
+);
+const LIFECYCLE_HOURS_WARN = Number(
+  process.env.GH_LIFECYCLE_HOURS_WARN ?? '336'
+);
+const LIFECYCLE_MIN_SAMPLE = Number(process.env.GH_LIFECYCLE_MIN_SAMPLE ?? '5');
 
 export function buildHealthReport(
   data: ActivityData,
@@ -437,6 +545,9 @@ export function buildHealthReport(
   const crossRoleReviewRate = computeCrossRoleReviewRate(
     data.pullRequests,
     data.comments
+  );
+  const proposalLifecycleTiming = computeProposalLifecycleTiming(
+    data.proposals
   );
 
   const rawEligible = Number(env.COLONY_ELIGIBLE_VOTERS);
@@ -534,6 +645,33 @@ export function buildHealthReport(
     );
   }
 
+  if (
+    proposalLifecycleTiming.resolvedSampleSize >= LIFECYCLE_MIN_SAMPLE &&
+    proposalLifecycleTiming.medianDiscussionHours !== null &&
+    proposalLifecycleTiming.medianDiscussionHours > DISCUSSION_HOURS_WARN
+  ) {
+    warnings.push(
+      `Proposal discussion median (${proposalLifecycleTiming.medianDiscussionHours.toFixed(1)}h) exceeds ${DISCUSSION_HOURS_WARN}h threshold — proposals may be stalling before voting`
+    );
+    recommendations.push(
+      `Review open 'hivemoot:discussion' proposals older than ${Math.round(DISCUSSION_HOURS_WARN / 24)} days and move ready threads toward voting or closure.`
+    );
+  }
+
+  if (
+    proposalLifecycleTiming.resolvedSampleSize >= LIFECYCLE_MIN_SAMPLE &&
+    proposalLifecycleTiming.medianCycleHours !== null &&
+    proposalLifecycleTiming.medianCycleHours > LIFECYCLE_HOURS_WARN
+  ) {
+    const days = (proposalLifecycleTiming.medianCycleHours / 24).toFixed(1);
+    warnings.push(
+      `Proposal lifecycle median (${days}d) exceeds ${(LIFECYCLE_HOURS_WARN / 24).toFixed(0)}d threshold`
+    );
+    recommendations.push(
+      `Audit long-running proposals across 'hivemoot:discussion', 'hivemoot:voting', and 'hivemoot:extended-voting' to unblock decisions that are aging past the normal cycle.`
+    );
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     dataWindowDays: computeDataWindowDays(data.proposals),
@@ -546,6 +684,7 @@ export function buildHealthReport(
       contestedDecisionRate,
       crossRoleReviewRate,
       voterParticipationRate,
+      proposalLifecycleTiming,
     },
     warnings,
     recommendations,
@@ -609,6 +748,7 @@ function printReport(report: HealthReport): void {
     contestedDecisionRate,
     crossRoleReviewRate,
     voterParticipationRate,
+    proposalLifecycleTiming,
   } = report.metrics;
 
   console.log(`Governance Health Report`);
@@ -680,6 +820,21 @@ function printReport(report: HealthReport): void {
   console.log(`  avg participation: ${avgPct}`);
   console.log(
     `  quorum failure rate: ${Math.round(voterParticipationRate.quorumFailureRate * 100)}%`
+  );
+  console.log('');
+
+  console.log('Proposal Lifecycle Timing');
+  console.log(
+    `  discussion p50: ${proposalLifecycleTiming.medianDiscussionHours === null ? 'N/A' : `${proposalLifecycleTiming.medianDiscussionHours.toFixed(1)}h`}`
+  );
+  console.log(
+    `  voting p50:     ${proposalLifecycleTiming.medianVotingHours === null ? 'N/A' : `${proposalLifecycleTiming.medianVotingHours.toFixed(1)}h`}`
+  );
+  console.log(
+    `  cycle p50:      ${proposalLifecycleTiming.medianCycleHours === null ? 'N/A' : `${proposalLifecycleTiming.medianCycleHours.toFixed(1)}h`}`
+  );
+  console.log(
+    `  sample:         ${proposalLifecycleTiming.sampleSize} proposals with transitions (${proposalLifecycleTiming.resolvedSampleSize} resolved)`
   );
   console.log('');
 
