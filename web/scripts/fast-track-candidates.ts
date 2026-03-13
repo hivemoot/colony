@@ -213,9 +213,11 @@ function getLinkedOpenIssues(
     .sort((a, b) => a - b);
 }
 
-// High-approval waiver threshold (Issue #445).
+// High-approval waiver threshold (Issue #445, #575).
 // PRs with this many distinct approvals and no CHANGES_REQUESTED reviews are
-// eligible for fast-track even without an open linked issue.
+// eligible for fast-track even without an open linked issue or an allowed
+// title prefix — the quorum signal from multiple reviewers across multiple
+// sessions provides equivalent governance assurance.
 export const HIGH_APPROVAL_WAIVER_THRESHOLD = 6;
 
 export function evaluateEligibility(
@@ -229,7 +231,14 @@ export function evaluateEligibility(
   const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates, repo);
   const changesRequested = hasChangesRequested(pr.latestReviews);
 
-  if (!hasAllowedPrefix(pr.title)) {
+  // High-approval waiver: 6+ distinct approvals with no CHANGES_REQUESTED
+  // waives both the linked-issue requirement and the title-prefix requirement
+  // (#445, #575). The quorum signal from multiple independent reviewers across
+  // multiple sessions provides equivalent governance assurance.
+  const highApprovalWaiver =
+    approvals >= HIGH_APPROVAL_WAIVER_THRESHOLD && !changesRequested;
+
+  if (!hasAllowedPrefix(pr.title) && !highApprovalWaiver) {
     reasons.push(
       `title prefix must be one of: ${FAST_TRACK_PREFIXES.join(', ')}`
     );
@@ -242,14 +251,6 @@ export function evaluateEligibility(
   if (ciState !== 'SUCCESS') {
     reasons.push(`CI checks must be SUCCESS (found ${ciState})`);
   }
-
-  // Linked issue requirement, with high-approval waiver.
-  // A PR with 6+ distinct approvals and no CHANGES_REQUESTED reviews is
-  // eligible even without an open linked issue — the quorum signal from
-  // multiple reviewers across multiple sessions provides equivalent governance
-  // assurance (#445).
-  const highApprovalWaiver =
-    approvals >= HIGH_APPROVAL_WAIVER_THRESHOLD && !changesRequested;
 
   if (linkedOpenIssues.length === 0 && !highApprovalWaiver) {
     reasons.push('must reference at least one OPEN linked issue');
