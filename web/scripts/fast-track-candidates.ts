@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 const DEFAULT_REPO = 'hivemoot/colony';
-const DEFAULT_LIMIT = 200;
+export const DEFAULT_LIMIT = 200;
 
 export const FAST_TRACK_PREFIXES = [
   'fix:',
@@ -96,7 +96,7 @@ interface CliOptions {
   json: boolean;
 }
 
-function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
     limit: DEFAULT_LIMIT,
@@ -115,9 +115,14 @@ function parseArgs(argv: string[]): CliOptions {
     }
 
     if (arg.startsWith('--limit=')) {
-      const value = Number.parseInt(arg.slice('--limit='.length), 10);
+      const raw = arg.slice('--limit='.length).trim();
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value > 0) {
         options.limit = value;
+      } else {
+        console.warn(
+          `Warning: --limit="${raw}" is not a valid positive integer. Ignored.`
+        );
       }
       continue;
     }
@@ -139,7 +144,10 @@ function printHelp(): void {
 
 export function hasAllowedPrefix(title: string): boolean {
   const normalized = title.trim().toLowerCase();
-  return FAST_TRACK_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  // Normalize Conventional Commits scoped variants (e.g. a11y(web): → a11y:)
+  // before matching, so `a11y(scope):` is treated the same as `a11y:`.
+  const withoutScope = normalized.replace(/^([a-z0-9]+)\([^)]*\):/, '$1:');
+  return FAST_TRACK_PREFIXES.some((prefix) => withoutScope.startsWith(prefix));
 }
 
 export function hasChangesRequested(
@@ -250,9 +258,11 @@ function getLinkedOpenIssues(
     .sort((a, b) => a - b);
 }
 
-// High-approval waiver threshold (Issue #445).
+// High-approval waiver threshold (Issue #445, #575).
 // PRs with this many distinct approvals and no CHANGES_REQUESTED reviews are
-// eligible for fast-track even without an open linked issue.
+// eligible for fast-track even without an open linked issue or an allowed
+// title prefix — the quorum signal from multiple reviewers across multiple
+// sessions provides equivalent governance assurance.
 export const HIGH_APPROVAL_WAIVER_THRESHOLD = 6;
 
 export function evaluateEligibility(
@@ -268,7 +278,14 @@ export function evaluateEligibility(
   const workflowApprovalOwner = getWorkflowApprovalBlocker(pr, repo);
   const workflowApprovalBlocked = workflowApprovalOwner != null;
 
-  if (!hasAllowedPrefix(pr.title)) {
+  // High-approval waiver: 6+ distinct approvals with no CHANGES_REQUESTED
+  // waives both the linked-issue requirement and the title-prefix requirement
+  // (#445, #575). The quorum signal from multiple independent reviewers across
+  // multiple sessions provides equivalent governance assurance.
+  const highApprovalWaiver =
+    approvals >= HIGH_APPROVAL_WAIVER_THRESHOLD && !changesRequested;
+
+  if (!hasAllowedPrefix(pr.title) && !highApprovalWaiver) {
     reasons.push(
       `title prefix must be one of: ${FAST_TRACK_PREFIXES.join(', ')}`
     );
@@ -286,14 +303,6 @@ export function evaluateEligibility(
       );
     }
   }
-
-  // Linked issue requirement, with high-approval waiver.
-  // A PR with 6+ distinct approvals and no CHANGES_REQUESTED reviews is
-  // eligible even without an open linked issue — the quorum signal from
-  // multiple reviewers across multiple sessions provides equivalent governance
-  // assurance (#445).
-  const highApprovalWaiver =
-    approvals >= HIGH_APPROVAL_WAIVER_THRESHOLD && !changesRequested;
 
   if (linkedOpenIssues.length === 0 && !highApprovalWaiver) {
     reasons.push('must reference at least one OPEN linked issue');

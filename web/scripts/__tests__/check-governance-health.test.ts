@@ -10,10 +10,16 @@ import {
   computeCrossRoleReviewRate,
   computeDataWindowDays,
   computeGini,
+  computeMergeBacklogDepth,
+  computeMergeLatency,
   computeContestedRate,
   computePrCycleTime,
+  computeReviewLatency,
   computeRoleDiversity,
+  computeVoterParticipationRate,
   extractRole,
+  hadQuorumFailure,
+  inferEligibleVoterCount,
   percentile,
   resolveActivityFile,
 } from '../check-governance-health';
@@ -217,6 +223,106 @@ describe('computePrCycleTime', () => {
     });
     const result = computePrCycleTime([pr]);
     expect(result.sampleSize).toBe(0);
+  });
+});
+
+describe('computeReviewLatency', () => {
+  it('computes open-to-first-approval latency for merged PRs', () => {
+    const prs = [
+      makePr({
+        number: 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        firstApprovalAt: '2026-02-01T12:00:00Z',
+      }),
+      makePr({
+        number: 2,
+        createdAt: '2026-02-01T00:00:00Z',
+        firstApprovalAt: '2026-02-02T00:00:00Z',
+      }),
+    ];
+
+    const result = computeReviewLatency(prs);
+    expect(result.sampleSize).toBe(2);
+    expect(result.p50).toBe(720);
+    expect(result.p95).toBe(1440);
+  });
+
+  it('ignores PRs without approval timestamps', () => {
+    const result = computeReviewLatency([makePr({ firstApprovalAt: null })]);
+    expect(result.sampleSize).toBe(0);
+    expect(result.p50).toBeNull();
+  });
+});
+
+describe('computeMergeLatency', () => {
+  it('computes first-approval-to-merge latency for merged PRs', () => {
+    const prs = [
+      makePr({
+        number: 1,
+        firstApprovalAt: '2026-02-01T12:00:00Z',
+        mergedAt: '2026-02-02T00:00:00Z',
+      }),
+      makePr({
+        number: 2,
+        firstApprovalAt: '2026-02-01T06:00:00Z',
+        mergedAt: '2026-02-03T00:00:00Z',
+      }),
+    ];
+
+    const result = computeMergeLatency(prs);
+    expect(result.sampleSize).toBe(2);
+    expect(result.p50).toBe(720);
+    expect(result.p95).toBe(2520);
+  });
+
+  it('ignores negative approval-to-merge durations', () => {
+    const result = computeMergeLatency([
+      makePr({
+        firstApprovalAt: '2026-02-03T00:00:00Z',
+        mergedAt: '2026-02-02T00:00:00Z',
+      }),
+    ]);
+    expect(result.sampleSize).toBe(0);
+  });
+});
+
+describe('computeMergeBacklogDepth', () => {
+  it('counts approved open PRs and reports the oldest age in hours', () => {
+    const result = computeMergeBacklogDepth(
+      [
+        makePr({
+          number: 1,
+          state: 'open',
+          mergedAt: null,
+          firstApprovalAt: '2026-02-02T00:00:00Z',
+        }),
+        makePr({
+          number: 2,
+          state: 'open',
+          mergedAt: null,
+          firstApprovalAt: '2026-02-04T00:00:00Z',
+        }),
+        makePr({
+          number: 3,
+          state: 'open',
+          mergedAt: null,
+          firstApprovalAt: null,
+        }),
+      ],
+      '2026-02-05T00:00:00Z'
+    );
+
+    expect(result.depth).toBe(2);
+    expect(result.eldestApprovedHours).toBe(72);
+  });
+
+  it('returns null eldest age when no approved open PRs exist', () => {
+    const result = computeMergeBacklogDepth(
+      [makePr({ state: 'open', mergedAt: null, firstApprovalAt: null })],
+      '2026-02-05T00:00:00Z'
+    );
+    expect(result.depth).toBe(0);
+    expect(result.eldestApprovedHours).toBeNull();
   });
 });
 
@@ -425,6 +531,139 @@ describe('computeDataWindowDays', () => {
 });
 
 // ──────────────────────────────────────────────
+// hadQuorumFailure
+// ──────────────────────────────────────────────
+
+describe('hadQuorumFailure', () => {
+  it('returns true when current phase is extended-voting', () => {
+    expect(hadQuorumFailure(makeProposal({ phase: 'extended-voting' }))).toBe(
+      true
+    );
+  });
+
+  it('returns true when phaseTransitions includes extended-voting', () => {
+    expect(
+      hadQuorumFailure(
+        makeProposal({
+          phase: 'ready-to-implement',
+          phaseTransitions: [
+            { phase: 'voting', enteredAt: '2026-02-01T00:00:00Z' },
+            { phase: 'extended-voting', enteredAt: '2026-02-03T00:00:00Z' },
+            { phase: 'ready-to-implement', enteredAt: '2026-02-05T00:00:00Z' },
+          ],
+        })
+      )
+    ).toBe(true);
+  });
+
+  it('returns false when extended-voting is absent from transitions', () => {
+    expect(
+      hadQuorumFailure(
+        makeProposal({
+          phase: 'ready-to-implement',
+          phaseTransitions: [
+            { phase: 'voting', enteredAt: '2026-02-01T00:00:00Z' },
+            { phase: 'ready-to-implement', enteredAt: '2026-02-03T00:00:00Z' },
+          ],
+        })
+      )
+    ).toBe(false);
+  });
+
+  it('returns false when phaseTransitions is absent', () => {
+    expect(hadQuorumFailure(makeProposal({ phase: 'implemented' }))).toBe(
+      false
+    );
+  });
+});
+
+// ──────────────────────────────────────────────
+// inferEligibleVoterCount
+// ──────────────────────────────────────────────
+
+describe('inferEligibleVoterCount', () => {
+  it('returns 1 for empty proposals', () => {
+    expect(inferEligibleVoterCount([])).toBe(1);
+  });
+
+  it('returns 1 when no proposals have votesSummary', () => {
+    expect(inferEligibleVoterCount([makeProposal()])).toBe(1);
+  });
+
+  it('returns max total votes across cycles', () => {
+    const proposals = [
+      makeProposal({ votesSummary: { thumbsUp: 2, thumbsDown: 0 } }),
+      makeProposal({ votesSummary: { thumbsUp: 3, thumbsDown: 1 } }), // 4 total
+      makeProposal({ votesSummary: { thumbsUp: 1, thumbsDown: 0 } }),
+    ];
+    expect(inferEligibleVoterCount(proposals)).toBe(4);
+  });
+});
+
+// ──────────────────────────────────────────────
+// computeVoterParticipationRate
+// ──────────────────────────────────────────────
+
+describe('computeVoterParticipationRate', () => {
+  it('returns null averageParticipationRate and zero quorumFailureRate for no voted proposals', () => {
+    const result = computeVoterParticipationRate([], 2);
+    expect(result.votingCyclesAnalyzed).toBe(0);
+    expect(result.averageParticipationRate).toBeNull();
+    expect(result.quorumFailureRate).toBe(0);
+    expect(result.eligibleVoterCount).toBe(2);
+  });
+
+  it('excludes proposals without votesSummary', () => {
+    const result = computeVoterParticipationRate(
+      [makeProposal({ phase: 'discussion' })],
+      2
+    );
+    expect(result.votingCyclesAnalyzed).toBe(0);
+  });
+
+  it('computes correct averageParticipationRate', () => {
+    const proposals = [
+      makeProposal({ votesSummary: { thumbsUp: 2, thumbsDown: 0 } }), // 2/4 = 0.5
+      makeProposal({ votesSummary: { thumbsUp: 4, thumbsDown: 0 } }), // 4/4 = 1.0
+    ];
+    const result = computeVoterParticipationRate(proposals, 4);
+    expect(result.votingCyclesAnalyzed).toBe(2);
+    expect(result.averageParticipationRate).toBeCloseTo(0.75);
+    expect(result.quorumFailureRate).toBe(0);
+  });
+
+  it('caps participation rate at 1 when votes exceed eligibleVoterCount', () => {
+    const proposals = [
+      makeProposal({ votesSummary: { thumbsUp: 5, thumbsDown: 0 } }),
+    ];
+    const result = computeVoterParticipationRate(proposals, 2);
+    expect(result.averageParticipationRate).toBe(1);
+  });
+
+  it('computes quorumFailureRate from extended-voting transitions', () => {
+    const proposals = [
+      makeProposal({
+        number: 1,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+        phaseTransitions: [
+          { phase: 'voting', enteredAt: '2026-02-01T00:00:00Z' },
+          { phase: 'extended-voting', enteredAt: '2026-02-03T00:00:00Z' },
+          { phase: 'ready-to-implement', enteredAt: '2026-02-05T00:00:00Z' },
+        ],
+        phase: 'ready-to-implement',
+      }),
+      makeProposal({
+        number: 2,
+        votesSummary: { thumbsUp: 3, thumbsDown: 0 },
+        phase: 'ready-to-implement',
+      }),
+    ];
+    const result = computeVoterParticipationRate(proposals, 3);
+    expect(result.quorumFailureRate).toBeCloseTo(0.5);
+  });
+});
+
+// ──────────────────────────────────────────────
 // buildHealthReport
 // ──────────────────────────────────────────────
 
@@ -434,10 +673,27 @@ describe('buildHealthReport', () => {
     expect(report.generatedAt).toBeTruthy();
     expect(report.dataWindowDays).toBe(0);
     expect(report.metrics.prCycleTime).toBeDefined();
+    expect(report.metrics.reviewLatency).toBeDefined();
+    expect(report.metrics.mergeLatency).toBeDefined();
+    expect(report.metrics.mergeBacklogDepth).toBeDefined();
     expect(report.metrics.roleDiversity).toBeDefined();
     expect(report.metrics.contestedDecisionRate).toBeDefined();
     expect(report.metrics.crossRoleReviewRate).toBeDefined();
+    expect(report.metrics.voterParticipationRate).toBeDefined();
     expect(report.warnings).toBeInstanceOf(Array);
+    expect(report.recommendations).toBeInstanceOf(Array);
+  });
+
+  it('recommendations and warnings have the same length', () => {
+    const longPrs = Array.from({ length: 5 }, (_, i) =>
+      makePr({
+        number: i + 1,
+        createdAt: '2026-02-01T00:00:00Z',
+        mergedAt: '2026-02-15T00:00:00Z',
+      })
+    );
+    const report = buildHealthReport(minimalData({ pullRequests: longPrs }));
+    expect(report.recommendations).toHaveLength(report.warnings.length);
   });
 
   it('emits no warnings for healthy data', () => {
@@ -486,6 +742,7 @@ describe('buildHealthReport', () => {
       minimalData({ pullRequests: prs, proposals, comments })
     );
     expect(report.warnings).toHaveLength(0);
+    expect(report.recommendations).toHaveLength(0);
   });
 
   it('emits PR cycle time warning when p95 exceeds 7 days', () => {
@@ -498,6 +755,9 @@ describe('buildHealthReport', () => {
     );
     const report = buildHealthReport(minimalData({ pullRequests: longPrs }));
     expect(report.warnings.some((w) => w.includes('PR cycle time'))).toBe(true);
+    expect(
+      report.recommendations.some((r) => r.includes('hivemoot:merge-ready'))
+    ).toBe(true);
   });
 
   it('emits role concentration warning when top role > 60%', () => {
@@ -506,6 +766,12 @@ describe('buildHealthReport', () => {
     );
     const report = buildHealthReport(minimalData({ proposals }));
     expect(report.warnings.some((w) => w.includes('Role concentration'))).toBe(
+      true
+    );
+    expect(
+      report.recommendations.some((r) => r.includes('hivemoot:discussion'))
+    ).toBe(true);
+    expect(report.recommendations.some((r) => r.includes('builder'))).toBe(
       true
     );
   });
@@ -520,6 +786,9 @@ describe('buildHealthReport', () => {
     const report = buildHealthReport(minimalData({ proposals }));
     expect(
       report.warnings.some((w) => w.includes('Contested decision rate'))
+    ).toBe(true);
+    expect(
+      report.recommendations.some((r) => r.includes('rubber-stamping'))
     ).toBe(true);
   });
 
@@ -543,6 +812,80 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Cross-role review rate'))
     ).toBe(true);
+    expect(
+      report.recommendations.some((r) => r.includes('hivemoot:candidate'))
+    ).toBe(true);
+  });
+
+  it('emits voter participation warning when avg rate < 50% with enough cycles', () => {
+    // 3 cycles, each with 1 out of 4 eligible voters participating (25%)
+    const proposals = Array.from({ length: 3 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 1, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(minimalData({ proposals }), {
+      COLONY_ELIGIBLE_VOTERS: '4',
+    });
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(true);
+  });
+
+  it('does not emit voter participation warning when avg rate >= 50%', () => {
+    const proposals = Array.from({ length: 3 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(minimalData({ proposals }), {
+      COLONY_ELIGIBLE_VOTERS: '2',
+    });
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(false);
+  });
+
+  it('does not emit voter participation warning with fewer than 3 voting cycles', () => {
+    const proposals = Array.from({ length: 2 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 1, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(minimalData({ proposals }), {
+      COLONY_ELIGIBLE_VOTERS: '4',
+    });
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(false);
+  });
+
+  it('uses agents.length as denominator when COLONY_ELIGIBLE_VOTERS is unset', () => {
+    // 7 agents configured, every proposal gets exactly 2 votes.
+    // With the old peak-votes fallback, eligible = 2, participation = 100% — no warning.
+    // With agents.length fallback, eligible = 7, participation ≈ 29% — warning fires.
+    const agents = Array.from({ length: 7 }, (_, i) => ({
+      login: `hivemoot-agent-${i}`,
+    }));
+    const proposals = Array.from({ length: 3 }, (_, i) =>
+      makeProposal({
+        number: i + 1,
+        votesSummary: { thumbsUp: 2, thumbsDown: 0 },
+      })
+    );
+    const report = buildHealthReport(
+      minimalData({ agents, proposals }),
+      {} // no COLONY_ELIGIBLE_VOTERS
+    );
+    const metric = report.metrics.voterParticipationRate;
+    expect(metric.eligibleVoterCount).toBe(7);
+    expect(metric.averageParticipationRate).toBeCloseTo(2 / 7);
+    expect(
+      report.warnings.some((w) => w.includes('Voter participation rate'))
+    ).toBe(true);
   });
 
   it('does not emit contested warning with fewer than 5 voted proposals', () => {
@@ -556,6 +899,38 @@ describe('buildHealthReport', () => {
     expect(
       report.warnings.some((w) => w.includes('Contested decision rate'))
     ).toBe(false);
+  });
+
+  it('emits merge latency warning when p95 exceeds 48 hours', () => {
+    const prs = Array.from({ length: 3 }, (_, i) =>
+      makePr({
+        number: i + 1,
+        firstApprovalAt: '2026-02-01T00:00:00Z',
+        mergedAt: '2026-02-04T00:00:00Z',
+      })
+    );
+    const report = buildHealthReport(minimalData({ pullRequests: prs }));
+    expect(report.warnings.some((w) => w.includes('Merge latency'))).toBe(true);
+  });
+
+  it('emits merge backlog warning when approved open PR depth exceeds threshold', () => {
+    const prs = Array.from({ length: 11 }, (_, i) =>
+      makePr({
+        number: i + 1,
+        state: 'open',
+        mergedAt: null,
+        firstApprovalAt: '2026-02-10T00:00:00Z',
+      })
+    );
+    const report = buildHealthReport(
+      minimalData({
+        generatedAt: '2026-02-14T01:00:00Z',
+        pullRequests: prs,
+      })
+    );
+    expect(report.warnings.some((w) => w.includes('Merge backlog depth'))).toBe(
+      true
+    );
   });
 });
 

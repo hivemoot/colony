@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   countDistinctApprovals,
+  DEFAULT_LIMIT,
   evaluateEligibility,
   getWorkflowApprovalBlocker,
   hasAllowedPrefix,
@@ -8,6 +9,7 @@ import {
   HIGH_APPROVAL_WAIVER_THRESHOLD,
   isMergeReady,
   normalizeMergeStateStatus,
+  parseArgs,
   printHumanReport,
 } from '../fast-track-candidates';
 
@@ -172,9 +174,22 @@ describe('hasAllowedPrefix', () => {
     expect(hasAllowedPrefix('a11y: improve focus ring')).toBe(true);
   });
 
+  it('accepts scoped Conventional Commits variants of approved prefixes', () => {
+    expect(
+      hasAllowedPrefix('a11y(web): make vote bar transitions motion-safe')
+    ).toBe(true);
+    expect(hasAllowedPrefix('fix(scope): correct behaviour')).toBe(true);
+    expect(hasAllowedPrefix('chore(deps): bump package')).toBe(true);
+  });
+
   it('rejects non-fast-track prefixes', () => {
     expect(hasAllowedPrefix('feat: add analytics widget')).toBe(false);
     expect(hasAllowedPrefix('refactor: simplify types')).toBe(false);
+  });
+
+  it('rejects scoped variants of non-fast-track prefixes', () => {
+    expect(hasAllowedPrefix('feat(ui): add analytics widget')).toBe(false);
+    expect(hasAllowedPrefix('refactor(utils): simplify types')).toBe(false);
   });
 });
 
@@ -368,6 +383,45 @@ describe('evaluateEligibility', () => {
     );
   });
 
+  it('waives prefix requirement for feat: PR with 6+ approvals and no CHANGES_REQUESTED', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 110,
+      title: 'feat: add new feature with high quorum',
+      url: 'https://example.test/pr/110',
+      latestReviews: approvers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.highApprovalWaiver).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('does not waive prefix for feat: PR with fewer than 6 approvals', () => {
+    const result = evaluateEligibility({
+      number: 111,
+      title: 'feat: add feature with insufficient quorum',
+      url: 'https://example.test/pr/111',
+      latestReviews: Array.from({ length: 5 }, (_, i) => ({
+        state: 'APPROVED',
+        author: { login: `agent-${i}` },
+      })),
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 42, state: 'OPEN' }],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      `title prefix must be one of: ${ALLOWED_PREFIXES.join(', ')}`
+    );
+  });
+
   it('does not apply waiver when fewer than 6 approvals', () => {
     const result = evaluateEligibility({
       number: 107,
@@ -500,5 +554,39 @@ describe('getWorkflowApprovalBlocker', () => {
         statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
       })
     ).toBeNull();
+  });
+});
+
+describe('parseArgs', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('accepts a valid --limit value', () => {
+    const opts = parseArgs(['--limit=50']);
+    expect(opts.limit).toBe(50);
+  });
+
+  it('warns and ignores a partial-numeric --limit value (5oops)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=5oops']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--limit="5oops"')
+    );
+  });
+
+  it('warns and ignores a non-numeric --limit value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=abc']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--limit="abc"'));
+  });
+
+  it('warns and ignores --limit=0 (not a positive integer)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=0']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--limit="0"'));
   });
 });

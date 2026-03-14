@@ -98,6 +98,21 @@ describe('parseReplayArgs', () => {
   it('throws on unsupported flags', () => {
     expect(() => parseReplayArgs(['--wat'])).toThrow(/Unknown argument/);
   });
+
+  it('throws with a clear message for an invalid --from date', () => {
+    expect(() => parseReplayArgs(['--from=not-a-date'])).toThrow(
+      /--from must be an ISO-8601 date/
+    );
+  });
+
+  it('throws with a clear message when --from is later than --to', () => {
+    expect(() =>
+      parseReplayArgs([
+        '--from=2026-02-10T00:00:00Z',
+        '--to=2026-02-01T00:00:00Z',
+      ])
+    ).toThrow(/--from cannot be later than --to/);
+  });
 });
 
 describe('formatMissingHistoryFileMessage', () => {

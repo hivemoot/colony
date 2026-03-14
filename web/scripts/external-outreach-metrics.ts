@@ -71,7 +71,7 @@ interface IssueCommentApiResponse {
   body?: string;
 }
 
-function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
     baselineStars: null,
@@ -100,20 +100,27 @@ function parseArgs(argv: string[]): CliOptions {
     }
 
     if (arg.startsWith('--baseline-stars=')) {
-      const value = Number.parseInt(
-        arg.slice('--baseline-stars='.length).trim(),
-        10
-      );
+      const raw = arg.slice('--baseline-stars='.length).trim();
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value >= 0) {
         options.baselineStars = value;
+      } else {
+        console.warn(
+          `Warning: --baseline-stars="${raw}" is not a valid non-negative integer. Ignored.`
+        );
       }
       continue;
     }
 
     if (arg.startsWith('--issue=')) {
-      const value = Number.parseInt(arg.slice('--issue='.length).trim(), 10);
+      const raw = arg.slice('--issue='.length).trim();
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value > 0) {
         options.issue = value;
+      } else {
+        console.warn(
+          `Warning: --issue="${raw}" is not a valid positive integer. Ignored.`
+        );
       }
       continue;
     }
