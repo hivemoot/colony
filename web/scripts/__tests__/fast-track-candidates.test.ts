@@ -465,6 +465,19 @@ describe('getWorkflowApprovalBlocker', () => {
     ).toBe('hivemoot-heater');
   });
 
+  it('detects cross-repo PRs with no checks and clean merge state', () => {
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 203,
+        title: 'fix: no required checks repo',
+        url: 'https://example.test/pr/203',
+        mergeStateStatus: 'CLEAN',
+        headRepositoryOwner: { login: 'hivemoot-heater' },
+        statusCheckRollup: [],
+      })
+    ).toBe('hivemoot-heater');
+  });
+
   it('does not flag same-owner PRs or PRs that already have checks', () => {
     expect(
       getWorkflowApprovalBlocker({
