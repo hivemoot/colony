@@ -269,8 +269,7 @@ export function computeBenchmarkMetrics(
     mergeRate:
       openedWithinWindow.length > 0
         ? openedWithinWindow.filter(
-            (pr) =>
-              pr.mergedAt !== null && new Date(pr.mergedAt).getTime() <= endMs
+            (pr) => pr.mergedAt && new Date(pr.mergedAt).getTime() <= endMs
           ).length / openedWithinWindow.length
         : null,
     staleOpenPrShare:
