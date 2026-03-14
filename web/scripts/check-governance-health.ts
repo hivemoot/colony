@@ -15,6 +15,7 @@
  * Usage:
  *   npm run check-governance-health
  *   npm run check-governance-health -- --json
+ *   npm run check-governance-health -- --help
  *   ACTIVITY_FILE=/path/to/activity.json npm run check-governance-health
  */
 
@@ -708,14 +709,48 @@ export function resolveActivityFile(
   return env.ACTIVITY_FILE ?? DEFAULT_ACTIVITY_FILE;
 }
 
+interface CliOptions {
+  json: boolean;
+}
+
+function printHelp(): void {
+  console.log('Usage: npm run check-governance-health -- [--json] [--help]');
+  console.log('');
+  console.log('Options:');
+  console.log('  --json   Output the full health report as JSON');
+  console.log('  --help   Show this help message');
+  console.log('');
+  console.log(
+    'Set ACTIVITY_FILE env var to override the default activity.json path.'
+  );
+}
+
+export function parseArgs(argv: string[]): CliOptions {
+  const options: CliOptions = { json: false };
+
+  for (const arg of argv) {
+    if (arg === '--json') {
+      options.json = true;
+      continue;
+    }
+    if (arg === '--help') {
+      printHelp();
+      process.exit(0);
+    }
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return options;
+}
+
 function isDirectExecution(): boolean {
   if (!process.argv[1]) return false;
   return resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 }
 
 async function main(): Promise<void> {
+  const options = parseArgs(process.argv.slice(2));
   const activityFile = resolveActivityFile();
-  const isJson = process.argv.includes('--json');
 
   if (!existsSync(activityFile)) {
     console.error(`Activity file not found: ${activityFile}`);
@@ -728,7 +763,7 @@ async function main(): Promise<void> {
   const data = JSON.parse(readFileSync(activityFile, 'utf-8')) as ActivityData;
   const report = buildHealthReport(data);
 
-  if (isJson) {
+  if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
     printReport(report);
