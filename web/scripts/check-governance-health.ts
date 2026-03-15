@@ -20,6 +20,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { computeGini } from '../shared/governance-snapshot';
 import type {
   ActivityData,
   Comment,
@@ -169,19 +170,6 @@ export function percentile(sorted: number[], p: number): number | null {
  * Compute the Gini coefficient for an array of non-negative values.
  * Returns 0 for arrays of length ≤ 1 or all-zero arrays.
  */
-export function computeGini(values: number[]): number {
-  if (values.length <= 1) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const n = sorted.length;
-  const total = sorted.reduce((a, b) => a + b, 0);
-  if (total === 0) return 0;
-  let sumOfDiffs = 0;
-  for (let i = 0; i < n; i++) {
-    sumOfDiffs += (2 * (i + 1) - n - 1) * sorted[i];
-  }
-  return sumOfDiffs / (n * total);
-}
-
 // ──────────────────────────────────────────────
 // Metric computation
 // ──────────────────────────────────────────────
