@@ -243,6 +243,42 @@ function extractFileBackedFaviconHref(html: string): string {
   return '';
 }
 
+export function hasAtomAutodiscoveryLink(html: string): boolean {
+  const tagPattern = /<link\b[^>]*>/gi;
+  const attrPattern = (attribute: string): RegExp =>
+    new RegExp(
+      `\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      'i'
+    );
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tag = match[0];
+    const relMatch = tag.match(attrPattern('rel'));
+    const relValue = (
+      relMatch?.[1] ??
+      relMatch?.[2] ??
+      relMatch?.[3] ??
+      ''
+    ).trim();
+    if (!relValue.toLowerCase().split(/\s+/).includes('alternate')) {
+      continue;
+    }
+
+    const typeMatch = tag.match(attrPattern('type'));
+    const typeValue = (
+      typeMatch?.[1] ??
+      typeMatch?.[2] ??
+      typeMatch?.[3] ??
+      ''
+    ).trim();
+    if (typeValue.toLowerCase() === 'application/atom+xml') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function runChecks(): Promise<CheckResult[]> {
   const indexHtml = readIfExists(INDEX_HTML_PATH);
   const sitemapXml = readIfExists(SITEMAP_PATH);
@@ -352,28 +388,44 @@ async function runChecks(): Promise<CheckResult[]> {
     ok: rootRes?.status === 200,
   });
 
-  const deployedHubChecks = await Promise.all(
-    [
-      { label: 'Deployed /agents/ hub is reachable', path: 'agents/' },
-      {
-        label: 'Deployed /proposals/ hub is reachable',
-        path: 'proposals/',
-      },
-    ].map(async ({ label, path }) => {
-      const url = resolveDeployedPageUrl(baseUrl, path);
-      const response = await fetchWithTimeout(url);
-      const ok = response?.status === 200;
-      return {
-        label,
-        ok,
-        details: ok
-          ? `GET ${url} returned 200`
-          : `GET ${url} returned ${response?.status ?? 'no response'}`,
-      };
-    })
+  const agentsHubUrl = resolveDeployedPageUrl(baseUrl, 'agents/');
+  const proposalsHubUrl = resolveDeployedPageUrl(baseUrl, 'proposals/');
+  const [agentsHubRes, proposalsHubRes] = await Promise.all([
+    fetchWithTimeout(agentsHubUrl),
+    fetchWithTimeout(proposalsHubUrl),
+  ]);
+
+  const agentsOk = agentsHubRes?.status === 200;
+  const proposalsOk = proposalsHubRes?.status === 200;
+  results.push(
+    {
+      label: 'Deployed /agents/ hub is reachable',
+      ok: agentsOk,
+      details: agentsOk
+        ? `GET ${agentsHubUrl} returned 200`
+        : `GET ${agentsHubUrl} returned ${agentsHubRes?.status ?? 'no response'}`,
+    },
+    {
+      label: 'Deployed /proposals/ hub is reachable',
+      ok: proposalsOk,
+      details: proposalsOk
+        ? `GET ${proposalsHubUrl} returned 200`
+        : `GET ${proposalsHubUrl} returned ${proposalsHubRes?.status ?? 'no response'}`,
+    }
   );
 
-  results.push(...deployedHubChecks);
+  const proposalsHubHtml =
+    proposalsHubRes?.status === 200 ? await proposalsHubRes.text() : '';
+  const atomAutodiscoveryPresent = hasAtomAutodiscoveryLink(proposalsHubHtml);
+  results.push({
+    label: 'Deployed /proposals/ hub exposes Atom feed autodiscovery',
+    ok: atomAutodiscoveryPresent,
+    details: atomAutodiscoveryPresent
+      ? 'Found <link rel="alternate" type="application/atom+xml"> on /proposals/ hub'
+      : proposalsHubRes?.status === 200
+        ? 'Missing <link rel="alternate" type="application/atom+xml"> on /proposals/ hub'
+        : `Could not fetch /proposals/ hub: ${proposalsHubRes?.status ?? 'no response'}`,
+  });
 
   let deployedRootHtml = '';
   let deployedJsonLd = false;

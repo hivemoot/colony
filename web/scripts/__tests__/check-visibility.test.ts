@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildRepositoryApiUrl,
+  hasAtomAutodiscoveryLink,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
   normalizeHttpsUrl,
@@ -180,6 +181,44 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('hasAtomAutodiscoveryLink', () => {
+  it('detects a well-formed Atom autodiscovery link tag', () => {
+    const html = `<head>
+      <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="Colony Proposals">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+
+  it('returns false when the autodiscovery link is absent', () => {
+    const html = `<head>
+      <link rel="stylesheet" href="/style.css">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(false);
+  });
+
+  it('returns false for an empty string', () => {
+    expect(hasAtomAutodiscoveryLink('')).toBe(false);
+  });
+
+  it('handles attribute order variations', () => {
+    const html = `<link type="application/atom+xml" rel="alternate" href="/feed.xml">`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+
+  it('is case-insensitive for the type attribute', () => {
+    const html = `<link rel="alternate" type="Application/Atom+XML" href="/feed.xml">`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+
+  it('detects Atom link when another alternate link comes first', () => {
+    const html = `<head>
+      <link rel="alternate" type="application/json" href="/api/feed">
+      <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="Colony Proposals">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
   });
 });
 
