@@ -982,11 +982,14 @@ describe('parseArgs', () => {
     const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit');
     });
-    expect(() => parseArgs(['--help'])).toThrow('process.exit');
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('Usage:'));
-    expect(exit).toHaveBeenCalledWith(0);
-    log.mockRestore();
-    exit.mockRestore();
+    try {
+      expect(() => parseArgs(['--help'])).toThrow('process.exit');
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('Usage:'));
+      expect(exit).toHaveBeenCalledWith(0);
+    } finally {
+      log.mockRestore();
+      exit.mockRestore();
+    }
   });
 
   it('throws on an unknown flag', () => {
