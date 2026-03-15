@@ -49,6 +49,10 @@ import { computeGovernanceHistoryIntegrity } from './governance-history-integrit
 import { evaluateGeneratedAtFreshness } from './freshness';
 import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
 import { buildChaossSnapshot } from './chaoss-snapshot';
+import {
+  buildHealthReport,
+  type HealthReport,
+} from './check-governance-health';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -56,6 +60,7 @@ const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
 const METRICS_SNAPSHOT_FILE = join(OUTPUT_DIR, 'metrics', 'snapshot.json');
+const HEALTH_HISTORY_FILE = join(OUTPUT_DIR, 'governance-health-history.json');
 const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
@@ -1959,6 +1964,103 @@ async function generateActivityData(): Promise<ActivityData> {
 /**
  * Build an empty governance history artifact.
  */
+// ──────────────────────────────────────────────
+// Governance health history
+// ──────────────────────────────────────────────
+
+export const HEALTH_HISTORY_SCHEMA_VERSION = 1;
+export const HEALTH_HISTORY_MAX_ENTRIES = 90;
+
+export interface GovernanceHealthEntry {
+  timestamp: string;
+  metrics: {
+    prCycleTimeP50Hours: number | null;
+    prCycleTimeP95Hours: number | null;
+    prCycleTimeSampleSize: number;
+    reviewLatencyP50Hours: number | null;
+    reviewLatencyP95Hours: number | null;
+    reviewLatencySampleSize: number;
+    mergeLatencyP50Hours: number | null;
+    mergeLatencyP95Hours: number | null;
+    mergeLatencySampleSize: number;
+    mergeBacklogDepth: number;
+    roleDiversityGini: number;
+    roleDiversityUniqueRoles: number;
+    contestedDecisionRate: number | null;
+    crossRoleReviewRate: number | null;
+    voterParticipationRate: number | null;
+  };
+  warningCount: number;
+}
+
+export interface GovernanceHealthHistory {
+  schemaVersion: number;
+  generatedAt: string;
+  snapshots: GovernanceHealthEntry[];
+}
+
+export function buildGovernanceHealthEntry(
+  report: HealthReport
+): GovernanceHealthEntry {
+  const m = report.metrics;
+  return {
+    timestamp: report.generatedAt,
+    metrics: {
+      prCycleTimeP50Hours: m.prCycleTime.p50,
+      prCycleTimeP95Hours: m.prCycleTime.p95,
+      prCycleTimeSampleSize: m.prCycleTime.sampleSize,
+      reviewLatencyP50Hours: m.reviewLatency.p50,
+      reviewLatencyP95Hours: m.reviewLatency.p95,
+      reviewLatencySampleSize: m.reviewLatency.sampleSize,
+      mergeLatencyP50Hours: m.mergeLatency.p50,
+      mergeLatencyP95Hours: m.mergeLatency.p95,
+      mergeLatencySampleSize: m.mergeLatency.sampleSize,
+      mergeBacklogDepth: m.mergeBacklogDepth.depth,
+      roleDiversityGini: m.roleDiversity.giniIndex,
+      roleDiversityUniqueRoles: m.roleDiversity.uniqueRoles,
+      contestedDecisionRate: m.contestedDecisionRate.rate,
+      crossRoleReviewRate: m.crossRoleReviewRate.rate,
+      voterParticipationRate: m.voterParticipationRate.averageParticipationRate,
+    },
+    warningCount: report.warnings.length,
+  };
+}
+
+export function appendGovernanceHealthEntry(
+  existing: GovernanceHealthEntry[],
+  entry: GovernanceHealthEntry
+): GovernanceHealthEntry[] {
+  const updated = [...existing, entry];
+  if (updated.length > HEALTH_HISTORY_MAX_ENTRIES) {
+    return updated.slice(updated.length - HEALTH_HISTORY_MAX_ENTRIES);
+  }
+  return updated;
+}
+
+export function loadGovernanceHealthHistory(
+  filePath: string = HEALTH_HISTORY_FILE
+): GovernanceHealthHistory {
+  try {
+    if (existsSync(filePath)) {
+      const raw = readFileSync(filePath, 'utf-8');
+      const parsed = JSON.parse(raw) as GovernanceHealthHistory;
+      if (
+        parsed.schemaVersion === HEALTH_HISTORY_SCHEMA_VERSION &&
+        Array.isArray(parsed.snapshots)
+      ) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fall through to empty history
+  }
+  return {
+    schemaVersion: HEALTH_HISTORY_SCHEMA_VERSION,
+    generatedAt: new Date().toISOString(),
+    snapshots: [],
+  };
+}
+
 function emptyHistoryArtifact(generatedAt: string): GovernanceHistoryArtifact {
   const artifactWithoutIntegrity = buildGovernanceHistoryArtifact({
     generatedAt,
@@ -2043,6 +2145,27 @@ async function main(): Promise<void> {
       JSON.stringify(chaossSnapshot, null, 2)
     );
     console.log(`CHAOSS metrics snapshot written to ${METRICS_SNAPSHOT_FILE}`);
+
+    // Append governance health snapshot
+    const healthReport = buildHealthReport(data);
+    const healthEntry = buildGovernanceHealthEntry(healthReport);
+    const healthHistory = loadGovernanceHealthHistory();
+    const updatedHealthSnapshots = appendGovernanceHealthEntry(
+      healthHistory.snapshots,
+      healthEntry
+    );
+    const updatedHealthHistory: GovernanceHealthHistory = {
+      schemaVersion: HEALTH_HISTORY_SCHEMA_VERSION,
+      generatedAt: data.generatedAt,
+      snapshots: updatedHealthSnapshots,
+    };
+    writeFileSync(
+      HEALTH_HISTORY_FILE,
+      JSON.stringify(updatedHealthHistory, null, 2)
+    );
+    console.log(
+      `Governance health snapshot appended to ${HEALTH_HISTORY_FILE} (${updatedHealthSnapshots.length} entries)`
+    );
 
     // Keep sitemap lastmod in sync with the generation timestamp
     updateSitemapLastmod(data.generatedAt);
