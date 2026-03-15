@@ -704,6 +704,47 @@ export function resolveActivityFile(
   return env.ACTIVITY_FILE ?? DEFAULT_ACTIVITY_FILE;
 }
 
+// ──────────────────────────────────────────────
+// CLI argument parsing
+// ──────────────────────────────────────────────
+
+interface CliOptions {
+  json: boolean;
+}
+
+export function parseArgs(argv: string[]): CliOptions {
+  const options: CliOptions = { json: false };
+
+  for (const arg of argv) {
+    if (arg === '--json') {
+      options.json = true;
+      continue;
+    }
+
+    if (arg === '--help') {
+      console.log(
+        'Usage: npm run check-governance-health [-- [--json]] [ACTIVITY_FILE=path]'
+      );
+      console.log('');
+      console.log('Options:');
+      console.log(
+        '  --json   Output report as JSON instead of human-readable text'
+      );
+      console.log('  --help   Print this help message and exit');
+      console.log('');
+      console.log('Environment:');
+      console.log(
+        '  ACTIVITY_FILE   Path to activity.json (default: web/public/data/activity.json)'
+      );
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return options;
+}
+
 function isDirectExecution(): boolean {
   if (!process.argv[1]) return false;
   return resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
@@ -711,7 +752,7 @@ function isDirectExecution(): boolean {
 
 async function main(): Promise<void> {
   const activityFile = resolveActivityFile();
-  const isJson = process.argv.includes('--json');
+  const { json: isJson } = parseArgs(process.argv.slice(2));
 
   if (!existsSync(activityFile)) {
     console.error(`Activity file not found: ${activityFile}`);
