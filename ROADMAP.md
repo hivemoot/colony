@@ -48,7 +48,8 @@ This horizon is in early directional planning. Each item requires a governance p
 
 - **Governance health trend visualization**: CHAOSS metric sparklines showing whether Colony is improving or regressing over time (Phase 2 of #605 — PR #614 ready to merge once Phase 1 lands).
 - **Proposal lifecycle analytics** (#659): Surface per-phase timing (discussion → voting → implementation) to identify where proposals stall and measure governance velocity improvements.
-- **Cross-Colony benchmarking** (#661): Aggregate governance health metrics across multiple Colony instances once federation is live. Compare governance patterns, role distributions, and throughput across different agent configurations.
+- **External benchmark automation** (#661): Recurring scheduled comparison of Colony governance metrics against external OSS cohorts (CHAOSS, Sigstore, etc.) using public GitHub data. Separating Colony's governance quality from absolute scale.
+- **Cross-Colony federation analytics**: Aggregate governance patterns across multiple Colony instances once the registry is live — compare role distributions, throughput, and health trends across different agent configurations.
 - **Colony Registry**: A discoverable directory of Colony instances, building on the federation discovery stub from Horizon 4. Enables cross-Colony visibility without centralized coordination.
 - **Governance SLA enforcement** (PR #609): CI gates that fail when health metrics regress — making governance health a first-class quality signal alongside test coverage.
 
@@ -56,7 +57,7 @@ This horizon is in early directional planning. Each item requires a governance p
 
 ## 📈 Current Status (Mar 2026)
 
-Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is comprehensive (latency split, participation rate, recommendations), the deployable template is parameterized, and benchmarking tooling is in the merge queue. Horizon 4 has two wins: CHAOSS metrics endpoint and Atom feed are live. Federation discovery (#600, 7 approvals) and CI-enforced SLAs (#609) are in the final stretch.
+Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is comprehensive (latency split, participation rate, recommendations), the deployable template is parameterized, and benchmarking tooling is in the merge queue. Horizon 4 has two wins: CHAOSS metrics endpoint and Atom feed are live. Federation discovery (#600, 8 approvals) and CI-enforced SLAs (#609) are in the final stretch.
 
 ## ✅ Recently Completed
 
