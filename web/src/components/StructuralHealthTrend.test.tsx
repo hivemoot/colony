@@ -5,21 +5,29 @@ import type { GovernanceHealthEntry } from '../../shared/governance-health-histo
 
 function makeEntry(
   timestamp: string,
-  overrides: Partial<GovernanceHealthEntry> = {}
+  metricsOverrides: Partial<GovernanceHealthEntry['metrics']> = {}
 ): GovernanceHealthEntry {
   return {
     timestamp,
-    prCycleTime: { p50: 1440, p95: 10080, sampleSize: 10 },
-    roleDiversity: {
-      uniqueRoles: 5,
-      giniIndex: 0.3,
-      topRole: 'builder',
-      topRoleShare: 0.4,
+    metrics: {
+      prCycleTimeP50Hours: 24,
+      prCycleTimeP95Hours: 168,
+      prCycleTimeSampleSize: 10,
+      reviewLatencyP50Hours: 6,
+      reviewLatencyP95Hours: 24,
+      reviewLatencySampleSize: 10,
+      mergeLatencyP50Hours: 2,
+      mergeLatencyP95Hours: 8,
+      mergeLatencySampleSize: 10,
+      mergeBacklogDepth: 3,
+      roleDiversityGini: 0.3,
+      roleDiversityUniqueRoles: 5,
+      contestedDecisionRate: 0.2,
+      crossRoleReviewRate: 0.8,
+      voterParticipationRate: 0.75,
+      ...metricsOverrides,
     },
-    contestedDecisionRate: { contestedCount: 2, totalVoted: 10, rate: 0.2 },
-    crossRoleReviewRate: { crossRoleCount: 8, totalReviews: 10, rate: 0.8 },
     warningCount: 0,
-    ...overrides,
   };
 }
 
@@ -65,10 +73,14 @@ describe('StructuralHealthTrend', () => {
   it('shows sparklines via SVG elements', () => {
     const snapshots = [
       makeEntry('2026-03-01T00:00:00Z', {
-        prCycleTime: { p50: 720, p95: 7200, sampleSize: 5 },
+        prCycleTimeP50Hours: 12,
+        prCycleTimeP95Hours: 120,
+        prCycleTimeSampleSize: 5,
       }),
       makeEntry('2026-03-08T00:00:00Z', {
-        prCycleTime: { p50: 1440, p95: 10080, sampleSize: 10 },
+        prCycleTimeP50Hours: 24,
+        prCycleTimeP95Hours: 168,
+        prCycleTimeSampleSize: 10,
       }),
     ];
 
@@ -97,10 +109,14 @@ describe('StructuralHealthTrend', () => {
   it('skips metrics with null values gracefully', () => {
     const snapshots = [
       makeEntry('2026-03-01T00:00:00Z', {
-        prCycleTime: { p50: null, p95: null, sampleSize: 0 },
+        prCycleTimeP50Hours: null,
+        prCycleTimeP95Hours: null,
+        prCycleTimeSampleSize: 0,
       }),
       makeEntry('2026-03-08T00:00:00Z', {
-        prCycleTime: { p50: null, p95: null, sampleSize: 0 },
+        prCycleTimeP50Hours: null,
+        prCycleTimeP95Hours: null,
+        prCycleTimeSampleSize: 0,
       }),
     ];
 

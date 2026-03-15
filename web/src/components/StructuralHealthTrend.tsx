@@ -29,8 +29,7 @@ const METRICS: MetricDef[] = [
   {
     key: 'cycleTimeP95',
     label: 'PR Cycle Time (p95)',
-    extract: (s) =>
-      s.prCycleTime.p95 !== null ? s.prCycleTime.p95 / 60 : null,
+    extract: (s) => s.metrics.prCycleTimeP95Hours,
     direction: 'lower-is-better',
     formatValue: (v) => `${v.toFixed(0)}h`,
     strokeClass: 'text-sky-500 dark:text-sky-400',
@@ -40,7 +39,7 @@ const METRICS: MetricDef[] = [
   {
     key: 'giniIndex',
     label: 'Role Diversity (Gini)',
-    extract: (s) => s.roleDiversity.giniIndex,
+    extract: (s) => s.metrics.roleDiversityGini,
     direction: 'lower-is-better',
     formatValue: (v) => v.toFixed(2),
     strokeClass: 'text-violet-500 dark:text-violet-400',
@@ -51,8 +50,8 @@ const METRICS: MetricDef[] = [
     key: 'contestedRate',
     label: 'Contested Decision Rate',
     extract: (s) =>
-      s.contestedDecisionRate.totalVoted > 0
-        ? s.contestedDecisionRate.rate * 100
+      s.metrics.contestedDecisionRate !== null
+        ? s.metrics.contestedDecisionRate * 100
         : null,
     direction: 'higher-is-better',
     formatValue: (v) => `${v.toFixed(0)}%`,
@@ -64,8 +63,8 @@ const METRICS: MetricDef[] = [
     key: 'crossRoleRate',
     label: 'Cross-Role Review Rate',
     extract: (s) =>
-      s.crossRoleReviewRate.totalReviews > 0
-        ? s.crossRoleReviewRate.rate * 100
+      s.metrics.crossRoleReviewRate !== null
+        ? s.metrics.crossRoleReviewRate * 100
         : null,
     direction: 'higher-is-better',
     formatValue: (v) => `${v.toFixed(0)}%`,

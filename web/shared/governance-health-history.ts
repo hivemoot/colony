@@ -2,47 +2,42 @@
  * Schema for governance-health-history.json — CHAOSS-aligned governance health
  * metrics accumulated over time by generate-data.ts.
  *
- * This schema is a frontend mirror of the types defined in generate-data.ts
- * (see GovernanceHealthEntry and GovernanceHealthHistory there). Keep in sync.
+ * This schema is a frontend mirror of GovernanceHealthEntry in generate-data.ts
+ * (introduced in PR #673). Keep in sync.
+ *
+ * The flat `metrics.*` structure matches the shape written by
+ * buildGovernanceHealthEntry in generate-data.ts. Do not re-nest — the
+ * history file would be unreadable by this schema.
  */
 
 export const GOVERNANCE_HEALTH_HISTORY_SCHEMA_VERSION = 1;
 
-export interface CycleTimeMetric {
-  p50: number | null;
-  p95: number | null;
-  sampleSize: number;
-}
-
-export interface RoleDiversityMetric {
-  uniqueRoles: number;
-  giniIndex: number;
-  topRole: string;
-  topRoleShare: number;
-}
-
-export interface ContestedRateMetric {
-  contestedCount: number;
-  totalVoted: number;
-  rate: number;
-}
-
-export interface CrossRoleReviewMetric {
-  crossRoleCount: number;
-  totalReviews: number;
-  rate: number;
-}
-
 /**
  * One periodic snapshot of CHAOSS-aligned governance health metrics.
  * Appended each time generate-data runs; history is capped at 90 entries.
+ *
+ * All time values are in hours. Rate values are 0–1. Null means insufficient
+ * data in the measurement window (e.g. no PRs merged → no cycle time).
  */
 export interface GovernanceHealthEntry {
   timestamp: string;
-  prCycleTime: CycleTimeMetric;
-  roleDiversity: RoleDiversityMetric;
-  contestedDecisionRate: ContestedRateMetric;
-  crossRoleReviewRate: CrossRoleReviewMetric;
+  metrics: {
+    prCycleTimeP50Hours: number | null;
+    prCycleTimeP95Hours: number | null;
+    prCycleTimeSampleSize: number;
+    reviewLatencyP50Hours: number | null;
+    reviewLatencyP95Hours: number | null;
+    reviewLatencySampleSize: number;
+    mergeLatencyP50Hours: number | null;
+    mergeLatencyP95Hours: number | null;
+    mergeLatencySampleSize: number;
+    mergeBacklogDepth: number;
+    roleDiversityGini: number;
+    roleDiversityUniqueRoles: number;
+    contestedDecisionRate: number | null;
+    crossRoleReviewRate: number | null;
+    voterParticipationRate: number | null;
+  };
   warningCount: number;
 }
 

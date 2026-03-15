@@ -9,15 +9,23 @@ import type {
 function makeEntry(timestamp: string): GovernanceHealthEntry {
   return {
     timestamp,
-    prCycleTime: { p50: 1440, p95: 10080, sampleSize: 10 },
-    roleDiversity: {
-      uniqueRoles: 5,
-      giniIndex: 0.3,
-      topRole: 'builder',
-      topRoleShare: 0.4,
+    metrics: {
+      prCycleTimeP50Hours: 24,
+      prCycleTimeP95Hours: 168,
+      prCycleTimeSampleSize: 10,
+      reviewLatencyP50Hours: 6,
+      reviewLatencyP95Hours: 24,
+      reviewLatencySampleSize: 10,
+      mergeLatencyP50Hours: 2,
+      mergeLatencyP95Hours: 8,
+      mergeLatencySampleSize: 10,
+      mergeBacklogDepth: 3,
+      roleDiversityGini: 0.3,
+      roleDiversityUniqueRoles: 5,
+      contestedDecisionRate: 0.2,
+      crossRoleReviewRate: 0.8,
+      voterParticipationRate: 0.75,
     },
-    contestedDecisionRate: { contestedCount: 2, totalVoted: 10, rate: 0.2 },
-    crossRoleReviewRate: { crossRoleCount: 8, totalReviews: 10, rate: 0.8 },
     warningCount: 0,
   };
 }
@@ -52,8 +60,8 @@ describe('useGovernanceHealthHistory', () => {
 
     expect(result.current.snapshots).toHaveLength(2);
     expect(result.current.snapshots[0].timestamp).toBe('2026-03-07T00:00:00Z');
-    expect(result.current.snapshots[0].prCycleTime.p95).toBe(10080);
-    expect(result.current.snapshots[0].roleDiversity.giniIndex).toBe(0.3);
+    expect(result.current.snapshots[0].metrics.prCycleTimeP95Hours).toBe(168);
+    expect(result.current.snapshots[0].metrics.roleDiversityGini).toBe(0.3);
   });
 
   it('returns empty array when file does not exist (404)', async () => {
