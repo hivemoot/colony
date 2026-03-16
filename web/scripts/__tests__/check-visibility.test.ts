@@ -8,6 +8,7 @@ import {
   resolveDeployedPageUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
+  resolveVisibilityToken,
   resolveVisibilityUserAgent,
   type CheckResult,
   type VisibilityReport,
@@ -32,6 +33,46 @@ describe('resolveVisibilityUserAgent', () => {
         VISIBILITY_USER_AGENT: '   ',
       })
     ).toBe('colony-visibility-check');
+  });
+});
+
+describe('resolveVisibilityToken', () => {
+  it('returns GITHUB_TOKEN when it is the only configured token', () => {
+    expect(
+      resolveVisibilityToken({
+        GITHUB_TOKEN: 'github-token',
+      })
+    ).toBe('github-token');
+  });
+
+  it('falls back to GH_TOKEN when GITHUB_TOKEN is missing', () => {
+    expect(
+      resolveVisibilityToken({
+        GH_TOKEN: 'gh-token',
+      })
+    ).toBe('gh-token');
+  });
+
+  it('prefers GITHUB_TOKEN when both tokens are set', () => {
+    expect(
+      resolveVisibilityToken({
+        GITHUB_TOKEN: 'github-token',
+        GH_TOKEN: 'gh-token',
+      })
+    ).toBe('github-token');
+  });
+
+  it('treats blank GITHUB_TOKEN as absent and falls back to GH_TOKEN', () => {
+    expect(
+      resolveVisibilityToken({
+        GITHUB_TOKEN: '',
+        GH_TOKEN: 'gh-token',
+      })
+    ).toBe('gh-token');
+  });
+
+  it('returns undefined when neither token is configured', () => {
+    expect(resolveVisibilityToken({})).toBeUndefined();
   });
 });
 
