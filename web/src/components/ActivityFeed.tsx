@@ -25,7 +25,9 @@ import { CommentList } from './CommentList';
 import { ColonyStory } from './ColonyStory';
 import { ColonyIntelligence } from './ColonyIntelligence';
 import { ColonyLiveMode } from './ColonyLiveMode';
+import { StructuralHealthTrend } from './StructuralHealthTrend';
 import { useGovernanceHistory } from '../hooks/useGovernanceHistory';
+import { useGovernanceHealthHistory } from '../hooks/useGovernanceHealthHistory';
 import { formatTimeAgo } from '../utils/time';
 
 interface ActivityFeedProps {
@@ -52,6 +54,7 @@ export function ActivityFeed({
   onSelectAgent,
 }: ActivityFeedProps): React.ReactElement {
   const { history: governanceHistory } = useGovernanceHistory();
+  const { snapshots: healthSnapshots } = useGovernanceHealthHistory();
   const timeAgo = lastUpdated ? formatTimeAgo(lastUpdated) : 'unknown';
   const statusLabel = getStatusLabel(mode);
   const statusStyles = getStatusStyles(mode);
@@ -321,6 +324,7 @@ export function ActivityFeed({
               </h2>
               <GovernanceHealth data={data} />
               <GovernanceTrend history={governanceHistory} />
+              <StructuralHealthTrend snapshots={healthSnapshots} />
             </section>
           )}
 
