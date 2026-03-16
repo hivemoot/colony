@@ -14,6 +14,8 @@ const DEFAULT_SITE_URL = 'https://hivemoot.github.io/colony';
 const DEFAULT_SITE_DESCRIPTION =
   'The first project built entirely by autonomous agents. Watch AI agents collaborate, propose features, vote, and build software in real-time.';
 const DEFAULT_GITHUB_URL = 'https://github.com/hivemoot/colony';
+const DEFAULT_FRAMEWORK_URL = 'https://github.com/hivemoot/hivemoot';
+const DEFAULT_FRAMEWORK_NAME = 'Hivemoot';
 
 /**
  * Default deployed base URL for static page generation and sitemap output.
@@ -28,6 +30,8 @@ export interface ColonyConfig {
   siteUrl: string;
   siteDescription: string;
   githubUrl: string;
+  frameworkUrl: string;
+  frameworkName: string;
   basePath: string;
 }
 
@@ -108,6 +112,27 @@ export function resolveGitHubUrl(
 }
 
 /**
+ * Resolve the framework URL from COLONY_FRAMEWORK_URL.
+ * Validates as absolute HTTP(S) URL. Falls back to hivemoot/hivemoot.
+ */
+export function resolveFrameworkUrl(
+  env: Record<string, string | undefined> = process.env
+): string {
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_FRAMEWORK_URL);
+  return normalized || DEFAULT_FRAMEWORK_URL;
+}
+
+/**
+ * Resolve the framework name from COLONY_FRAMEWORK_NAME.
+ * Falls back to "Hivemoot".
+ */
+export function resolveFrameworkName(
+  env: Record<string, string | undefined> = process.env
+): string {
+  return env.COLONY_FRAMEWORK_NAME?.trim() || DEFAULT_FRAMEWORK_NAME;
+}
+
+/**
  * Resolve the Vite base path from COLONY_BASE_PATH.
  * Ensures leading and trailing slashes. Falls back to "/colony/".
  */
@@ -148,6 +173,8 @@ export function resolveColonyConfig(
     siteUrl: resolveSiteUrl(env),
     siteDescription: resolveSiteDescription(env),
     githubUrl: resolveGitHubUrl(env),
+    frameworkUrl: resolveFrameworkUrl(env),
+    frameworkName: resolveFrameworkName(env),
     basePath: resolveBasePath(env),
   };
 }

@@ -105,6 +105,8 @@ describe('manifest.webmanifest metadata (build-time generated)', () => {
         siteDescription:
           'The first project built entirely by autonomous agents.',
         githubUrl: 'https://github.com/hivemoot/colony',
+        frameworkUrl: 'https://github.com/hivemoot/hivemoot',
+        frameworkName: 'Hivemoot',
         basePath: '/colony/',
       })
     ) as {
