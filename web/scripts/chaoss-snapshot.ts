@@ -66,6 +66,7 @@ export interface ChaossSnapshot {
     };
     changeRequestReviews: {
       'x-chaoss-metric': 'change-request-reviews';
+      'x-chaoss-note': string;
       'x-chaoss-spec': string;
       /** Fraction of reviews where reviewer role differs from PR author role (0–1) */
       crossRoleReviewRate: number;
@@ -145,6 +146,8 @@ export function buildChaossSnapshot(
       },
       changeRequestReviews: {
         'x-chaoss-metric': 'change-request-reviews',
+        'x-chaoss-note':
+          'Approximation: Colony measures cross-role review fraction, not raw review count per change request. Scope differs from CHAOSS spec.',
         'x-chaoss-spec':
           'https://chaoss.community/kb/metric-change-request-reviews/',
         crossRoleReviewRate: Math.round(crossRoleReview.rate * 10000) / 10000,

@@ -1441,6 +1441,50 @@ describe('generateStaticPages', () => {
       vi.resetModules();
     }
   });
+
+  it('generates .well-known/colony-instance.json with deployment-specific URLs', async () => {
+    const savedUrl = process.env.COLONY_DEPLOYED_URL;
+    process.env.COLONY_DEPLOYED_URL = 'https://my-org.github.io/my-project';
+    vi.resetModules();
+
+    try {
+      const { generateStaticPages: generate } = await import('../static-pages');
+
+      writeFileSync(
+        join(TEST_OUT, 'data', 'activity.json'),
+        JSON.stringify(minimalActivityData())
+      );
+
+      generate(TEST_OUT);
+
+      const manifest = JSON.parse(
+        readFileSync(
+          join(TEST_OUT, '.well-known', 'colony-instance.json'),
+          'utf-8'
+        )
+      );
+
+      expect(manifest.dashboardUrl).toBe(
+        'https://my-org.github.io/my-project/'
+      );
+      expect(manifest.dataEndpoints.activityJson).toBe(
+        'https://my-org.github.io/my-project/data/activity.json'
+      );
+      expect(manifest.dataEndpoints.governanceHistoryJson).toBe(
+        'https://my-org.github.io/my-project/data/governance-history.json'
+      );
+      expect(manifest.dashboardUrl).not.toContain('hivemoot.github.io');
+      expect(manifest.version).toBe('1');
+      expect(manifest.type).toBe('colony-instance');
+    } finally {
+      if (savedUrl === undefined) {
+        delete process.env.COLONY_DEPLOYED_URL;
+      } else {
+        process.env.COLONY_DEPLOYED_URL = savedUrl;
+      }
+      vi.resetModules();
+    }
+  });
 });
 
 describe('generateAtomFeed', () => {

@@ -42,6 +42,9 @@ interface PullRequestNode {
   title: string;
   url: string;
   mergeStateStatus?: string;
+  headRepositoryOwner?: {
+    login?: string;
+  };
   latestReviews?: ReviewNode[];
   statusCheckRollup?: StatusCheckNode[] | null;
   closingIssuesReferences?: IssueNode[];
@@ -55,6 +58,8 @@ export interface EligibilityResult {
   ciState: string;
   linkedOpenIssues: number[];
   highApprovalWaiver: boolean;
+  workflowApprovalBlocked: boolean;
+  workflowApprovalOwner: string | null;
 }
 
 interface CandidateRecord {
@@ -68,6 +73,8 @@ interface CandidateRecord {
   ciState: string;
   linkedOpenIssues: number[];
   highApprovalWaiver: boolean;
+  workflowApprovalBlocked: boolean;
+  workflowApprovalOwner: string | null;
 }
 
 interface Report {
@@ -78,6 +85,7 @@ interface Report {
     totalOpenPrs: number;
     eligiblePrs: number;
     mergeReadyEligiblePrs: number;
+    workflowApprovalBlockedPrs: number;
   };
   candidates: CandidateRecord[];
 }
@@ -197,6 +205,38 @@ function getCiState(pr: PullRequestNode): string {
   return hasPending ? 'PENDING' : 'SUCCESS';
 }
 
+function getRepoOwner(repo: string): string {
+  const [owner] = repo.split('/');
+  return owner?.trim().toLowerCase() || '';
+}
+
+export function getWorkflowApprovalBlocker(
+  pr: PullRequestNode,
+  repo: string = DEFAULT_REPO
+): string | null {
+  const headOwner = pr.headRepositoryOwner?.login?.trim().toLowerCase() || '';
+  if (!headOwner) {
+    return null;
+  }
+
+  if (headOwner === getRepoOwner(repo)) {
+    return null;
+  }
+
+  const ciState = getCiState(pr);
+  const mergeStateStatus = normalizeMergeStateStatus(pr.mergeStateStatus);
+
+  if (ciState !== 'UNKNOWN') {
+    return null;
+  }
+
+  if (mergeStateStatus !== 'UNSTABLE' && mergeStateStatus !== 'CLEAN') {
+    return null;
+  }
+
+  return headOwner;
+}
+
 function getLinkedOpenIssues(
   pr: PullRequestNode,
   issueStates: Map<string, string>,
@@ -235,6 +275,8 @@ export function evaluateEligibility(
   const ciState = getCiState(pr);
   const linkedOpenIssues = getLinkedOpenIssues(pr, issueStates, repo);
   const changesRequested = hasChangesRequested(pr.latestReviews);
+  const workflowApprovalOwner = getWorkflowApprovalBlocker(pr, repo);
+  const workflowApprovalBlocked = workflowApprovalOwner != null;
 
   // High-approval waiver: 6+ distinct approvals with no CHANGES_REQUESTED
   // waives both the linked-issue requirement and the title-prefix requirement
@@ -255,6 +297,11 @@ export function evaluateEligibility(
 
   if (ciState !== 'SUCCESS') {
     reasons.push(`CI checks must be SUCCESS (found ${ciState})`);
+    if (workflowApprovalOwner) {
+      reasons.push(
+        `likely waiting on first-time fork workflow approval for ${workflowApprovalOwner}`
+      );
+    }
   }
 
   if (linkedOpenIssues.length === 0 && !highApprovalWaiver) {
@@ -276,6 +323,8 @@ export function evaluateEligibility(
     ciState,
     linkedOpenIssues,
     highApprovalWaiver,
+    workflowApprovalBlocked,
+    workflowApprovalOwner,
   };
 }
 
@@ -306,6 +355,7 @@ function loadPullRequests(repo: string, limit: number): PullRequestNode[] {
     'title',
     'url',
     'mergeStateStatus',
+    'headRepositoryOwner',
     'latestReviews',
     'statusCheckRollup',
     'closingIssuesReferences',
@@ -427,6 +477,8 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       ciState: evaluation.ciState,
       linkedOpenIssues: evaluation.linkedOpenIssues,
       highApprovalWaiver: evaluation.highApprovalWaiver,
+      workflowApprovalBlocked: evaluation.workflowApprovalBlocked,
+      workflowApprovalOwner: evaluation.workflowApprovalOwner,
     };
   });
 
@@ -440,6 +492,9 @@ function buildReport(prs: PullRequestNode[], repo: string): Report {
       mergeReadyEligiblePrs: candidates.filter(
         (candidate) =>
           candidate.eligible && isMergeReady(candidate.mergeStateStatus)
+      ).length,
+      workflowApprovalBlockedPrs: candidates.filter(
+        (candidate) => candidate.workflowApprovalBlocked
       ).length,
     },
     candidates,
@@ -457,6 +512,9 @@ export function printHumanReport(report: Report): void {
     `Fast-track eligible: ${eligible.length}/${report.summary.totalOpenPrs}`
   );
   console.log(`Merge-ready now: ${report.summary.mergeReadyEligiblePrs}`);
+  console.log(
+    `Workflow approval blockers: ${report.summary.workflowApprovalBlockedPrs}`
+  );
 
   if (eligible.length === 0) {
     console.log('No eligible PRs found.');
@@ -473,6 +531,31 @@ export function printHumanReport(report: Report): void {
   }
 
   if (ineligible.length > 0) {
+    const workflowApprovalBlockers = ineligible.filter(
+      (pr) => pr.workflowApprovalBlocked
+    );
+    if (workflowApprovalBlockers.length > 0) {
+      console.log(
+        `\n⚠️  ${workflowApprovalBlockers.length} PR(s) likely waiting on first-time fork workflow approval:`
+      );
+      console.log(
+        '   Maintainer action: open one PR from each listed fork owner and click "Approve and run workflows".'
+      );
+      const groupedOwners = Array.from(
+        new Set(
+          workflowApprovalBlockers
+            .map((pr) => pr.workflowApprovalOwner)
+            .filter((owner): owner is string => Boolean(owner))
+        )
+      ).sort();
+      console.log(`   Fork owners: ${groupedOwners.join(', ')}`);
+      for (const pr of workflowApprovalBlockers) {
+        console.log(
+          `   - #${pr.number} (${pr.approvals} approvals, owner ${pr.workflowApprovalOwner}, merge ${pr.mergeStateStatus}): ${pr.url}`
+        );
+      }
+    }
+
     const closedIssueBlockers = ineligible.filter((pr) =>
       pr.reasons.some((r) => r.includes('OPEN linked issue'))
     );
