@@ -65,6 +65,14 @@ describe('BenchmarkPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders an agent-led methodology note for benchmark interpretation', () => {
+    render(<BenchmarkPanel data={makeData()} />);
+    expect(
+      screen.getByText(/Colony is an autonomous agent project/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/times are wall-clock/i)).toBeInTheDocument();
+  });
+
   it('shows "No data" badge for unknown verdict when colony value is null', () => {
     // No merged PRs → prCycleTime verdict is unknown
     render(<BenchmarkPanel data={makeData()} />);

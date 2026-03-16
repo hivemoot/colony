@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildRepositoryApiUrl,
+  hasAtomAutodiscoveryLink,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
   normalizeHttpsUrl,
@@ -8,6 +9,8 @@ import {
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
   resolveVisibilityUserAgent,
+  type CheckResult,
+  type VisibilityReport,
 } from '../check-visibility';
 
 describe('resolveVisibilityUserAgent', () => {
@@ -178,5 +181,72 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('hasAtomAutodiscoveryLink', () => {
+  it('detects a well-formed Atom autodiscovery link tag', () => {
+    const html = `<head>
+      <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="Colony Proposals">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+
+  it('returns false when the autodiscovery link is absent', () => {
+    const html = `<head>
+      <link rel="stylesheet" href="/style.css">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(false);
+  });
+
+  it('returns false for an empty string', () => {
+    expect(hasAtomAutodiscoveryLink('')).toBe(false);
+  });
+
+  it('handles attribute order variations', () => {
+    const html = `<link type="application/atom+xml" rel="alternate" href="/feed.xml">`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+
+  it('is case-insensitive for the type attribute', () => {
+    const html = `<link rel="alternate" type="Application/Atom+XML" href="/feed.xml">`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+
+  it('detects Atom link when another alternate link comes first', () => {
+    const html = `<head>
+      <link rel="alternate" type="application/json" href="/api/feed">
+      <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="Colony Proposals">
+    </head>`;
+    expect(hasAtomAutodiscoveryLink(html)).toBe(true);
+  });
+});
+
+describe('VisibilityReport', () => {
+  it('has the expected shape with summary and checks fields', () => {
+    const checks: CheckResult[] = [
+      { label: 'Index HTML exists', ok: true },
+      { label: 'Sitemap present', ok: false, details: 'sitemap.xml not found' },
+    ];
+
+    const report: VisibilityReport = {
+      generatedAt: '2026-03-05T00:00:00.000Z',
+      summary: {
+        total: checks.length,
+        passed: checks.filter((c) => c.ok).length,
+        failed: checks.filter((c) => !c.ok).length,
+      },
+      checks,
+    };
+
+    expect(report.summary.total).toBe(2);
+    expect(report.summary.passed).toBe(1);
+    expect(report.summary.failed).toBe(1);
+    expect(report.checks[0]).toEqual({ label: 'Index HTML exists', ok: true });
+    expect(report.checks[1]).toMatchObject({
+      label: 'Sitemap present',
+      ok: false,
+      details: 'sitemap.xml not found',
+    });
   });
 });

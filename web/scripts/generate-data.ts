@@ -48,12 +48,14 @@ import {
 import { computeGovernanceHistoryIntegrity } from './governance-history-integrity';
 import { evaluateGeneratedAtFreshness } from './freshness';
 import { DEFAULT_DEPLOYED_BASE_URL } from './colony-config';
+import { buildChaossSnapshot } from './chaoss-snapshot';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
 const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'activity.json');
 const HISTORY_FILE = join(OUTPUT_DIR, 'governance-history.json');
+const METRICS_SNAPSHOT_FILE = join(OUTPUT_DIR, 'metrics', 'snapshot.json');
 const ROADMAP_PATH = join(ROOT_DIR, 'ROADMAP.md');
 const INDEX_HTML_PATH = join(ROOT_DIR, 'web', 'index.html');
 const SITEMAP_PATH = join(ROOT_DIR, 'web', 'public', 'sitemap.xml');
@@ -213,6 +215,10 @@ export function resolveRepository(env = process.env): {
   const normalizedRepository = repository?.trim();
 
   if (!normalizedRepository) {
+    console.warn(
+      `⚠  COLONY_REPOSITORY not set — using default ${DEFAULT_OWNER}/${DEFAULT_REPO}.\n` +
+        `   Set COLONY_REPOSITORY=your-org/your-repo to track a different repository.`
+    );
     return { owner: DEFAULT_OWNER, repo: DEFAULT_REPO };
   }
 
@@ -577,15 +583,20 @@ async function fetchFirstApprovalAt(
 }
 
 /**
- * Enrich the most recent merged PRs with their first approval timestamp.
- * Capped at 20 PRs to limit additional API calls.
+ * Enrich open PRs and the most recent merged PRs with first approval times.
+ *
+ * Open PRs need approval timestamps so current merge backlog metrics can
+ * identify approved-but-unmerged work. Recent merged PRs keep historical
+ * review/merge latency metrics representative without fetching approval data
+ * for the entire closed backlog.
  */
-export async function enrichMergedPRsWithApprovalTimes(
+export async function enrichPullRequestsWithApprovalTimes(
   owner: string,
   repo: string,
   pullRequests: PullRequest[]
 ): Promise<void> {
-  const MAX_ENRICHED = 20;
+  const MAX_ENRICHED_MERGED = 20;
+  const openPRs = pullRequests.filter((pr) => pr.state === 'open');
   const mergedPRs = pullRequests
     .filter(
       (pr): pr is PullRequest & { mergedAt: string } =>
@@ -594,10 +605,11 @@ export async function enrichMergedPRsWithApprovalTimes(
     .sort(
       (a, b) => new Date(b.mergedAt).getTime() - new Date(a.mergedAt).getTime()
     )
-    .slice(0, MAX_ENRICHED);
+    .slice(0, MAX_ENRICHED_MERGED);
+  const prsToEnrich = [...openPRs, ...mergedPRs];
 
   await Promise.all(
-    mergedPRs.map(async (pr) => {
+    prsToEnrich.map(async (pr) => {
       pr.firstApprovalAt = await fetchFirstApprovalAt(owner, repo, pr.number);
     })
   );
@@ -1416,6 +1428,28 @@ export async function buildExternalVisibility(
             : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
   });
 
+  const ogImageTypeRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:type',
+    'content'
+  );
+  const hasOgImageType = ogImageTypeRaw
+    .trim()
+    .toLowerCase()
+    .startsWith('image/');
+  checks.push({
+    id: 'deployed-og-image-type',
+    label: 'Deployed Open Graph image type is declared',
+    ok: hasOgImageType,
+    details: hasOgImageType
+      ? `og:image:type set to ${ogImageTypeRaw.trim()}`
+      : !ogImageTypeRaw
+        ? 'Missing og:image:type metadata on deployed homepage'
+        : `Invalid og:image:type value: ${ogImageTypeRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
@@ -1451,6 +1485,23 @@ export async function buildExternalVisibility(
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const twitterImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image:alt',
+    'content'
+  );
+  const hasTwitterImageAlt = twitterImageAltRaw.trim().length > 0;
+  checks.push({
+    id: 'deployed-twitter-image-alt',
+    label: 'Deployed Twitter image alt text is declared',
+    ok: hasTwitterImageAlt,
+    details: hasTwitterImageAlt
+      ? 'twitter:image:alt metadata is present'
+      : 'Missing twitter:image:alt metadata on deployed homepage',
   });
 
   const manifestRaw = extractTagAttributeValue(
@@ -1837,7 +1888,7 @@ async function fetchRepoActivity(
     repoTag
   );
   await fetchPhaseTransitions(owner, repo, proposals);
-  await enrichMergedPRsWithApprovalTimes(owner, repo, prResult.pullRequests);
+  await enrichPullRequestsWithApprovalTimes(owner, repo, prResult.pullRequests);
 
   const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
 
@@ -2050,6 +2101,16 @@ async function main(): Promise<void> {
     // Write activity data
     writeFileSync(OUTPUT_FILE, JSON.stringify(data, null, 2));
     console.log(`Activity data written to ${OUTPUT_FILE}`);
+
+    // Emit CHAOSS-compatible metrics snapshot
+    const sourceRepo = `https://github.com/${data.repository.owner}/${data.repository.name}`;
+    const chaossSnapshot = buildChaossSnapshot(data, sourceRepo);
+    mkdirSync(join(OUTPUT_DIR, 'metrics'), { recursive: true });
+    writeFileSync(
+      METRICS_SNAPSHOT_FILE,
+      JSON.stringify(chaossSnapshot, null, 2)
+    );
+    console.log(`CHAOSS metrics snapshot written to ${METRICS_SNAPSHOT_FILE}`);
 
     // Keep sitemap lastmod in sync with the generation timestamp
     updateSitemapLastmod(data.generatedAt);

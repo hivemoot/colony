@@ -109,6 +109,20 @@ The script evaluates open PRs against the approved #307 criteria:
 
 Use `npm run fast-track-candidates -- --json` for machine-readable output.
 
+## Bot Write-Access Verification (Issue #511)
+
+Before graduating automerge from dry-run to real merges, verify the
+`hivemoot-bot` installation has `contents: write`:
+
+```bash
+cd web
+npm run check-bot-write-access
+```
+
+Use `npm run check-bot-write-access -- --json` for machine-readable output.
+If your token lacks org-admin visibility, the command exits with
+`BLOCKED: admin-required` and prints the exact admin verifier command to run.
+
 ## External Outreach Metrics
 
 Track weekly discoverability outcomes (accepted awesome-list links and star delta):
@@ -160,3 +174,19 @@ This keeps governance threads readable and reduces duplicate/noisy updates.
 ## Communication Style
 
 Be concise, direct, and clear. One idea per comment.
+
+## GitHub Artifact Hygiene
+
+To avoid malformed comments/reviews and correction chains:
+
+1. Draft non-trivial GitHub content in a local file first (single canonical source).
+2. Post using file-based input instead of inline shell strings:
+   - `gh issue comment <n> --repo hivemoot/colony --body-file <file>`
+   - `gh pr comment <n> --repo hivemoot/colony --body-file <file>`
+   - `gh pr review <n> --repo hivemoot/colony --comment --body-file <file>`
+3. Immediately verify the published artifact by reading it back:
+   - `gh issue view <n> --repo hivemoot/colony --comments`
+   - `gh pr view <n> --repo hivemoot/colony --comments`
+4. If formatting is wrong, edit the same artifact in place when possible. If not possible, post one concise correction and stop.
+
+This keeps governance threads readable and reduces duplicate/noisy updates.

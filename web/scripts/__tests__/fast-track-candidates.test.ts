@@ -1,12 +1,15 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   countDistinctApprovals,
+  DEFAULT_LIMIT,
   evaluateEligibility,
+  getWorkflowApprovalBlocker,
   hasAllowedPrefix,
   hasChangesRequested,
   HIGH_APPROVAL_WAIVER_THRESHOLD,
   isMergeReady,
   normalizeMergeStateStatus,
+  parseArgs,
   printHumanReport,
 } from '../fast-track-candidates';
 
@@ -32,6 +35,9 @@ function makeBlockedReport(
     approvals: pr.approvals,
     ciState: 'SUCCESS',
     linkedOpenIssues: [] as number[],
+    highApprovalWaiver: false,
+    workflowApprovalBlocked: false,
+    workflowApprovalOwner: null,
   }));
 
   return {
@@ -42,6 +48,42 @@ function makeBlockedReport(
       totalOpenPrs: candidates.length,
       eligiblePrs: 0,
       mergeReadyEligiblePrs: 0,
+      workflowApprovalBlockedPrs: 0,
+    },
+    candidates,
+  };
+}
+
+function makeWorkflowApprovalBlockedReport(
+  blockedPrs: Array<{ number: number; approvals: number; owner: string }>
+): Parameters<typeof printHumanReport>[0] {
+  const candidates = blockedPrs.map((pr) => ({
+    number: pr.number,
+    title: `fix: pr ${pr.number}`,
+    url: `https://github.com/hivemoot/colony/pull/${pr.number}`,
+    mergeStateStatus: 'UNSTABLE',
+    eligible: false,
+    reasons: [
+      'CI checks must be SUCCESS (found UNKNOWN)',
+      `likely waiting on first-time fork workflow approval for ${pr.owner}`,
+    ],
+    approvals: pr.approvals,
+    ciState: 'UNKNOWN',
+    linkedOpenIssues: [] as number[],
+    highApprovalWaiver: false,
+    workflowApprovalBlocked: true,
+    workflowApprovalOwner: pr.owner,
+  }));
+
+  return {
+    generatedAt: '2026-03-13T00:00:00Z',
+    repo: 'hivemoot/colony',
+    allowedPrefixes: ALLOWED_PREFIXES,
+    summary: {
+      totalOpenPrs: candidates.length,
+      eligiblePrs: 0,
+      mergeReadyEligiblePrs: 0,
+      workflowApprovalBlockedPrs: candidates.length,
     },
     candidates,
   };
@@ -103,6 +145,26 @@ describe('printHumanReport — blocked PR display', () => {
     const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
     expect(output).toContain('#200 (7 approvals):');
   });
+
+  it('surfaces likely fork workflow approval blockers with maintainer action', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const report = makeWorkflowApprovalBlockedReport([
+      { number: 536, approvals: 5, owner: 'hivemoot-heater' },
+      { number: 572, approvals: 4, owner: 'hivemoot-heater' },
+    ]);
+
+    printHumanReport(report);
+
+    const output = logSpy.mock.calls.map((c) => c[0] as string).join('\n');
+    expect(output).toContain('Workflow approval blockers: 2');
+    expect(output).toContain(
+      'likely waiting on first-time fork workflow approval'
+    );
+    expect(output).toContain('Approve and run workflows');
+    expect(output).toContain('Fork owners: hivemoot-heater');
+    expect(output).toContain('#536 (5 approvals, owner hivemoot-heater');
+    expect(output).toContain('#572 (4 approvals, owner hivemoot-heater');
+  });
 });
 
 describe('hasAllowedPrefix', () => {
@@ -112,9 +174,22 @@ describe('hasAllowedPrefix', () => {
     expect(hasAllowedPrefix('a11y: improve focus ring')).toBe(true);
   });
 
+  it('accepts scoped Conventional Commits variants of approved prefixes', () => {
+    expect(
+      hasAllowedPrefix('a11y(web): make vote bar transitions motion-safe')
+    ).toBe(true);
+    expect(hasAllowedPrefix('fix(scope): correct behaviour')).toBe(true);
+    expect(hasAllowedPrefix('chore(deps): bump package')).toBe(true);
+  });
+
   it('rejects non-fast-track prefixes', () => {
     expect(hasAllowedPrefix('feat: add analytics widget')).toBe(false);
     expect(hasAllowedPrefix('refactor: simplify types')).toBe(false);
+  });
+
+  it('rejects scoped variants of non-fast-track prefixes', () => {
+    expect(hasAllowedPrefix('feat(ui): add analytics widget')).toBe(false);
+    expect(hasAllowedPrefix('refactor(utils): simplify types')).toBe(false);
   });
 });
 
@@ -237,6 +312,31 @@ describe('evaluateEligibility', () => {
     );
   });
 
+  it('flags likely first-time fork workflow approval blockers', () => {
+    const result = evaluateEligibility({
+      number: 109,
+      title: 'fix: unblock queue visibility',
+      url: 'https://example.test/pr/109',
+      mergeStateStatus: 'UNSTABLE',
+      headRepositoryOwner: { login: 'hivemoot-heater' },
+      latestReviews: [
+        { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+        { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+      ],
+      statusCheckRollup: [],
+      closingIssuesReferences: [{ number: 662, state: 'OPEN' }],
+    });
+
+    expect(result.workflowApprovalBlocked).toBe(true);
+    expect(result.workflowApprovalOwner).toBe('hivemoot-heater');
+    expect(result.reasons).toContain(
+      'CI checks must be SUCCESS (found UNKNOWN)'
+    );
+    expect(result.reasons).toContain(
+      'likely waiting on first-time fork workflow approval for hivemoot-heater'
+    );
+  });
+
   it('applies high-approval waiver when 6+ approvals and no linked open issue', () => {
     const approvers = Array.from(
       { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
@@ -280,6 +380,45 @@ describe('evaluateEligibility', () => {
     );
     expect(result.reasons).toContain(
       'cannot have a pending CHANGES_REQUESTED review'
+    );
+  });
+
+  it('waives prefix requirement for feat: PR with 6+ approvals and no CHANGES_REQUESTED', () => {
+    const approvers = Array.from(
+      { length: HIGH_APPROVAL_WAIVER_THRESHOLD },
+      (_, i) => ({ state: 'APPROVED', author: { login: `agent-${i}` } })
+    );
+    const result = evaluateEligibility({
+      number: 110,
+      title: 'feat: add new feature with high quorum',
+      url: 'https://example.test/pr/110',
+      latestReviews: approvers,
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [],
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.highApprovalWaiver).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('does not waive prefix for feat: PR with fewer than 6 approvals', () => {
+    const result = evaluateEligibility({
+      number: 111,
+      title: 'feat: add feature with insufficient quorum',
+      url: 'https://example.test/pr/111',
+      latestReviews: Array.from({ length: 5 }, (_, i) => ({
+        state: 'APPROVED',
+        author: { login: `agent-${i}` },
+      })),
+      statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      closingIssuesReferences: [{ number: 42, state: 'OPEN' }],
+    });
+
+    expect(result.eligible).toBe(false);
+    expect(result.highApprovalWaiver).toBe(false);
+    expect(result.reasons).toContain(
+      `title prefix must be one of: ${ALLOWED_PREFIXES.join(', ')}`
     );
   });
 
@@ -333,5 +472,121 @@ describe('evaluateEligibility', () => {
     expect(result.reasons).toContain(
       'must reference at least one OPEN linked issue'
     );
+  });
+
+  it('ignores non-github issue URL hosts and falls back to default repo', () => {
+    const result = evaluateEligibility(
+      {
+        number: 108,
+        title: 'fix: ignore non-github linked issue URLs',
+        url: 'https://example.test/pr/108',
+        latestReviews: [
+          { state: 'APPROVED', author: { login: 'hivemoot-scout' } },
+          { state: 'APPROVED', author: { login: 'hivemoot-builder' } },
+        ],
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+        closingIssuesReferences: [
+          {
+            number: 556,
+            state: 'OPEN',
+            url: 'https://malicious.example/hivemoot/hivemoot/issues/556',
+          },
+        ],
+      },
+      new Map([
+        ['hivemoot/colony#556', 'OPEN'],
+        ['hivemoot/hivemoot#556', 'CLOSED'],
+      ]),
+      'hivemoot/colony'
+    );
+
+    expect(result.eligible).toBe(true);
+    expect(result.reasons).toHaveLength(0);
+  });
+});
+
+describe('getWorkflowApprovalBlocker', () => {
+  it('detects cross-repo PRs with no checks and unstable merge state', () => {
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 200,
+        title: 'fix: queue blocker',
+        url: 'https://example.test/pr/200',
+        mergeStateStatus: 'UNSTABLE',
+        headRepositoryOwner: { login: 'hivemoot-heater' },
+        statusCheckRollup: [],
+      })
+    ).toBe('hivemoot-heater');
+  });
+
+  it('detects cross-repo PRs with no checks and clean merge state', () => {
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 203,
+        title: 'fix: no required checks repo',
+        url: 'https://example.test/pr/203',
+        mergeStateStatus: 'CLEAN',
+        headRepositoryOwner: { login: 'hivemoot-heater' },
+        statusCheckRollup: [],
+      })
+    ).toBe('hivemoot-heater');
+  });
+
+  it('does not flag same-owner PRs or PRs that already have checks', () => {
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 201,
+        title: 'fix: local branch',
+        url: 'https://example.test/pr/201',
+        mergeStateStatus: 'UNSTABLE',
+        headRepositoryOwner: { login: 'hivemoot' },
+        statusCheckRollup: [],
+      })
+    ).toBeNull();
+
+    expect(
+      getWorkflowApprovalBlocker({
+        number: 202,
+        title: 'fix: checks already ran',
+        url: 'https://example.test/pr/202',
+        mergeStateStatus: 'UNSTABLE',
+        headRepositoryOwner: { login: 'hivemoot-heater' },
+        statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    ).toBeNull();
+  });
+});
+
+describe('parseArgs', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('accepts a valid --limit value', () => {
+    const opts = parseArgs(['--limit=50']);
+    expect(opts.limit).toBe(50);
+  });
+
+  it('warns and ignores a partial-numeric --limit value (5oops)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=5oops']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--limit="5oops"')
+    );
+  });
+
+  it('warns and ignores a non-numeric --limit value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=abc']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--limit="abc"'));
+  });
+
+  it('warns and ignores --limit=0 (not a positive integer)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--limit=0']);
+    expect(opts.limit).toBe(DEFAULT_LIMIT);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--limit="0"'));
   });
 });

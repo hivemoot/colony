@@ -20,6 +20,7 @@ import {
   deduplicateAgents,
   extractPhaseTransitions,
   filterAndMapProposals,
+  enrichPullRequestsWithApprovalTimes,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -376,6 +377,67 @@ describe('mapPullRequests', () => {
   });
 });
 
+describe('enrichPullRequestsWithApprovalTimes', () => {
+  it('enriches open PRs and only the most recent merged PRs', async () => {
+    const pullRequests: PullRequest[] = [
+      {
+        number: 1,
+        title: 'Open PR',
+        state: 'open',
+        author: 'user1',
+        createdAt: '2026-02-10T00:00:00Z',
+      },
+      ...Array.from({ length: 25 }, (_, i) => ({
+        number: i + 2,
+        title: `Merged PR ${i + 2}`,
+        state: 'merged' as const,
+        author: 'user2',
+        createdAt: '2026-02-01T00:00:00Z',
+        mergedAt: `2026-02-${String(25 - i).padStart(2, '0')}T00:00:00Z`,
+      })),
+    ];
+
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        const prNumber = Number(url.match(/pulls\/(\d+)\/reviews/)?.[1] ?? 0);
+
+        return new Response(
+          JSON.stringify([
+            {
+              state: 'APPROVED',
+              submitted_at: `2026-02-${String((prNumber % 28) + 1).padStart(2, '0')}T12:00:00Z`,
+            },
+          ]),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      });
+
+    await enrichPullRequestsWithApprovalTimes(
+      'hivemoot',
+      'colony',
+      pullRequests
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(21);
+    expect(pullRequests[0].firstApprovalAt).toBeTruthy();
+
+    const enrichedMerged = pullRequests.filter(
+      (pr) => pr.state === 'merged' && pr.firstApprovalAt
+    );
+    expect(enrichedMerged).toHaveLength(20);
+    expect(
+      pullRequests.find((pr) => pr.number === 26)?.firstApprovalAt
+    ).toBeFalsy();
+  });
+});
+
 describe('mapEvents', () => {
   it('should tag comments with repo when repoTag is provided', () => {
     const events: GitHubEvent[] = [
@@ -506,7 +568,7 @@ describe('parseRoadmap', () => {
 ### Horizon 2: Make Colony Genuinely Useful (Current Focus)
 Moving from an "interesting demo" to a "useful tool".
 - [x] **Governance Analytics** (#120): Pipeline counts, success rates, and agent roles.
-- [ ] **Proposal Detail View**: In-app view of proposal discussions and vote breakdowns.
+- [x] **Proposal Detail View** (#266): In-app view of proposal discussions and vote breakdowns.
 `;
 
     const parsed = parseRoadmap(markdown);
@@ -520,7 +582,8 @@ Moving from an "interesting demo" to a "useful tool".
     });
     expect(parsed.horizons[0].items[1]).toEqual({
       task: 'Proposal Detail View',
-      done: false,
+      done: true,
+      issueNumber: 266,
       description: 'In-app view of proposal discussions and vote breakdowns.',
     });
   });
@@ -529,18 +592,16 @@ Moving from an "interesting demo" to a "useful tool".
     const markdown = `
 ## 📈 Current Status (Feb 2026)
 
-The project has successfully delivered the majority of Horizon 2 features.
-Current work is focused on Proposal Detail View.
+Horizon 2 is complete.
+Horizon 3 is now in foundation mode.
 
 *This roadmap is a living document, evolved through Hivemoot governance proposals.*
 `;
 
     const parsed = parseRoadmap(markdown);
+    expect(parsed.currentStatus).toContain('Horizon 2 is complete.');
     expect(parsed.currentStatus).toContain(
-      'The project has successfully delivered the majority of Horizon 2 features.'
-    );
-    expect(parsed.currentStatus).toContain(
-      'Current work is focused on Proposal Detail View.'
+      'Horizon 3 is now in foundation mode.'
     );
   });
 });
@@ -858,7 +919,9 @@ describe('buildExternalVisibility', () => {
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
                 <meta property="og:image:width" content="1200" />
                 <meta property="og:image:height" content="630" />
+                <meta property="og:image:type" content="image/png" />
                 <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <meta name="twitter:image:alt" content="Colony dashboard screenshot" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/colony/apple-touch-icon.png" />
                 <script type="application/ld+json">{}</script>
               </head>
@@ -949,11 +1012,17 @@ describe('buildExternalVisibility', () => {
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image-dimensions')?.ok
     ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-og-image-type')?.ok
+    ).toBe(true);
     expect(visibility.checks.find((c) => c.id === 'deployed-favicon')?.ok).toBe(
       true
     );
     expect(
       visibility.checks.find((c) => c.id === 'deployed-twitter-image')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-twitter-image-alt')?.ok
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-pwa-manifest')?.ok
@@ -1289,6 +1358,122 @@ describe('buildExternalVisibility', () => {
     expect(ogImageDimensionsCheck?.ok).toBe(false);
     expect(ogImageDimensionsCheck?.details).toContain(
       'Missing og:image:width and og:image:height metadata on deployed homepage'
+    );
+  });
+
+  it('flags missing og:image:type on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <meta name="twitter:image:alt" content="Colony screenshot" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (
+          url === `${baseUrl}/og-image.png` ||
+          url === `${baseUrl}/twitter-image.png`
+        ) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const ogImageTypeCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-og-image-type'
+    );
+    expect(ogImageTypeCheck?.ok).toBe(false);
+    expect(ogImageTypeCheck?.details).toContain(
+      'Missing og:image:type metadata on deployed homepage'
+    );
+  });
+
+  it('flags missing twitter:image:alt on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta property="og:image:type" content="image/png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (
+          url === `${baseUrl}/og-image.png` ||
+          url === `${baseUrl}/twitter-image.png`
+        ) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const twitterAltCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-twitter-image-alt'
+    );
+    expect(twitterAltCheck?.ok).toBe(false);
+    expect(twitterAltCheck?.details).toContain(
+      'Missing twitter:image:alt metadata on deployed homepage'
     );
   });
 

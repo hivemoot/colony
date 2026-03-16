@@ -332,6 +332,32 @@ describe('ProposalList', () => {
     );
   });
 
+  it('uses motion-safe transition classes on vote support progress bar', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 1,
+        title: 'Voting proposal',
+        phase: 'voting',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 2,
+        votesSummary: { thumbsUp: 3, thumbsDown: 1 },
+      },
+    ];
+
+    render(<ProposalList proposals={proposals} repoUrl={repoUrl} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /#1/i }));
+
+    const progressBar = screen.getByRole('progressbar', {
+      name: /support percentage/i,
+    });
+    expect(progressBar.className).toContain('motion-safe:transition-all');
+    expect(progressBar.className).toContain('motion-safe:duration-500');
+    expect(progressBar.className).not.toMatch(/(^|\s)transition-all(\s|$)/);
+    expect(progressBar.className).not.toMatch(/(^|\s)duration-500(\s|$)/);
+  });
+
   it('renders proposal comments in the discussion section when selected', () => {
     const proposals: Proposal[] = [
       {
@@ -456,6 +482,45 @@ describe('ProposalList', () => {
       'href',
       'https://github.com/hivemoot/colony/issues/7#issuecomment-301'
     );
+  });
+
+  it('sanitizes unsafe proposal discussion comment URLs', () => {
+    const proposals: Proposal[] = [
+      {
+        number: 9,
+        title: 'Unsafe discussion URL',
+        phase: 'discussion',
+        author: 'worker',
+        createdAt: '2026-02-05T09:00:00Z',
+        commentCount: 1,
+        repo: 'hivemoot/colony',
+      },
+    ];
+    const comments = [
+      {
+        id: 901,
+        issueOrPrNumber: 9,
+        type: 'issue' as const,
+        repo: 'hivemoot/colony',
+        author: 'scout',
+        body: 'Unsafe URL payload',
+        createdAt: '2026-02-05T09:30:00Z',
+        url: 'javascript:alert(1)',
+      },
+    ];
+
+    render(
+      <ProposalList
+        proposals={proposals}
+        comments={comments}
+        repoUrl={repoUrl}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /#9/i }));
+    expect(
+      screen.getByRole('link', { name: /view on github/i })
+    ).toHaveAttribute('href', '#');
   });
 
   it('clamps long discussion comments and supports expand/collapse', () => {

@@ -6,7 +6,7 @@ import {
   buildDecisionSnapshot,
   getProposalHash,
 } from '../utils/decision-explorer';
-import { renderMarkdown } from '../utils/markdown';
+import { renderMarkdown, sanitizeUrl } from '../utils/markdown';
 import { filterProposals, type ProposalPhaseFilter } from '../utils/governance';
 
 interface ProposalListProps {
@@ -507,7 +507,7 @@ export function ProposalList({
                                 ·
                               </span>
                               <a
-                                href={comment.url}
+                                href={sanitizeUrl(comment.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800 rounded"
@@ -568,7 +568,7 @@ export function ProposalList({
                     </div>
                     <div className="h-2 w-full bg-amber-100 dark:bg-neutral-700 rounded-full overflow-hidden flex">
                       <div
-                        className="h-full bg-emerald-500 transition-all duration-500"
+                        className="h-full bg-emerald-500 motion-safe:transition-all motion-safe:duration-500"
                         style={{
                           width: `${snapshot.votes.supportPct !== null ? Math.round(snapshot.votes.supportPct * 100) : 0}%`,
                         }}

@@ -2,6 +2,8 @@
 
 This guide covers how to deploy Colony from this repository today.
 
+> **Deploying a fork for your own project?** See [`docs/TEMPLATE-DEPLOY.md`](docs/TEMPLATE-DEPLOY.md) for the streamlined fork-and-deploy path that doesn't require a local environment.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -41,8 +43,11 @@ COLONY_SITE_TITLE=Colony              # Site title, OG/Twitter titles, JSON-LD n
 COLONY_ORG_NAME=Hivemoot              # Organization name for OG site_name, JSON-LD publisher
 COLONY_SITE_URL=https://hivemoot.github.io/colony  # Canonical URL (must be HTTP/HTTPS)
 COLONY_SITE_DESCRIPTION=...           # Meta description, OG/Twitter/manifest descriptions
-COLONY_GITHUB_URL=https://github.com/hivemoot/colony  # GitHub repo link (noscript, JSON-LD)
+COLONY_GITHUB_URL=https://github.com/hivemoot/colony  # GitHub repo link (noscript, JSON-LD, footer "View on GitHub")
+COLONY_FRAMEWORK_URL=https://github.com/hivemoot/hivemoot  # Footer "Learn About" link destination
+COLONY_FRAMEWORK_NAME=Hivemoot       # Footer "Learn About" link label text
 COLONY_BASE_PATH=/colony/             # Vite base path, manifest start_url/scope
+COLONY_DEPLOYED_URL=https://hivemoot.github.io/colony  # Deployed site URL for static page generation — canonical links, sitemap entries, and proposal page hrefs (must be HTTP/HTTPS)
 ```
 
 Notes:
@@ -50,9 +55,13 @@ Notes:
 - `GITHUB_TOKEN` and `GH_TOKEN` are both supported.
 - `COLONY_REQUIRED_DISCOVERABILITY_TOPICS` accepts a comma-separated list.
   Values are trimmed, lowercased, and deduplicated.
-- Visibility checks derive the deployed site URL from your repository homepage
+- Visibility checks resolve the deployed site URL from your repository homepage
   setting (`Settings -> General -> Homepage`). If homepage is unset/invalid,
   checks fall back to `https://hivemoot.github.io/colony`.
+- `COLONY_DEPLOYED_URL` controls the base URL used by static page generation
+  (canonical links, sitemap entries, and cross-page hrefs). It does not affect
+  visibility checks. Set it when your homepage setting differs from the site
+  you are building for, or when homepage is not yet configured.
 
 ## 2. Install and Generate Data
 

@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import type { Proposal, AgentStats, ActivityData } from '../shared/types';
-import { resolveDeployedUrl } from './colony-config';
+import { resolveDeployedUrl, resolveGitHubUrl } from './colony-config';
 
 const BASE_URL = resolveDeployedUrl();
 
@@ -35,6 +35,27 @@ interface PageMeta {
   title: string;
   description: string;
   canonicalPath: string;
+  jsonLd?: object;
+  /** Optional extra <link> or <meta> tags injected into <head>. */
+  extraHeadTags?: string;
+}
+
+/**
+ * Serialize a JSON-LD object as a safe inline <script> tag.
+ *
+ * JSON.stringify is safe for embedding in HTML <script> blocks as long as
+ * the characters `<`, `>`, and `&` are unicode-escaped so that the browser's
+ * HTML parser never sees a closing `</script>` sequence or an entity that
+ * could confuse surrounding markup. This is the pattern recommended by
+ * Google's Search Central documentation.
+ */
+function jsonLdTag(data: object): string {
+  const json = JSON.stringify(data).replace(/[<>&]/g, (c) => {
+    if (c === '<') return '\\u003c';
+    if (c === '>') return '\\u003e';
+    return '\\u0026';
+  });
+  return `<script type="application/ld+json">${json}</script>`;
 }
 
 // -- Phase display helpers --
@@ -188,7 +209,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="description" content="${escapeHtml(meta.description)}" />
   <link rel="canonical" href="${escapeHtml(fullUrl)}" />
   <link rel="icon" href="${basePath()}favicon.ico" sizes="any" />
-  <link rel="apple-touch-icon" sizes="180x180" href="${basePath()}apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="${basePath()}apple-touch-icon.png" />${meta.extraHeadTags ? `\n  ${meta.extraHeadTags}` : ''}
   <meta property="og:type" content="website" />
   <meta property="og:url" content="${escapeHtml(fullUrl)}" />
   <meta property="og:title" content="${escapeHtml(meta.title)}" />
@@ -199,6 +220,7 @@ function htmlShell(meta: PageMeta, content: string): string {
   <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
   <meta name="twitter:description" content="${escapeHtml(meta.description)}" />
   <meta name="twitter:image" content="${escapeHtml(BASE_URL)}/og-image.png" />
+  ${meta.jsonLd ? jsonLdTag(meta.jsonLd) : ''}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; background: #fffbeb; min-height: 100vh; }
@@ -253,10 +275,24 @@ function proposalPage(proposal: Proposal): string {
 
   const phaseLine = `${phaseLabel} — proposed by ${proposal.author}. ${proposal.commentCount} comments.${proposal.votesSummary ? ` Votes: ${proposal.votesSummary.thumbsUp} for, ${proposal.votesSummary.thumbsDown} against.` : ''}`;
   const excerpt = bodyExcerpt(proposal.body);
+  const canonicalPath = `/proposal/${proposal.number}/`;
   const meta: PageMeta = {
     title: `Proposal #${proposal.number}: ${proposal.title} | Colony`,
     description: excerpt ? `${phaseLine} ${excerpt}` : phaseLine,
-    canonicalPath: `/proposal/${proposal.number}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'DiscussionForumPosting',
+      headline: proposal.title,
+      url: `${BASE_URL}${canonicalPath}`,
+      datePublished: proposal.createdAt,
+      author: {
+        '@type': 'Person',
+        name: proposal.author,
+        url: `https://github.com/${encodeURIComponent(proposal.author)}`,
+      },
+      commentCount: proposal.commentCount,
+    },
   };
 
   let votesHtml = '';
@@ -353,17 +389,29 @@ function proposalPage(proposal: Proposal): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
 }
 
 function agentPage(agent: AgentStats): string {
+  const canonicalPath = `/agent/${encodeURIComponent(agent.login)}/`;
   const meta: PageMeta = {
     title: `${agent.login} | Colony Agents`,
     description: `${agent.login} — ${agent.commits} commits, ${agent.pullRequestsMerged} PRs merged, ${agent.reviews} reviews. Contributing to Colony, the first project built entirely by autonomous agents.`,
-    canonicalPath: `/agent/${encodeURIComponent(agent.login)}/`,
+    canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: `${agent.login} | Colony Agents`,
+      url: `${BASE_URL}${canonicalPath}`,
+      mainEntity: {
+        '@type': 'Person',
+        name: agent.login,
+        url: `https://github.com/${encodeURIComponent(agent.login)}`,
+      },
+    },
   };
 
   const content = `
@@ -410,7 +458,7 @@ function agentPage(agent: AgentStats): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
@@ -478,7 +526,7 @@ function agentsIndexPage(agents: AgentStats[]): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
@@ -489,6 +537,7 @@ function proposalsIndexPage(proposals: Proposal[]): string {
     title: 'Colony Governance Proposals | Colony',
     description: `All ${proposals.length} governance proposals from Colony — an autonomous agent-governed open-source project.`,
     canonicalPath: '/proposals/',
+    extraHeadTags: `<link rel="alternate" type="application/atom+xml" title="Colony Governance Feed" href="${escapeHtml(BASE_URL)}/feed.xml" />`,
   };
 
   // Sort by proposal number descending (most recent first)
@@ -539,7 +588,7 @@ function proposalsIndexPage(proposals: Proposal[]): string {
 
     <div class="footer">
       <p>Colony &mdash; the first project built entirely by autonomous agents.</p>
-      <p><a href="https://github.com/hivemoot/colony" style="color: #b45309;">GitHub</a></p>
+      <p><a href="${resolveGitHubUrl()}" style="color: #b45309;">GitHub</a></p>
     </div>`;
 
   return htmlShell(meta, content);
@@ -568,6 +617,12 @@ function generateSitemap(
     <lastmod>${lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${BASE_URL}/feed.xml</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
   </url>`;
 
   for (const p of proposals) {
@@ -594,6 +649,68 @@ function generateSitemap(
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
 </urlset>
+`;
+}
+
+/**
+ * Escape a string for safe embedding in XML content or attribute values.
+ * Mirrors the subset of escapeHtml relevant for XML: &, <, >, and ".
+ */
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Generate an Atom 1.0 feed for the 50 most recent governance proposals.
+ * Entries are ordered newest first. All user-supplied strings are XML-escaped.
+ * Feed and entry URLs use BASE_URL so template deployments produce correct links.
+ */
+export function generateAtomFeed(
+  proposals: Proposal[],
+  generatedAt: string
+): string {
+  const feedUrl = `${BASE_URL}/feed.xml`;
+  const hubUrl = `${BASE_URL}/proposals/`;
+
+  const recent = [...proposals]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, 50);
+
+  const entries = recent
+    .map((p) => {
+      const entryUrl = `${BASE_URL}/proposal/${p.number}/`;
+      const summary = escapeXml(bodyExcerpt(p.body));
+      return `  <entry>
+    <id>${escapeXml(entryUrl)}</id>
+    <title>${escapeXml(p.title)}</title>
+    <link href="${escapeXml(entryUrl)}"/>
+    <published>${p.createdAt}</published>
+    <updated>${p.createdAt}</updated>
+    <author><name>${escapeXml(p.author)}</name></author>
+    <category term="${escapeXml(p.phase)}"/>
+    ${summary ? `<summary>${summary}</summary>` : ''}
+  </entry>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>${escapeXml(feedUrl)}</id>
+  <title>Colony Governance Feed</title>
+  <link rel="self" href="${escapeXml(feedUrl)}"/>
+  <link rel="alternate" href="${escapeXml(hubUrl)}"/>
+  <updated>${generatedAt}</updated>
+  <author><name>Hivemoot Colony</name></author>
+  <rights>Apache 2.0</rights>
+${entries}
+</feed>
 `;
 }
 
@@ -660,7 +777,34 @@ export function generateStaticPages(outDir: string): void {
   const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${BASE_URL}/sitemap.xml\n`;
   writeFileSync(join(outDir, 'robots.txt'), robotsTxt);
 
+  // Generate Atom feed for the 50 most recent governance proposals.
+  const atomFeed = generateAtomFeed(data.proposals, data.generatedAt);
+  writeFileSync(join(outDir, 'feed.xml'), atomFeed);
+
+  // Generate .well-known/colony-instance.json — RFC 8615 discovery document.
+  // Generated here (not as a static asset) so template deployments emit their
+  // own deployed URL rather than the upstream hivemoot/colony URL.
+  const wellKnownDir = join(outDir, '.well-known');
+  mkdirSync(wellKnownDir, { recursive: true });
+  const colonyInstanceManifest = {
+    version: '1',
+    type: 'colony-instance',
+    name: 'hivemoot/colony',
+    dashboardUrl: `${BASE_URL}/`,
+    dataEndpoints: {
+      activityJson: `${BASE_URL}/data/activity.json`,
+      governanceHistoryJson: `${BASE_URL}/data/governance-history.json`,
+    },
+    sourceRepository: 'https://github.com/hivemoot/colony',
+    framework: 'https://github.com/hivemoot/hivemoot',
+    since: '2026-02',
+  };
+  writeFileSync(
+    join(wellKnownDir, 'colony-instance.json'),
+    JSON.stringify(colonyInstanceManifest, null, 2) + '\n'
+  );
+
   console.log(
-    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, and robots.txt`
+    `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, robots.txt, feed.xml, and .well-known/colony-instance.json`
   );
 }

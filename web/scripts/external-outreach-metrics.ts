@@ -13,6 +13,7 @@ const PULL_REQUEST_URL_REGEX =
   /https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/pull\/([1-9][0-9]*)/gi;
 const PULL_REQUEST_REF_REGEX =
   /\b([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#([1-9][0-9]*)\b/g;
+const IGNORED_PULL_REQUEST_REPOS = new Set(['owner/repo']);
 
 interface CliOptions {
   repo: string;
@@ -70,7 +71,7 @@ interface IssueCommentApiResponse {
   body?: string;
 }
 
-function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
     baselineStars: null,
@@ -99,20 +100,27 @@ function parseArgs(argv: string[]): CliOptions {
     }
 
     if (arg.startsWith('--baseline-stars=')) {
-      const value = Number.parseInt(
-        arg.slice('--baseline-stars='.length).trim(),
-        10
-      );
+      const raw = arg.slice('--baseline-stars='.length).trim();
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value >= 0) {
         options.baselineStars = value;
+      } else {
+        console.warn(
+          `Warning: --baseline-stars="${raw}" is not a valid non-negative integer. Ignored.`
+        );
       }
       continue;
     }
 
     if (arg.startsWith('--issue=')) {
-      const value = Number.parseInt(arg.slice('--issue='.length).trim(), 10);
+      const raw = arg.slice('--issue='.length).trim();
+      const value = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : NaN;
       if (Number.isFinite(value) && value > 0) {
         options.issue = value;
+      } else {
+        console.warn(
+          `Warning: --issue="${raw}" is not a valid positive integer. Ignored.`
+        );
       }
       continue;
     }
@@ -191,6 +199,14 @@ export function dedupePullRequestRefs(
   return deduped;
 }
 
+export function filterIgnoredPullRequestRefs(
+  refs: PullRequestRef[]
+): PullRequestRef[] {
+  return refs.filter(
+    (ref) => !IGNORED_PULL_REQUEST_REPOS.has(ref.repo.toLowerCase())
+  );
+}
+
 function runGhJson<T>(args: string[]): T {
   const output = execFileSync('gh', args, {
     encoding: 'utf8',
@@ -211,10 +227,12 @@ function loadCurrentStars(repo: string): number {
 }
 
 function parsePullRequestRefs(inputs: string[]): PullRequestRef[] {
-  return dedupePullRequestRefs(
-    inputs
-      .map((value) => parsePullRequestRef(value))
-      .filter((value): value is PullRequestRef => value !== null)
+  return filterIgnoredPullRequestRefs(
+    dedupePullRequestRefs(
+      inputs
+        .map((value) => parsePullRequestRef(value))
+        .filter((value): value is PullRequestRef => value !== null)
+    )
   );
 }
 
@@ -236,7 +254,7 @@ function loadIssueThreadPullRequestRefs(
     refs.push(...extractPullRequestRefsFromText(comment.body ?? ''));
   }
 
-  return dedupePullRequestRefs(refs);
+  return filterIgnoredPullRequestRefs(dedupePullRequestRefs(refs));
 }
 
 function resolveTrackedPullRequestRefs(options: CliOptions): PullRequestRef[] {

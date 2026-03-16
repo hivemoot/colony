@@ -3,9 +3,71 @@ import {
   buildOutreachReport,
   dedupePullRequestRefs,
   extractPullRequestRefsFromText,
+  filterIgnoredPullRequestRefs,
   normalizePullState,
+  parseArgs,
   parsePullRequestRef,
 } from '../external-outreach-metrics';
+
+describe('parseArgs', () => {
+  it('accepts a valid --baseline-stars value', () => {
+    const opts = parseArgs(['--baseline-stars=5']);
+    expect(opts.baselineStars).toBe(5);
+  });
+
+  it('warns and ignores an invalid --baseline-stars value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--baseline-stars=abc']);
+    expect(opts.baselineStars).toBeNull(); // default unchanged
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--baseline-stars="abc"')
+    );
+    warn.mockRestore();
+  });
+
+  it('warns and ignores a partial-numeric --baseline-stars value (5oops)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--baseline-stars=5oops']);
+    expect(opts.baselineStars).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--baseline-stars="5oops"')
+    );
+    warn.mockRestore();
+  });
+
+  it('warns and ignores a negative --baseline-stars value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--baseline-stars=-1']);
+    expect(opts.baselineStars).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--baseline-stars="-1"')
+    );
+    warn.mockRestore();
+  });
+
+  it('accepts a valid --issue value', () => {
+    const opts = parseArgs(['--issue=298']);
+    expect(opts.issue).toBe(298);
+  });
+
+  it('warns and ignores an invalid --issue value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--issue=abc']);
+    expect(opts.issue).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--issue="abc"'));
+    warn.mockRestore();
+  });
+
+  it('warns and ignores a partial-numeric --issue value (123abc)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const opts = parseArgs(['--issue=123abc']);
+    expect(opts.issue).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('--issue="123abc"')
+    );
+    warn.mockRestore();
+  });
+});
 
 describe('parsePullRequestRef', () => {
   it('parses a valid owner/repo#number ref', () => {
@@ -65,6 +127,17 @@ describe('dedupePullRequestRefs', () => {
       { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
       { repo: 'jim-schwoebel/awesome_ai_agents', number: 42 },
     ]);
+  });
+});
+
+describe('filterIgnoredPullRequestRefs', () => {
+  it('drops placeholder owner/repo refs', () => {
+    const refs = filterIgnoredPullRequestRefs([
+      { repo: 'owner/repo', number: 123 },
+      { repo: 'e2b-dev/awesome-ai-agents', number: 274 },
+    ]);
+
+    expect(refs).toEqual([{ repo: 'e2b-dev/awesome-ai-agents', number: 274 }]);
   });
 });
 
