@@ -132,7 +132,9 @@ export interface VisibilityCheck {
     | 'deployed-robots-sitemap'
     | 'deployed-sitemap-reachable'
     | 'deployed-sitemap-lastmod'
-    | 'deployed-activity-freshness';
+    | 'deployed-activity-freshness'
+    | 'deployed-agents-hub-reachable'
+    | 'deployed-proposals-hub-reachable';
   label: string;
   ok: boolean;
   details?: string;

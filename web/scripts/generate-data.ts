@@ -1707,6 +1707,35 @@ export async function buildExternalVisibility(
       : 'Missing lastmod in live sitemap',
   });
 
+  // Hub reachability checks (mirrors check-visibility.ts deployedHubChecks)
+  const hubChecks = await Promise.all(
+    [
+      {
+        id: 'deployed-agents-hub-reachable' as const,
+        label: 'Deployed /agents/ hub is reachable',
+        path: 'agents/',
+      },
+      {
+        id: 'deployed-proposals-hub-reachable' as const,
+        label: 'Deployed /proposals/ hub is reachable',
+        path: 'proposals/',
+      },
+    ].map(async ({ id, label, path }) => {
+      const url = `${baseUrl}/${path}`;
+      const response = await fetchWithTimeout(url);
+      const ok = response?.status === 200;
+      return {
+        id,
+        label,
+        ok,
+        details: ok
+          ? `GET ${url} returned 200`
+          : `GET ${url} returned ${response?.status ?? 'no response'}`,
+      };
+    })
+  );
+  checks.push(...hubChecks);
+
   // Freshness check
   let freshnessDetails = `Could not fetch deployed activity data. ${deployedSourceDetails}`;
   let freshnessOk = false;
