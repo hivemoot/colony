@@ -21,6 +21,13 @@ import {
   extractPhaseTransitions,
   filterAndMapProposals,
   enrichPullRequestsWithApprovalTimes,
+  buildGovernanceHealthEntry,
+  appendGovernanceHealthEntry,
+  loadGovernanceHealthHistory,
+  HEALTH_HISTORY_SCHEMA_VERSION,
+  HEALTH_HISTORY_MAX_ENTRIES,
+  type GovernanceHealthEntry,
+  type GovernanceHealthHistory,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -2527,5 +2534,191 @@ describe('extractPhaseTransitions with hivemoot:* labels', () => {
       { phase: 'voting', enteredAt: '2026-01-02T00:00:00Z' },
       { phase: 'implemented', enteredAt: '2026-01-03T00:00:00Z' },
     ]);
+  });
+});
+
+// ──────────────────────────────────────────────
+// Governance health history
+// ──────────────────────────────────────────────
+
+function makeHealthReport(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    generatedAt: '2026-03-14T00:00:00.000Z',
+    dataWindowDays: 30,
+    metrics: {
+      prCycleTime: { p50: 12, p95: 48, sampleSize: 10 },
+      reviewLatency: { p50: 6, p95: 24, sampleSize: 10 },
+      mergeLatency: { p50: 2, p95: 8, sampleSize: 10 },
+      mergeBacklogDepth: { depth: 3, eldestApprovedHours: 72 },
+      roleDiversity: {
+        uniqueRoles: 4,
+        giniIndex: 0.25,
+        topRole: 'forager',
+        topRoleShare: 0.4,
+      },
+      contestedDecisionRate: { contestedCount: 1, totalVoted: 5, rate: 0.2 },
+      crossRoleReviewRate: { crossRoleCount: 7, totalReviews: 10, rate: 0.7 },
+      voterParticipationRate: {
+        votingCyclesAnalyzed: 5,
+        averageParticipationRate: 0.8,
+        quorumFailureRate: 0.1,
+        eligibleVoterCount: 6,
+      },
+    },
+    warnings: ['one warning'],
+    recommendations: ['one recommendation'],
+    ...overrides,
+  };
+}
+
+describe('buildGovernanceHealthEntry', () => {
+  it('maps all HealthReport fields to a GovernanceHealthEntry', () => {
+    const report = makeHealthReport();
+    const entry = buildGovernanceHealthEntry(report as never);
+    expect(entry.timestamp).toBe('2026-03-14T00:00:00.000Z');
+    expect(entry.warningCount).toBe(1);
+    expect(entry.metrics.prCycleTimeP50Hours).toBe(12);
+    expect(entry.metrics.prCycleTimeP95Hours).toBe(48);
+    expect(entry.metrics.prCycleTimeSampleSize).toBe(10);
+    expect(entry.metrics.reviewLatencyP50Hours).toBe(6);
+    expect(entry.metrics.reviewLatencyP95Hours).toBe(24);
+    expect(entry.metrics.reviewLatencySampleSize).toBe(10);
+    expect(entry.metrics.mergeLatencyP50Hours).toBe(2);
+    expect(entry.metrics.mergeLatencyP95Hours).toBe(8);
+    expect(entry.metrics.mergeLatencySampleSize).toBe(10);
+    expect(entry.metrics.mergeBacklogDepth).toBe(3);
+    expect(entry.metrics.roleDiversityGini).toBe(0.25);
+    expect(entry.metrics.roleDiversityUniqueRoles).toBe(4);
+    expect(entry.metrics.contestedDecisionRate).toBe(0.2);
+    expect(entry.metrics.crossRoleReviewRate).toBe(0.7);
+    expect(entry.metrics.voterParticipationRate).toBe(0.8);
+  });
+
+  it('handles null metrics correctly', () => {
+    const report = makeHealthReport();
+    report.metrics.prCycleTime.p50 = null as never;
+    report.metrics.prCycleTime.p95 = null as never;
+    report.metrics.voterParticipationRate.averageParticipationRate =
+      null as never;
+    const entry = buildGovernanceHealthEntry(report as never);
+    expect(entry.metrics.prCycleTimeP50Hours).toBeNull();
+    expect(entry.metrics.prCycleTimeP95Hours).toBeNull();
+    expect(entry.metrics.voterParticipationRate).toBeNull();
+  });
+
+  it('sets warningCount to zero when no warnings', () => {
+    const report = makeHealthReport();
+    report.warnings = [];
+    const entry = buildGovernanceHealthEntry(report as never);
+    expect(entry.warningCount).toBe(0);
+  });
+});
+
+describe('appendGovernanceHealthEntry', () => {
+  it('appends an entry to an empty list', () => {
+    const report = makeHealthReport();
+    const entry = buildGovernanceHealthEntry(report as never);
+    const result = appendGovernanceHealthEntry([], entry);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(entry);
+  });
+
+  it('preserves order — new entry is last', () => {
+    const e1 = buildGovernanceHealthEntry(
+      makeHealthReport({ generatedAt: '2026-01-01T00:00:00.000Z' }) as never
+    );
+    const e2 = buildGovernanceHealthEntry(
+      makeHealthReport({ generatedAt: '2026-01-02T00:00:00.000Z' }) as never
+    );
+    const result = appendGovernanceHealthEntry([e1], e2);
+    expect(result[0].timestamp).toBe('2026-01-01T00:00:00.000Z');
+    expect(result[1].timestamp).toBe('2026-01-02T00:00:00.000Z');
+  });
+
+  it('caps at HEALTH_HISTORY_MAX_ENTRIES (90)', () => {
+    const base = buildGovernanceHealthEntry(makeHealthReport() as never);
+    const existing: GovernanceHealthEntry[] = Array.from(
+      { length: HEALTH_HISTORY_MAX_ENTRIES },
+      (_, i) => ({
+        ...base,
+        timestamp: `2025-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+      })
+    );
+    const newEntry = { ...base, timestamp: '2026-03-14T00:00:00.000Z' };
+    const result = appendGovernanceHealthEntry(existing, newEntry);
+    expect(result).toHaveLength(HEALTH_HISTORY_MAX_ENTRIES);
+    expect(result[result.length - 1].timestamp).toBe(
+      '2026-03-14T00:00:00.000Z'
+    );
+    // oldest entry should have been dropped
+    expect(result[0].timestamp).toBe('2025-01-02T00:00:00.000Z');
+  });
+
+  it('does not mutate the existing array', () => {
+    const e1 = buildGovernanceHealthEntry(makeHealthReport() as never);
+    const e2 = buildGovernanceHealthEntry(makeHealthReport() as never);
+    const original = [e1];
+    appendGovernanceHealthEntry(original, e2);
+    expect(original).toHaveLength(1);
+  });
+});
+
+describe('loadGovernanceHealthHistory', () => {
+  let tmpDir: string;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns empty history when file does not exist', () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'health-history-'));
+    const result = loadGovernanceHealthHistory(
+      join(tmpDir, 'nonexistent.json')
+    );
+    expect(result.schemaVersion).toBe(HEALTH_HISTORY_SCHEMA_VERSION);
+    expect(result.snapshots).toEqual([]);
+  });
+
+  it('parses a valid history file', () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'health-history-'));
+    const filePath = join(tmpDir, 'governance-health-history.json');
+    const entry = buildGovernanceHealthEntry(makeHealthReport() as never);
+    const history: GovernanceHealthHistory = {
+      schemaVersion: HEALTH_HISTORY_SCHEMA_VERSION,
+      generatedAt: '2026-03-14T00:00:00.000Z',
+      snapshots: [entry],
+    };
+    writeFileSync(filePath, JSON.stringify(history, null, 2));
+    const result = loadGovernanceHealthHistory(filePath);
+    expect(result.schemaVersion).toBe(HEALTH_HISTORY_SCHEMA_VERSION);
+    expect(result.snapshots).toHaveLength(1);
+    expect(result.snapshots[0].timestamp).toBe('2026-03-14T00:00:00.000Z');
+  });
+
+  it('returns empty history on invalid JSON', () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'health-history-'));
+    const filePath = join(tmpDir, 'governance-health-history.json');
+    writeFileSync(filePath, 'not valid json{{{');
+    const result = loadGovernanceHealthHistory(filePath);
+    expect(result.schemaVersion).toBe(HEALTH_HISTORY_SCHEMA_VERSION);
+    expect(result.snapshots).toEqual([]);
+  });
+
+  it('returns empty history when schemaVersion is mismatched', () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'health-history-'));
+    const filePath = join(tmpDir, 'governance-health-history.json');
+    const badHistory = {
+      schemaVersion: 999,
+      generatedAt: '2026-03-14T00:00:00.000Z',
+      snapshots: [],
+    };
+    writeFileSync(filePath, JSON.stringify(badHistory));
+    const result = loadGovernanceHealthHistory(filePath);
+    expect(result.schemaVersion).toBe(HEALTH_HISTORY_SCHEMA_VERSION);
+    expect(result.snapshots).toEqual([]);
   });
 });
