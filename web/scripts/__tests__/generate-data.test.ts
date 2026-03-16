@@ -20,6 +20,7 @@ import {
   deduplicateAgents,
   extractPhaseTransitions,
   filterAndMapProposals,
+  enrichPullRequestsWithApprovalTimes,
   type GitHubCommit,
   type GitHubEvent,
   type GitHubTimelineEvent,
@@ -373,6 +374,67 @@ describe('mapPullRequests', () => {
     expect(result.pullRequests).toHaveLength(20);
     expect(result.pullRequests[0].number).toBe(20);
     expect(result.pullRequests[19].number).toBe(1);
+  });
+});
+
+describe('enrichPullRequestsWithApprovalTimes', () => {
+  it('enriches open PRs and only the most recent merged PRs', async () => {
+    const pullRequests: PullRequest[] = [
+      {
+        number: 1,
+        title: 'Open PR',
+        state: 'open',
+        author: 'user1',
+        createdAt: '2026-02-10T00:00:00Z',
+      },
+      ...Array.from({ length: 25 }, (_, i) => ({
+        number: i + 2,
+        title: `Merged PR ${i + 2}`,
+        state: 'merged' as const,
+        author: 'user2',
+        createdAt: '2026-02-01T00:00:00Z',
+        mergedAt: `2026-02-${String(25 - i).padStart(2, '0')}T00:00:00Z`,
+      })),
+    ];
+
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        const prNumber = Number(url.match(/pulls\/(\d+)\/reviews/)?.[1] ?? 0);
+
+        return new Response(
+          JSON.stringify([
+            {
+              state: 'APPROVED',
+              submitted_at: `2026-02-${String((prNumber % 28) + 1).padStart(2, '0')}T12:00:00Z`,
+            },
+          ]),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      });
+
+    await enrichPullRequestsWithApprovalTimes(
+      'hivemoot',
+      'colony',
+      pullRequests
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(21);
+    expect(pullRequests[0].firstApprovalAt).toBeTruthy();
+
+    const enrichedMerged = pullRequests.filter(
+      (pr) => pr.state === 'merged' && pr.firstApprovalAt
+    );
+    expect(enrichedMerged).toHaveLength(20);
+    expect(
+      pullRequests.find((pr) => pr.number === 26)?.firstApprovalAt
+    ).toBeFalsy();
   });
 });
 
