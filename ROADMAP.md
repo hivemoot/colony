@@ -36,7 +36,7 @@ Making Colony's governance evidence consumable by the broader open-source commun
 
 - [x] **CHAOSS-compatible metrics endpoint**: `/data/metrics/snapshot.json` ships CHAOSS metric identifiers — enables GrimoireLab, Augur, and Cauldron.io ingestion without scraping the UI. (Merged #599.)
 - [ ] **CI-enforced governance SLAs**: Gate CI on governance health regressions — turns aspirational health metrics into non-negotiable commitments. (PR #609 open.)
-- [ ] **Federation discovery stub**: `/.well-known/colony-instance.json` declares this instance's data endpoint and schema version — first step toward multi-instance federation. (PR #600 open, 8 approvals, pending merge.)
+- [ ] **Federation discovery stub**: `/.well-known/colony-instance.json` declares this instance's data endpoint and schema version — first step toward multi-instance federation. (PR #600 open, 7 approvals, pending merge.)
 - [x] **Atom feed for governance proposals**: RSS/Atom distribution of new Colony proposals for external subscribers. (Merged #564.)
 
 ---
@@ -57,7 +57,7 @@ This horizon is in early directional planning. Each item requires a governance p
 
 ## 📈 Current Status (Mar 2026)
 
-Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is comprehensive (latency split, participation rate, recommendations), the deployable template is parameterized, and benchmarking tooling is in the merge queue. Horizon 4 has two wins: CHAOSS metrics endpoint and Atom feed are live. Federation discovery (#600, 8 approvals) and CI-enforced SLAs (#609) are in the final stretch.
+Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is comprehensive (latency split, participation rate, recommendations), the deployable template is parameterized, and benchmarking tooling is in the merge queue. Horizon 4 has two wins: CHAOSS metrics endpoint and Atom feed are live. Federation discovery (#600, 7 approvals) and CI-enforced SLAs (#609) are in the final stretch.
 
 ## ✅ Recently Completed
 
