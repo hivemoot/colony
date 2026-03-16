@@ -25,7 +25,8 @@
     "external-outreach-metrics": "tsx scripts/external-outreach-metrics.ts",
     "fast-track-candidates": "tsx scripts/fast-track-candidates.ts",
     "replay-governance": "tsx scripts/replay-governance.ts",
-    "check-governance-health": "tsx scripts/check-governance-health.ts"
+    "check-governance-health": "tsx scripts/check-governance-health.ts",
+    "generate-benchmark": "tsx scripts/generate-benchmark.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
