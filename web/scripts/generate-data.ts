@@ -1428,6 +1428,28 @@ export async function buildExternalVisibility(
             : `Invalid og:image dimension values: width=${ogImageWidthRaw}, height=${ogImageHeightRaw}`,
   });
 
+  const ogImageTypeRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:type',
+    'content'
+  );
+  const hasOgImageType = ogImageTypeRaw
+    .trim()
+    .toLowerCase()
+    .startsWith('image/');
+  checks.push({
+    id: 'deployed-og-image-type',
+    label: 'Deployed Open Graph image type is declared',
+    ok: hasOgImageType,
+    details: hasOgImageType
+      ? `og:image:type set to ${ogImageTypeRaw.trim()}`
+      : !ogImageTypeRaw
+        ? 'Missing og:image:type metadata on deployed homepage'
+        : `Invalid og:image:type value: ${ogImageTypeRaw}`,
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
@@ -1463,6 +1485,23 @@ export async function buildExternalVisibility(
         : resolvedTwitterImageRaw
           ? `twitter:image must be an absolute https URL (found: ${resolvedTwitterImageRaw})`
           : 'Missing twitter:image metadata on deployed homepage',
+  });
+
+  const twitterImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'name',
+    'twitter:image:alt',
+    'content'
+  );
+  const hasTwitterImageAlt = twitterImageAltRaw.trim().length > 0;
+  checks.push({
+    id: 'deployed-twitter-image-alt',
+    label: 'Deployed Twitter image alt text is declared',
+    ok: hasTwitterImageAlt,
+    details: hasTwitterImageAlt
+      ? 'twitter:image:alt metadata is present'
+      : 'Missing twitter:image:alt metadata on deployed homepage',
   });
 
   const manifestRaw = extractTagAttributeValue(

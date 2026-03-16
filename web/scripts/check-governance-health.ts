@@ -10,6 +10,7 @@
  *   5. Role diversity index — Gini coefficient of proposal authorship
  *   6. Contested decision rate — proposals with any 👎 / total voted
  *   7. Cross-role review rate — reviews where reviewer role ≠ PR author role
+ *   8. Voter participation rate — average turnout across governance votes
  *
  * Usage:
  *   npm run check-governance-health
@@ -527,6 +528,9 @@ export function buildHealthReport(
     );
     warnings.push(
       `Voter participation rate (${pct}%) below ${Math.round(VOTER_PARTICIPATION_WARN * 100)}% — fewer than half of eligible voters participating on average`
+    );
+    recommendations.push(
+      `Reach out to inactive voters on active governance decisions. Check open issues labeled 'hivemoot:voting' and 'hivemoot:extended-voting', then share the current voting thread link.`
     );
   }
 
