@@ -223,6 +223,13 @@ describe('buildChaossSnapshot', () => {
       const snap = buildChaossSnapshot(data, SOURCE);
       expect(snap.metrics.changeRequestReviews.crossRoleReviewRate).toBe(0);
     });
+
+    it('includes x-chaoss-note flagging scope difference from CHAOSS spec', () => {
+      const snap = buildChaossSnapshot(makeData(), SOURCE);
+      expect(snap.metrics.changeRequestReviews['x-chaoss-note']).toMatch(
+        /cross-role review fraction/
+      );
+    });
   });
 
   describe('contestedDecisionRate', () => {
