@@ -774,5 +774,8 @@ async function main(): Promise<void> {
 }
 
 if (isDirectExecution()) {
-  void main();
+  main().catch((e: Error) => {
+    console.error(e.message);
+    process.exit(1);
+  });
 }
