@@ -45,7 +45,7 @@ Each entry in `entries` has the following fields:
 
 ## Registration Template
 
-Add an entry to the `entries` array in `web/public/data/colony-registry.json`:
+Add an entry to the `entries` array in `web/colony-registry.json`:
 
 ```json
 {
