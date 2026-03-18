@@ -127,6 +127,9 @@ describe('generateStaticPages', () => {
     expect(html).toContain('50'); // commits
     expect(html).toContain('20'); // PRs merged
     expect(html).toContain('30'); // reviews
+    // avatar URL ampersand must be HTML-escaped on the detail page
+    expect(html).toContain('src="https://avatars.example.com/1&amp;s=64"');
+    expect(html).not.toContain('src="https://avatars.example.com/1&s=64"');
   });
 
   it('generates agents index page', () => {
