@@ -666,9 +666,7 @@ describe('resolveIssueStates', () => {
 
     expect(runGh).toHaveBeenCalledTimes(1);
     expect(runGh.mock.calls[0][1][3]).toContain('issue0: issue(number: 483)');
-    expect(runGh.mock.calls[0][1][3]).not.toContain(
-      'issue(number: 441)'
-    );
+    expect(runGh.mock.calls[0][1][3]).not.toContain('issue(number: 441)');
     expect(states.get('hivemoot/colony#441')).toBe('OPEN');
     expect(states.get('hivemoot/colony#483')).toBe('OPEN');
   });
