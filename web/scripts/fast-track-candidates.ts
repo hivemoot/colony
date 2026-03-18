@@ -25,6 +25,12 @@ interface IssueNode {
   url?: string;
 }
 
+interface IssueLookupRef {
+  key: string;
+  repo: string;
+  number: number;
+}
+
 interface StatusCheckNode {
   status?: string;
   conclusion?: string | null;
@@ -393,6 +399,25 @@ function getIssueKey(issue: IssueNode, defaultRepo: string): string {
   return `${defaultRepo}#${issue.number}`;
 }
 
+function parseIssueKey(issueKey: string): IssueLookupRef | null {
+  const hashIndex = issueKey.lastIndexOf('#');
+  if (hashIndex <= 0 || hashIndex === issueKey.length - 1) {
+    return null;
+  }
+
+  const repo = issueKey.slice(0, hashIndex);
+  const issueNumber = Number.parseInt(issueKey.slice(hashIndex + 1), 10);
+  if (!Number.isFinite(issueNumber) || issueNumber <= 0) {
+    return null;
+  }
+
+  return {
+    key: issueKey,
+    repo,
+    number: issueNumber,
+  };
+}
+
 function parseIssueRefFromUrl(
   url: string | undefined
 ): { repo: string; number: number } | null {
@@ -423,39 +448,121 @@ function parseIssueRefFromUrl(
   }
 }
 
-function resolveIssueStates(
+function buildIssueLookupRefs(
   repo: string,
   prs: PullRequestNode[]
-): Map<string, string> {
-  const issueKeys = Array.from(
-    new Set(
-      prs.flatMap((pr) =>
-        (pr.closingIssuesReferences ?? []).map((issue) =>
-          getIssueKey(issue, repo)
-        )
-      )
-    )
-  );
+): { states: Map<string, string>; unresolved: IssueLookupRef[] } {
   const states = new Map<string, string>();
+  const unresolved = new Map<string, IssueLookupRef>();
 
-  for (const issueKey of issueKeys) {
-    const hashIndex = issueKey.lastIndexOf('#');
-    const issueRepo = issueKey.slice(0, hashIndex);
-    const issueNumber = issueKey.slice(hashIndex + 1);
+  for (const pr of prs) {
+    for (const issue of pr.closingIssuesReferences ?? []) {
+      const issueKey = getIssueKey(issue, repo);
+      const directState = issue.state?.trim().toUpperCase();
 
-    try {
-      const state = execFileSync(
-        'gh',
-        ['api', `repos/${issueRepo}/issues/${issueNumber}`, '--jq', '.state'],
-        {
-          encoding: 'utf8',
-        }
-      )
-        .trim()
+      if (directState === 'OPEN' || directState === 'CLOSED') {
+        states.set(issueKey, directState);
+        continue;
+      }
+
+      if (states.has(issueKey) || unresolved.has(issueKey)) {
+        continue;
+      }
+
+      const parsed = parseIssueKey(issueKey);
+      if (!parsed) {
+        states.set(issueKey, 'UNKNOWN');
+        continue;
+      }
+
+      unresolved.set(issueKey, parsed);
+    }
+  }
+
+  return {
+    states,
+    unresolved: Array.from(unresolved.values()),
+  };
+}
+
+function buildIssueStateQuery(refs: IssueLookupRef[]): {
+  query: string;
+  aliases: Array<{ repoAlias: string; issueAlias: string; key: string }>;
+} {
+  const refsByRepo = new Map<string, IssueLookupRef[]>();
+  for (const ref of refs) {
+    const repoRefs = refsByRepo.get(ref.repo) ?? [];
+    repoRefs.push(ref);
+    refsByRepo.set(ref.repo, repoRefs);
+  }
+
+  const aliases: Array<{ repoAlias: string; issueAlias: string; key: string }> =
+    [];
+  const repoBlocks: string[] = [];
+  let repoIndex = 0;
+
+  for (const [lookupRepo, repoRefs] of refsByRepo.entries()) {
+    const [owner, name] = lookupRepo.split('/');
+    if (!owner || !name) {
+      continue;
+    }
+
+    const repoAlias = `repo${repoIndex}`;
+    const issueBlocks = repoRefs.map((ref, issueIndex) => {
+      const issueAlias = `issue${issueIndex}`;
+      aliases.push({ repoAlias, issueAlias, key: ref.key });
+      return `${issueAlias}: issue(number: ${ref.number}) { state }`;
+    });
+
+    repoBlocks.push(
+      `${repoAlias}: repository(owner: "${owner}", name: "${name}") { ${issueBlocks.join(
+        ' '
+      )} }`
+    );
+    repoIndex += 1;
+  }
+
+  return {
+    query: `query { ${repoBlocks.join(' ')} }`,
+    aliases,
+  };
+}
+
+export function resolveIssueStates(
+  repo: string,
+  prs: PullRequestNode[],
+  runGh: typeof execFileSync = execFileSync
+): Map<string, string> {
+  const { states, unresolved } = buildIssueLookupRefs(repo, prs);
+  if (unresolved.length === 0) {
+    return states;
+  }
+
+  const { query, aliases } = buildIssueStateQuery(unresolved);
+  if (!query.includes('repository(')) {
+    for (const ref of unresolved) {
+      states.set(ref.key, 'UNKNOWN');
+    }
+    return states;
+  }
+
+  try {
+    const output = runGh('gh', ['api', 'graphql', '-f', `query=${query}`], {
+      encoding: 'utf8',
+    });
+    const response = JSON.parse(output) as {
+      data?: Record<string, Record<string, { state?: string } | null> | null>;
+    };
+
+    for (const alias of aliases) {
+      const state = response.data?.[alias.repoAlias]?.[alias.issueAlias]?.state
+        ?.trim()
         .toUpperCase();
-      states.set(issueKey, state);
-    } catch {
-      states.set(issueKey, 'UNKNOWN');
+      states.set(alias.key, state || 'UNKNOWN');
+    }
+  } catch {
+    for (const ref of unresolved) {
+      states.set(ref.key, 'UNKNOWN');
     }
   }
 

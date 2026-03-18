@@ -11,6 +11,7 @@ import {
   normalizeMergeStateStatus,
   parseArgs,
   printHumanReport,
+  resolveIssueStates,
 } from '../fast-track-candidates';
 
 const ALLOWED_PREFIXES = [
@@ -554,6 +555,120 @@ describe('getWorkflowApprovalBlocker', () => {
         statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
       })
     ).toBeNull();
+  });
+});
+
+describe('resolveIssueStates', () => {
+  it('uses direct issue states without extra gh lookups', () => {
+    const runGh = vi.fn();
+
+    const states = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 200,
+          title: 'fix: keep queue moving',
+          url: 'https://example.test/pr/200',
+          closingIssuesReferences: [
+            { number: 441, state: 'OPEN' },
+            { number: 662, state: 'CLOSED' },
+          ],
+        },
+      ],
+      runGh as unknown as typeof import('node:child_process').execFileSync
+    );
+
+    expect(states.get('hivemoot/colony#441')).toBe('OPEN');
+    expect(states.get('hivemoot/colony#662')).toBe('CLOSED');
+    expect(runGh).not.toHaveBeenCalled();
+  });
+
+  it('batches unresolved issue lookups into one GraphQL call', () => {
+    const runGh = vi.fn(() =>
+      JSON.stringify({
+        data: {
+          repo0: {
+            issue0: { state: 'OPEN' },
+            issue1: { state: 'CLOSED' },
+          },
+          repo1: {
+            issue0: { state: 'OPEN' },
+          },
+        },
+      })
+    );
+
+    const states = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 201,
+          title: 'fix: batch issue state lookups',
+          url: 'https://example.test/pr/201',
+          closingIssuesReferences: [
+            { number: 441 },
+            { number: 483 },
+            {
+              number: 307,
+              url: 'https://github.com/hivemoot/hivemoot/issues/307',
+            },
+          ],
+        },
+      ],
+      runGh as unknown as typeof import('node:child_process').execFileSync
+    );
+
+    expect(runGh).toHaveBeenCalledTimes(1);
+    expect(runGh.mock.calls[0][0]).toBe('gh');
+    expect(runGh.mock.calls[0][1]).toEqual(
+      expect.arrayContaining(['api', 'graphql'])
+    );
+    expect(runGh.mock.calls[0][1][3]).toContain(
+      'repo0: repository(owner: "hivemoot", name: "colony")'
+    );
+    expect(runGh.mock.calls[0][1][3]).toContain('issue0: issue(number: 441)');
+    expect(runGh.mock.calls[0][1][3]).toContain('issue1: issue(number: 483)');
+    expect(runGh.mock.calls[0][1][3]).toContain(
+      'repo1: repository(owner: "hivemoot", name: "hivemoot")'
+    );
+    expect(states.get('hivemoot/colony#441')).toBe('OPEN');
+    expect(states.get('hivemoot/colony#483')).toBe('CLOSED');
+    expect(states.get('hivemoot/hivemoot#307')).toBe('OPEN');
+  });
+
+  it('keeps direct states and batches only unresolved lookups in the same run', () => {
+    const runGh = vi.fn(() =>
+      JSON.stringify({
+        data: {
+          repo0: {
+            issue0: { state: 'OPEN' },
+          },
+        },
+      })
+    );
+
+    const states = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 202,
+          title: 'fix: mix direct and unresolved issue states',
+          url: 'https://example.test/pr/202',
+          closingIssuesReferences: [
+            { number: 441, state: 'OPEN' },
+            { number: 483 },
+            { number: 483 },
+          ],
+        },
+      ],
+      runGh as unknown as typeof import('node:child_process').execFileSync
+    );
+
+    expect(runGh).toHaveBeenCalledTimes(1);
+    expect(runGh.mock.calls[0][1][3]).toContain('issue0: issue(number: 483)');
+    expect(runGh.mock.calls[0][1][3]).not.toContain('issue(number: 441)');
+    expect(states.get('hivemoot/colony#441')).toBe('OPEN');
+    expect(states.get('hivemoot/colony#483')).toBe('OPEN');
   });
 });
 
