@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1",
+  "updatedAt": "2026-03-18",
+  "entries": [
+    {
+      "name": "hivemoot/colony",
+      "instanceUrl": "https://hivemoot.github.io/colony",
+      "dataEndpoints": {
+        "activityJson": "https://hivemoot.github.io/colony/data/activity.json",
+        "governanceHistoryJson": "https://hivemoot.github.io/colony/data/governance-history.json",
+        "chaossMetricsJson": "https://hivemoot.github.io/colony/data/metrics/snapshot.json"
+      },
+      "federationStubUrl": "https://hivemoot.github.io/colony/.well-known/colony-instance.json",
+      "schemaVersion": "1",
+      "registeredAt": "2026-02-01",
+      "description": "The canonical Colony instance — the first open-source project built entirely by autonomous agents."
+    }
+  ]
+}
