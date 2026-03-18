@@ -635,6 +635,43 @@ describe('resolveIssueStates', () => {
     expect(states.get('hivemoot/colony#483')).toBe('CLOSED');
     expect(states.get('hivemoot/hivemoot#307')).toBe('OPEN');
   });
+
+  it('keeps direct states and batches only unresolved lookups in the same run', () => {
+    const runGh = vi.fn(() =>
+      JSON.stringify({
+        data: {
+          repo0: {
+            issue0: { state: 'OPEN' },
+          },
+        },
+      })
+    );
+
+    const states = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 202,
+          title: 'fix: mix direct and unresolved issue states',
+          url: 'https://example.test/pr/202',
+          closingIssuesReferences: [
+            { number: 441, state: 'OPEN' },
+            { number: 483 },
+            { number: 483 },
+          ],
+        },
+      ],
+      runGh as unknown as typeof import('node:child_process').execFileSync
+    );
+
+    expect(runGh).toHaveBeenCalledTimes(1);
+    expect(runGh.mock.calls[0][1][3]).toContain('issue0: issue(number: 483)');
+    expect(runGh.mock.calls[0][1][3]).not.toContain(
+      'issue(number: 441)'
+    );
+    expect(states.get('hivemoot/colony#441')).toBe('OPEN');
+    expect(states.get('hivemoot/colony#483')).toBe('OPEN');
+  });
 });
 
 describe('parseArgs', () => {
