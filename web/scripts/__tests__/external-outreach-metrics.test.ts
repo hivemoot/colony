@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  EXTERNAL_OUTREACH_USAGE,
   buildOutreachReport,
   dedupePullRequestRefs,
   extractPullRequestRefsFromText,
@@ -15,34 +16,22 @@ describe('parseArgs', () => {
     expect(opts.baselineStars).toBe(5);
   });
 
-  it('warns and ignores an invalid --baseline-stars value', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const opts = parseArgs(['--baseline-stars=abc']);
-    expect(opts.baselineStars).toBeNull(); // default unchanged
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('--baseline-stars="abc"')
+  it('rejects an invalid --baseline-stars value', () => {
+    expect(() => parseArgs(['--baseline-stars=abc'])).toThrow(
+      /--baseline-stars="abc" must be a non-negative integer/
     );
-    warn.mockRestore();
   });
 
-  it('warns and ignores a partial-numeric --baseline-stars value (5oops)', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const opts = parseArgs(['--baseline-stars=5oops']);
-    expect(opts.baselineStars).toBeNull();
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('--baseline-stars="5oops"')
+  it('rejects a partial-numeric --baseline-stars value (5oops)', () => {
+    expect(() => parseArgs(['--baseline-stars=5oops'])).toThrow(
+      /--baseline-stars="5oops" must be a non-negative integer/
     );
-    warn.mockRestore();
   });
 
-  it('warns and ignores a negative --baseline-stars value', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const opts = parseArgs(['--baseline-stars=-1']);
-    expect(opts.baselineStars).toBeNull();
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('--baseline-stars="-1"')
+  it('rejects a negative --baseline-stars value', () => {
+    expect(() => parseArgs(['--baseline-stars=-1'])).toThrow(
+      /--baseline-stars="-1" must be a non-negative integer/
     );
-    warn.mockRestore();
   });
 
   it('accepts a valid --issue value', () => {
@@ -50,22 +39,25 @@ describe('parseArgs', () => {
     expect(opts.issue).toBe(298);
   });
 
-  it('warns and ignores an invalid --issue value', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const opts = parseArgs(['--issue=abc']);
-    expect(opts.issue).toBeNull();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('--issue="abc"'));
-    warn.mockRestore();
+  it('rejects an invalid --issue value', () => {
+    expect(() => parseArgs(['--issue=abc'])).toThrow(
+      /--issue="abc" must be a positive integer/
+    );
   });
 
-  it('warns and ignores a partial-numeric --issue value (123abc)', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const opts = parseArgs(['--issue=123abc']);
-    expect(opts.issue).toBeNull();
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('--issue="123abc"')
+  it('rejects a partial-numeric --issue value (123abc)', () => {
+    expect(() => parseArgs(['--issue=123abc'])).toThrow(
+      /--issue="123abc" must be a positive integer/
     );
-    warn.mockRestore();
+  });
+
+  it('surfaces help without exiting the process inside parseArgs', () => {
+    const opts = parseArgs(['--help']);
+    expect(opts.help).toBe(true);
+  });
+
+  it('includes usage guidance in validation errors', () => {
+    expect(() => parseArgs(['--issue=0'])).toThrow(EXTERNAL_OUTREACH_USAGE);
   });
 });
 

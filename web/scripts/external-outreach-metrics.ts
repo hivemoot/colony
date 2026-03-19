@@ -21,6 +21,7 @@ interface CliOptions {
   issue: number | null;
   prs: string[];
   json: boolean;
+  help: boolean;
 }
 
 interface PullRequestRef {
@@ -71,6 +72,9 @@ interface IssueCommentApiResponse {
   body?: string;
 }
 
+export const EXTERNAL_OUTREACH_USAGE =
+  'Usage: npm run external-outreach-metrics -- [--repo=owner/name] [--baseline-stars=2] [--issue=298] [--pr=owner/repo#123] [--json]';
+
 export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
@@ -78,6 +82,7 @@ export function parseArgs(argv: string[]): CliOptions {
     issue: null,
     prs: [],
     json: false,
+    help: false,
   };
 
   for (const arg of argv) {
@@ -87,8 +92,8 @@ export function parseArgs(argv: string[]): CliOptions {
     }
 
     if (arg === '--help') {
-      printHelp();
-      process.exit(0);
+      options.help = true;
+      continue;
     }
 
     if (arg.startsWith('--repo=')) {
@@ -105,8 +110,8 @@ export function parseArgs(argv: string[]): CliOptions {
       if (Number.isFinite(value) && value >= 0) {
         options.baselineStars = value;
       } else {
-        console.warn(
-          `Warning: --baseline-stars="${raw}" is not a valid non-negative integer. Ignored.`
+        throw new Error(
+          `--baseline-stars="${raw}" must be a non-negative integer.\n${EXTERNAL_OUTREACH_USAGE}`
         );
       }
       continue;
@@ -118,8 +123,8 @@ export function parseArgs(argv: string[]): CliOptions {
       if (Number.isFinite(value) && value > 0) {
         options.issue = value;
       } else {
-        console.warn(
-          `Warning: --issue="${raw}" is not a valid positive integer. Ignored.`
+        throw new Error(
+          `--issue="${raw}" must be a positive integer.\n${EXTERNAL_OUTREACH_USAGE}`
         );
       }
       continue;
@@ -138,9 +143,7 @@ export function parseArgs(argv: string[]): CliOptions {
 }
 
 function printHelp(): void {
-  console.log(
-    'Usage: npm run external-outreach-metrics -- [--repo=owner/name] [--baseline-stars=2] [--issue=298] [--pr=owner/repo#123] [--json]'
-  );
+  console.log(EXTERNAL_OUTREACH_USAGE);
 }
 
 export function parsePullRequestRef(input: string): PullRequestRef | null {
@@ -382,6 +385,11 @@ function printHumanReport(report: OutreachReport): void {
 
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    printHelp();
+    return;
+  }
+
   const refs = resolveTrackedPullRequestRefs(options);
 
   const currentStars = loadCurrentStars(options.repo);
@@ -402,5 +410,10 @@ function main(): void {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }

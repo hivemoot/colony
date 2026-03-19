@@ -10,6 +10,7 @@ import {
 import {
   formatMissingHistoryFileMessage,
   parseReplayArgs,
+  REPLAY_GOVERNANCE_USAGE,
   replayFromArtifact,
   summarizeGovernanceReplay,
   summarizeNumericValues,
@@ -93,10 +94,16 @@ describe('parseReplayArgs', () => {
     expect(args.from).toBe('2026-02-01T00:00:00Z');
     expect(args.to).toBe('2026-02-10T00:00:00Z');
     expect(args.json).toBe(true);
+    expect(args.help).toBe(false);
+  });
+
+  it('surfaces help without exiting the process inside parseReplayArgs', () => {
+    const args = parseReplayArgs(['--help']);
+    expect(args.help).toBe(true);
   });
 
   it('throws on unsupported flags', () => {
-    expect(() => parseReplayArgs(['--wat'])).toThrow(/Unknown argument/);
+    expect(() => parseReplayArgs(['--wat'])).toThrow(REPLAY_GOVERNANCE_USAGE);
   });
 
   it('throws with a clear message for an invalid --from date', () => {
