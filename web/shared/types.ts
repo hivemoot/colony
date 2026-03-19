@@ -122,6 +122,7 @@ export interface VisibilityCheck {
     | 'deployed-og-image'
     | 'deployed-og-image-dimensions'
     | 'deployed-og-image-type'
+    | 'deployed-og-image-alt'
     | 'deployed-twitter-image'
     | 'deployed-twitter-image-alt'
     | 'deployed-pwa-manifest'
