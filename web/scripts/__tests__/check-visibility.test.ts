@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRepositoryApiUrl,
   hasAtomAutodiscoveryLink,
+  hasOpenGraphImageAltText,
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
   normalizeHttpsUrl,
@@ -181,6 +182,16 @@ describe('hasTwitterImageAltText', () => {
 
   it('rejects blank alt text', () => {
     expect(hasTwitterImageAltText('   ')).toBe(false);
+  });
+});
+
+describe('hasOpenGraphImageAltText', () => {
+  it('accepts non-empty alt text', () => {
+    expect(hasOpenGraphImageAltText('Colony dashboard preview')).toBe(true);
+  });
+
+  it('rejects blank alt text', () => {
+    expect(hasOpenGraphImageAltText('   ')).toBe(false);
   });
 });
 

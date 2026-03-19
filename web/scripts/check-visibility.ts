@@ -138,6 +138,10 @@ export function hasTwitterImageAltText(rawValue: string): boolean {
   return rawValue.trim().length > 0;
 }
 
+export function hasOpenGraphImageAltText(rawValue: string): boolean {
+  return rawValue.trim().length > 0;
+}
+
 function resolveHttpsUrl(rawValue: string, baseUrl: string): string {
   return normalizeHttpsUrl(rawValue, `${baseUrl}/`);
 }
@@ -536,6 +540,22 @@ async function runChecks(): Promise<CheckResult[]> {
       : !ogImageTypeRaw
         ? 'Missing og:image:type metadata on deployed homepage'
         : `Invalid og:image:type value: ${ogImageTypeRaw}`,
+  });
+
+  const ogImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:alt',
+    'content'
+  );
+  const hasOgImageAlt = hasOpenGraphImageAltText(ogImageAltRaw);
+  results.push({
+    label: 'Deployed Open Graph image alt text is declared',
+    ok: hasOgImageAlt,
+    details: hasOgImageAlt
+      ? 'og:image:alt metadata is present'
+      : 'Missing og:image:alt metadata on deployed homepage',
   });
 
   const twitterImageRaw = extractTagAttributeValue(

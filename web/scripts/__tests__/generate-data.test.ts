@@ -917,6 +917,7 @@ describe('buildExternalVisibility', () => {
                 <link rel="canonical" href="${baseUrl}/" />
                 <link rel="manifest" href="${baseUrl}/manifest.webmanifest" />
                 <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta property="og:image:alt" content="Colony dashboard screenshot" />
                 <meta property="og:image:width" content="1200" />
                 <meta property="og:image:height" content="630" />
                 <meta property="og:image:type" content="image/png" />
@@ -1014,6 +1015,9 @@ describe('buildExternalVisibility', () => {
     ).toBe(true);
     expect(
       visibility.checks.find((c) => c.id === 'deployed-og-image-type')?.ok
+    ).toBe(true);
+    expect(
+      visibility.checks.find((c) => c.id === 'deployed-og-image-alt')?.ok
     ).toBe(true);
     expect(visibility.checks.find((c) => c.id === 'deployed-favicon')?.ok).toBe(
       true
@@ -1474,6 +1478,64 @@ describe('buildExternalVisibility', () => {
     expect(twitterAltCheck?.ok).toBe(false);
     expect(twitterAltCheck?.details).toContain(
       'Missing twitter:image:alt metadata on deployed homepage'
+    );
+  });
+
+  it('flags missing og:image:alt on deployed homepage', async () => {
+    const baseUrl = 'https://hivemoot.github.io/colony';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (url === baseUrl) {
+          return new Response(
+            `<html>
+              <head>
+                <meta property="og:image" content="${baseUrl}/og-image.png" />
+                <meta property="og:image:type" content="image/png" />
+                <meta name="twitter:image" content="${baseUrl}/twitter-image.png" />
+                <meta name="twitter:image:alt" content="Colony screenshot" />
+                <script type="application/ld+json">{}</script>
+              </head>
+            </html>`,
+            { status: 200 }
+          );
+        }
+        if (
+          url === `${baseUrl}/og-image.png` ||
+          url === `${baseUrl}/twitter-image.png`
+        ) {
+          return new Response('image-bytes', { status: 200 });
+        }
+        return new Response('ok', { status: 200 });
+      }
+    );
+
+    const visibility = await buildExternalVisibility([
+      {
+        owner: 'hivemoot',
+        name: 'colony',
+        url: 'https://github.com/hivemoot/colony',
+        stars: 1,
+        forks: 1,
+        openIssues: 1,
+        homepage: `${baseUrl}/`,
+        topics: REQUIRED_DISCOVERABILITY_TOPICS,
+        description: 'Open-source dashboard for autonomous agent governance',
+      },
+    ]);
+
+    const ogAltCheck = visibility.checks.find(
+      (c) => c.id === 'deployed-og-image-alt'
+    );
+    expect(ogAltCheck?.ok).toBe(false);
+    expect(ogAltCheck?.details).toContain(
+      'Missing og:image:alt metadata on deployed homepage'
     );
   });
 

@@ -51,6 +51,7 @@ export function transformHtml(html: string, config: ColonyConfig): string {
   const siteUrlWithSlash = config.siteUrl + '/';
   const ogImageUrl = `${config.siteUrl}/og-image.png`;
   const pageTitle = `${config.siteTitle} | ${config.orgName}`;
+  const socialImageAlt = `${config.siteTitle} dashboard — ${config.siteDescription}`;
 
   return html
     .replace(/__COLONY_CANONICAL_URL__/g, siteUrlWithSlash)
@@ -68,6 +69,7 @@ export function transformHtml(html: string, config: ColonyConfig): string {
     .replace(/__COLONY_TWITTER_TITLE__/g, pageTitle)
     .replace(/__COLONY_TWITTER_DESCRIPTION__/g, config.siteDescription)
     .replace(/__COLONY_TWITTER_IMAGE__/g, ogImageUrl)
+    .replace(/__COLONY_SOCIAL_IMAGE_ALT__/g, socialImageAlt)
     .replace(/__COLONY_JSONLD_NAME__/g, config.siteTitle)
     .replace(/__COLONY_JSONLD_URL__/g, siteUrlWithSlash)
     .replace(/__COLONY_JSONLD_DESCRIPTION__/g, config.siteDescription)

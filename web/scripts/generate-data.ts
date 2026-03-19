@@ -1450,6 +1450,23 @@ export async function buildExternalVisibility(
         : `Invalid og:image:type value: ${ogImageTypeRaw}`,
   });
 
+  const ogImageAltRaw = extractTagAttributeValue(
+    deployedRootHtml,
+    'meta',
+    'property',
+    'og:image:alt',
+    'content'
+  );
+  const hasOgImageAlt = ogImageAltRaw.trim().length > 0;
+  checks.push({
+    id: 'deployed-og-image-alt',
+    label: 'Deployed Open Graph image alt text is declared',
+    ok: hasOgImageAlt,
+    details: hasOgImageAlt
+      ? 'og:image:alt metadata is present'
+      : 'Missing og:image:alt metadata on deployed homepage',
+  });
+
   const twitterImageRaw = extractTagAttributeValue(
     deployedRootHtml,
     'meta',
