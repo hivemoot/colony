@@ -22,6 +22,7 @@ export interface ReplayOptions {
   from: string | null;
   to: string | null;
   json: boolean;
+  help: boolean;
 }
 
 export interface SubMetricSummary {
@@ -55,15 +56,24 @@ export interface GovernanceReplaySummary {
   subMetrics: GovernanceSubMetrics | null;
 }
 
+export const REPLAY_GOVERNANCE_USAGE =
+  'Usage: npm run replay-governance -- [--file=path] [--from=ISO-8601] [--to=ISO-8601] [--json]';
+
 export function parseReplayArgs(args: string[]): ReplayOptions {
   let file = DEFAULT_HISTORY_FILE;
   let from: string | null = null;
   let to: string | null = null;
   let json = false;
+  let help = false;
 
   for (const arg of args) {
     if (arg === '--json') {
       json = true;
+      continue;
+    }
+
+    if (arg === '--help') {
+      help = true;
       continue;
     }
 
@@ -87,7 +97,7 @@ export function parseReplayArgs(args: string[]): ReplayOptions {
     }
 
     throw new Error(
-      `Unknown argument "${arg}". Expected --file=, --from=, --to=, or --json.`
+      `Unknown argument "${arg}". Expected --file=, --from=, --to=, --json, or --help.\n${REPLAY_GOVERNANCE_USAGE}`
     );
   }
 
@@ -95,7 +105,7 @@ export function parseReplayArgs(args: string[]): ReplayOptions {
     throw new Error('--from cannot be later than --to');
   }
 
-  return { file, from, to, json };
+  return { file, from, to, json, help };
 }
 
 export function summarizeNumericValues(
@@ -277,6 +287,11 @@ function formatTextOutput(params: {
 
 async function main(): Promise<void> {
   const options = parseReplayArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(REPLAY_GOVERNANCE_USAGE);
+    return;
+  }
+
   if (!existsSync(options.file)) {
     throw new Error(formatMissingHistoryFileMessage(options.file));
   }
