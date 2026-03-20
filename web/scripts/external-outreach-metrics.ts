@@ -137,6 +137,8 @@ export function parseArgs(argv: string[]): CliOptions {
       }
       continue;
     }
+
+    throw new Error(`Unknown argument ${arg}.\n${EXTERNAL_OUTREACH_USAGE}`);
   }
 
   return options;

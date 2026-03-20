@@ -56,6 +56,12 @@ describe('parseArgs', () => {
     expect(opts.help).toBe(true);
   });
 
+  it('rejects unsupported flags', () => {
+    expect(() => parseArgs(['--wat'])).toThrow(
+      /Unknown argument --wat\.\nUsage: npm run external-outreach-metrics/
+    );
+  });
+
   it('includes usage guidance in validation errors', () => {
     expect(() => parseArgs(['--issue=0'])).toThrow(EXTERNAL_OUTREACH_USAGE);
   });
