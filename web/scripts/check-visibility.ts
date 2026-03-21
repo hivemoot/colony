@@ -390,9 +390,11 @@ async function runChecks(): Promise<CheckResult[]> {
 
   const agentsHubUrl = resolveDeployedPageUrl(baseUrl, 'agents/');
   const proposalsHubUrl = resolveDeployedPageUrl(baseUrl, 'proposals/');
-  const [agentsHubRes, proposalsHubRes] = await Promise.all([
+  const feedXmlUrl = resolveDeployedPageUrl(baseUrl, 'feed.xml');
+  const [agentsHubRes, proposalsHubRes, feedXmlRes] = await Promise.all([
     fetchWithTimeout(agentsHubUrl),
     fetchWithTimeout(proposalsHubUrl),
+    fetchWithTimeout(feedXmlUrl),
   ]);
 
   const agentsOk = agentsHubRes?.status === 200;
@@ -413,6 +415,15 @@ async function runChecks(): Promise<CheckResult[]> {
         : `GET ${proposalsHubUrl} returned ${proposalsHubRes?.status ?? 'no response'}`,
     }
   );
+
+  const feedXmlOk = feedXmlRes?.status === 200;
+  results.push({
+    label: 'Deployed feed.xml is reachable',
+    ok: feedXmlOk,
+    details: feedXmlOk
+      ? `GET ${feedXmlUrl} returned 200`
+      : `GET ${feedXmlUrl} returned ${feedXmlRes?.status ?? 'no response'}`,
+  });
 
   const proposalsHubHtml =
     proposalsHubRes?.status === 200 ? await proposalsHubRes.text() : '';
