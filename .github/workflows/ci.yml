@@ -13,6 +13,8 @@ concurrency:
 jobs:
   lint-typecheck-test-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: web
@@ -20,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,7 +50,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Governance health SLA
+      - name: Governance health SLA (PR — uses deployed activity.json)
+        if: github.event_name == 'pull_request'
+        run: |
+          if curl -sf "https://hivemoot.github.io/colony/data/activity.json" \
+               -o /tmp/pr-activity.json; then
+            ACTIVITY_FILE=/tmp/pr-activity.json npm run check-governance-health
+          else
+            echo "::warning::Deployed activity.json unavailable — governance health check skipped"
+          fi
+        env:
+          # Permissive initial thresholds — tighten as governance matures.
+          GH_CYCLE_P95_WARN_DAYS: '14'
+          GH_CONTESTED_MIN_WARN: '0'
+          GH_VOTER_PARTICIPATION_WARN: '0.25'
+
+      - name: Governance health SLA (main — uses generated activity.json)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm run check-governance-health
         env:
