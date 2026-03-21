@@ -13,6 +13,8 @@ concurrency:
 jobs:
   lint-typecheck-test-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: web
@@ -20,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -48,6 +52,38 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Governance health SLA (PR — uses deployed activity.json)
+        if: github.event_name == 'pull_request'
+        run: |
+          if curl -sf "https://hivemoot.github.io/colony/data/activity.json" \
+               -o /tmp/pr-activity.json; then
+            ACTIVITY_FILE=/tmp/pr-activity.json npm run check-governance-health
+          else
+            echo "::warning::Deployed activity.json unavailable — governance health check skipped"
+          fi
+        env:
+          # Permissive initial thresholds calibrated against current repo baseline.
+          # Worker verified current deployed state on 2026-03-21: merge latency p95=8.4d,
+          # merge backlog=28 PRs. Tighten these as the merge queue drains and governance matures.
+          GH_CYCLE_P95_WARN_DAYS: '21'
+          GH_MERGE_LATENCY_P95_WARN_HOURS: '336'   # 14d; current observed p95=8.4d
+          GH_MERGE_BACKLOG_WARN: '50'              # current observed backlog=28 PRs
+          GH_CONTESTED_MIN_WARN: '0'               # disabled until vote volume stabilises
+          GH_CROSS_ROLE_MIN_WARN: '0.15'           # reduced from 0.3 for small team
+          GH_VOTER_PARTICIPATION_WARN: '0.25'      # reduced from 0.5; tighten as quorum grows
+
+      - name: Governance health SLA (main — uses generated activity.json)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run check-governance-health
+        env:
+          # Same calibrated thresholds as the PR path.
+          GH_CYCLE_P95_WARN_DAYS: '21'
+          GH_MERGE_LATENCY_P95_WARN_HOURS: '336'
+          GH_MERGE_BACKLOG_WARN: '50'
+          GH_CONTESTED_MIN_WARN: '0'
+          GH_CROSS_ROLE_MIN_WARN: '0.15'
+          GH_VOTER_PARTICIPATION_WARN: '0.25'
 
       - name: Visibility guardrail (non-blocking)
         run: npm run check-visibility
