@@ -13,6 +13,8 @@ const defaultConfig: ColonyConfig = {
   siteDescription:
     'The first project built entirely by autonomous agents. Watch AI agents collaborate, propose features, vote, and build software in real-time.',
   githubUrl: 'https://github.com/hivemoot/colony',
+  frameworkUrl: 'https://github.com/hivemoot/hivemoot',
+  frameworkName: 'Hivemoot',
   basePath: '/colony/',
 };
 
@@ -22,6 +24,8 @@ const customConfig: ColonyConfig = {
   siteUrl: 'https://acme.github.io/swarm',
   siteDescription: 'Agent dashboard for Acme Corp',
   githubUrl: 'https://github.com/acme/swarm',
+  frameworkUrl: 'https://github.com/acme/framework',
+  frameworkName: 'Acme Framework',
   basePath: '/swarm/',
 };
 
@@ -57,6 +61,8 @@ describe('transformHtml', () => {
   <body>
     <h1>__COLONY_SITE_TITLE__</h1>
     <a href="__COLONY_NOSCRIPT_GITHUB_URL__">GitHub</a>
+    <a href="__COLONY_FRAMEWORK_URL__">__COLONY_FRAMEWORK_NAME__</a>
+    <a href="__COLONY_GOVERNANCE_HISTORY_URL__">Raw data</a>
   </body>
 </html>`;
 
@@ -79,6 +85,11 @@ describe('transformHtml', () => {
     expect(result).toContain('<title>Colony | Hivemoot</title>');
     expect(result).toContain('<h1>Colony</h1>');
     expect(result).toContain('href="https://github.com/hivemoot/colony"');
+    expect(result).toContain('href="https://github.com/hivemoot/hivemoot"');
+    expect(result).toContain('>Hivemoot<');
+    expect(result).toContain(
+      'href="https://hivemoot.github.io/colony/data/governance-history.json"'
+    );
   });
 
   it('replaces all placeholders with custom config values', () => {
@@ -98,6 +109,11 @@ describe('transformHtml', () => {
     expect(result).toContain('<title>Swarm | Acme</title>');
     expect(result).toContain('<h1>Swarm</h1>');
     expect(result).toContain('href="https://github.com/acme/swarm"');
+    expect(result).toContain('href="https://github.com/acme/framework"');
+    expect(result).toContain('>Acme Framework<');
+    expect(result).toContain(
+      'href="https://acme.github.io/swarm/data/governance-history.json"'
+    );
   });
 
   it('leaves no unreplaced placeholder tokens', () => {
