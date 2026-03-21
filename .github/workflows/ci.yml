@@ -46,6 +46,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Governance health SLA
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run check-governance-health
+        env:
+          # Permissive initial thresholds — tighten as governance matures.
+          # GH_CYCLE_P95_WARN_DAYS: current p95 is ~7.6d, give headroom while baseline establishes.
+          # GH_CONTESTED_MIN_WARN: disable contested-rate check until Colony's PR volume is larger.
+          # GH_VOTER_PARTICIPATION_WARN: lower floor until quorum patterns stabilize.
+          GH_CYCLE_P95_WARN_DAYS: '14'
+          GH_CONTESTED_MIN_WARN: '0'
+          GH_VOTER_PARTICIPATION_WARN: '0.25'
+
       - name: Build
         run: npm run build
 
