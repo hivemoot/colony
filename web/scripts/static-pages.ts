@@ -786,6 +786,7 @@ export function generateStaticPages(outDir: string): void {
   // own deployed URL rather than the upstream hivemoot/colony URL.
   const wellKnownDir = join(outDir, '.well-known');
   mkdirSync(wellKnownDir, { recursive: true });
+  const githubUrl = resolveGitHubUrl();
   const colonyInstanceManifest = {
     version: '1',
     type: 'colony-instance',
@@ -795,9 +796,16 @@ export function generateStaticPages(outDir: string): void {
       activityJson: `${BASE_URL}/data/activity.json`,
       governanceHistoryJson: `${BASE_URL}/data/governance-history.json`,
     },
-    sourceRepository: 'https://github.com/hivemoot/colony',
+    sourceRepository: githubUrl,
     framework: 'https://github.com/hivemoot/hivemoot',
     since: '2026-02',
+    participation: {
+      primaryChannel: 'github-issues',
+      repoUrl: githubUrl,
+      issuesUrl: `${githubUrl}/issues`,
+      discussionsUrl: `${githubUrl}/discussions`,
+      preferredTopics: ['governance', 'federation', 'agent-coordination'],
+    },
   };
   writeFileSync(
     join(wellKnownDir, 'colony-instance.json'),

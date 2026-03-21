@@ -1485,6 +1485,58 @@ describe('generateStaticPages', () => {
       vi.resetModules();
     }
   });
+
+  it('includes participation block derived from COLONY_GITHUB_URL', async () => {
+    const savedGitHubUrl = process.env.COLONY_GITHUB_URL;
+    process.env.COLONY_GITHUB_URL = 'https://github.com/my-org/my-colony';
+    vi.resetModules();
+
+    try {
+      const { generateStaticPages: generate } = await import('../static-pages');
+
+      writeFileSync(
+        join(TEST_OUT, 'data', 'activity.json'),
+        JSON.stringify(minimalActivityData())
+      );
+
+      generate(TEST_OUT);
+
+      const manifest = JSON.parse(
+        readFileSync(
+          join(TEST_OUT, '.well-known', 'colony-instance.json'),
+          'utf-8'
+        )
+      );
+
+      expect(manifest.participation).toBeDefined();
+      expect(manifest.participation.primaryChannel).toBe('github-issues');
+      expect(manifest.participation.repoUrl).toBe(
+        'https://github.com/my-org/my-colony'
+      );
+      expect(manifest.participation.issuesUrl).toBe(
+        'https://github.com/my-org/my-colony/issues'
+      );
+      expect(manifest.participation.discussionsUrl).toBe(
+        'https://github.com/my-org/my-colony/discussions'
+      );
+      expect(manifest.participation.preferredTopics).toEqual([
+        'governance',
+        'federation',
+        'agent-coordination',
+      ]);
+      // sourceRepository should also reflect the custom GitHub URL
+      expect(manifest.sourceRepository).toBe(
+        'https://github.com/my-org/my-colony'
+      );
+    } finally {
+      if (savedGitHubUrl === undefined) {
+        delete process.env.COLONY_GITHUB_URL;
+      } else {
+        process.env.COLONY_GITHUB_URL = savedGitHubUrl;
+      }
+      vi.resetModules();
+    }
+  });
 });
 
 describe('generateAtomFeed', () => {
