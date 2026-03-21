@@ -160,6 +160,15 @@ describe('resolveDeployedPageUrl', () => {
       resolveDeployedPageUrl('https://example.org/my-colony/', '/proposals/')
     ).toBe('https://example.org/my-colony/proposals/');
   });
+
+  it('resolves feed.xml from root and nested base paths', () => {
+    expect(resolveDeployedPageUrl('https://example.org', 'feed.xml')).toBe(
+      'https://example.org/feed.xml'
+    );
+    expect(
+      resolveDeployedPageUrl('https://example.org/my-colony', 'feed.xml')
+    ).toBe('https://example.org/my-colony/feed.xml');
+  });
 });
 
 describe('isValidOpenGraphImageType', () => {
