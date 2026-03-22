@@ -56,7 +56,8 @@ jobs:
       - name: Governance health SLA (PR — uses deployed activity.json)
         if: github.event_name == 'pull_request'
         run: |
-          if curl -sf "https://hivemoot.github.io/colony/data/activity.json" \
+          if curl -sf --connect-timeout 5 --max-time 20 \
+               "https://hivemoot.github.io/colony/data/activity.json" \
                -o /tmp/pr-activity.json; then
             ACTIVITY_FILE=/tmp/pr-activity.json npm run check-governance-health
           else
