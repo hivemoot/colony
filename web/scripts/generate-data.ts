@@ -2171,5 +2171,8 @@ async function main(): Promise<void> {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main();
+  main().catch((error: Error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
 }

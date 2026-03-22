@@ -592,5 +592,8 @@ function main(): void {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
+  main().catch((error: Error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
 }
