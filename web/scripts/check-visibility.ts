@@ -376,11 +376,20 @@ async function runChecks(): Promise<CheckResult[]> {
     }
   };
 
-  const [rootRes, robotsRes, sitemapRes, activityRes] = await Promise.all([
+  const [
+    rootRes,
+    robotsRes,
+    sitemapRes,
+    activityRes,
+    colonyInstanceRes,
+    metricsSnapshotRes,
+  ] = await Promise.all([
     fetchWithTimeout(baseUrl),
     fetchWithTimeout(`${baseUrl}/robots.txt`),
     fetchWithTimeout(`${baseUrl}/sitemap.xml`),
     fetchWithTimeout(`${baseUrl}/data/activity.json`),
+    fetchWithTimeout(`${baseUrl}/.well-known/colony-instance.json`),
+    fetchWithTimeout(`${baseUrl}/data/metrics/snapshot.json`),
   ]);
 
   results.push({
@@ -771,6 +780,26 @@ async function runChecks(): Promise<CheckResult[]> {
     label: 'Deployed data freshness (<= 18h)',
     ok: freshnessOk,
     details: freshnessDetails,
+  });
+
+  const colonyInstanceUrl = `${baseUrl}/.well-known/colony-instance.json`;
+  const colonyInstanceOk = colonyInstanceRes?.status === 200;
+  results.push({
+    label: 'Deployed /.well-known/colony-instance.json reachable',
+    ok: colonyInstanceOk,
+    details: colonyInstanceOk
+      ? `GET ${colonyInstanceUrl} returned 200`
+      : `GET ${colonyInstanceUrl} returned ${colonyInstanceRes?.status ?? 'no response'}`,
+  });
+
+  const metricsSnapshotUrl = `${baseUrl}/data/metrics/snapshot.json`;
+  const metricsSnapshotOk = metricsSnapshotRes?.status === 200;
+  results.push({
+    label: 'Deployed /data/metrics/snapshot.json reachable',
+    ok: metricsSnapshotOk,
+    details: metricsSnapshotOk
+      ? `GET ${metricsSnapshotUrl} returned 200`
+      : `GET ${metricsSnapshotUrl} returned ${metricsSnapshotRes?.status ?? 'no response'}`,
   });
 
   return results;
