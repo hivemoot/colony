@@ -44,19 +44,16 @@ const DEFAULT_BENCHMARK_FILE = join(
  * Source: https://linearb.io/blog/2025-engineering-benchmarks-insights
  * Sample: 6.1M+ pull requests from 3,000+ development teams (telemetry, not survey).
  *
- * Metric definition: PR creation-to-merge (not commit-to-deploy).
- * LinearB labels PRs that take under 26 hours as "elite" and the industry
- * median is approximately 7 days (168 hours).
- *
- * Verification note: LinearB's primary metric is "commit-to-deploy" in some
- * report sections; the PR creation-to-merge values cited here are from their
- * PR-specific analysis. Implementers should verify at the source URL that
- * these numbers still refer to the PR creation-to-merge window.
+ * Metric definition: PR creation-to-merge (pickup + review sub-phases).
+ * LinearB's full cycle time (commit-to-production) is 26h elite / 168h median, but
+ * Colony's `prCycleTimeP50Hours` measures PR open-to-merge only — matching LinearB's
+ * pickup + review sub-phase breakdown: elite <13h (pickup <7h + review <6h),
+ * median ~4d / 96h for the PR-in-review period.
  */
 export const LINEAR_B_2025 = {
-  eliteThresholdHours: 26,
-  medianHours: 168,
-  source: 'LinearB 2025 Engineering Benchmarks',
+  eliteThresholdHours: 13,
+  medianHours: 96,
+  source: 'LinearB 2025 Engineering Benchmarks (Pickup + Review sub-phases)',
   sourceUrl: 'https://linearb.io/blog/2025-engineering-benchmarks-insights',
   sampleSize: '6.1M+ pull requests',
   year: 2025,
@@ -141,6 +138,7 @@ export interface BenchmarkReport {
 export interface CliOptions {
   json: boolean;
   compare: boolean;
+  help: boolean;
   benchmarkFile: string;
 }
 
@@ -148,6 +146,7 @@ export function parseArgs(argv: string[]): CliOptions {
   return {
     json: argv.includes('--json'),
     compare: argv.includes('--compare'),
+    help: argv.includes('--help'),
     benchmarkFile: resolve(
       process.env['BENCHMARK_FILE'] ?? DEFAULT_BENCHMARK_FILE
     ),
@@ -228,7 +227,7 @@ export function formatReport(
   lines.push(`  PRs merged:   ${colony.metrics.mergedPrs}`);
   lines.push(`  Open PRs:     ${colony.metrics.openPrs}`);
   lines.push(
-    `  Stale open:   ${colony.metrics.staleOpenPrs}  (>${report.cohort.length > 0 ? '7' : '7'}d without update)`
+    `  Stale open:   ${colony.metrics.staleOpenPrs}  (>7d without update)`
   );
   lines.push(`  Contributors: ${colony.metrics.activeContributors}`);
   lines.push(
@@ -331,20 +330,21 @@ export function formatReport(
 // Main
 // ──────────────────────────────────────────────
 
+const HELP_TEXT =
+  'Usage: npm run check-benchmarks [-- [--compare] [--json]]\n' +
+  '\n' +
+  'Options:\n' +
+  '  --compare   Add LinearB 2025 industry reference for PR cycle time\n' +
+  '  --json      Output machine-readable JSON instead of text\n' +
+  '\n' +
+  'Environment:\n' +
+  '  BENCHMARK_FILE   Path to benchmark.json (default: web/public/data/benchmark.json)\n';
+
 export async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  if (process.argv.includes('--help')) {
-    console.log(
-      'Usage: npm run check-benchmarks [-- [--compare] [--json]]\n' +
-        '\n' +
-        'Options:\n' +
-        '  --compare   Add LinearB 2025 industry reference for PR cycle time\n' +
-        '  --json      Output machine-readable JSON instead of text\n' +
-        '\n' +
-        'Environment:\n' +
-        '  BENCHMARK_FILE   Path to benchmark.json (default: web/public/data/benchmark.json)\n'
-    );
+  if (options.help) {
+    console.log(HELP_TEXT);
     return;
   }
 
@@ -374,19 +374,6 @@ function isDirectExecution(): boolean {
 }
 
 if (isDirectExecution()) {
-  if (process.argv.includes('--help')) {
-    console.log(
-      'Usage: npm run check-benchmarks [-- [--compare] [--json]]\n' +
-        '\n' +
-        'Options:\n' +
-        '  --compare   Add LinearB 2025 industry reference for PR cycle time\n' +
-        '  --json      Output machine-readable JSON instead of text\n' +
-        '\n' +
-        'Environment:\n' +
-        '  BENCHMARK_FILE   Path to benchmark.json (default: web/public/data/benchmark.json)\n'
-    );
-    process.exit(0);
-  }
   main().catch((e: Error) => {
     console.error(e.message);
     process.exit(1);

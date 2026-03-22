@@ -88,6 +88,7 @@ describe('parseArgs', () => {
     const opts = parseArgs([]);
     expect(opts.json).toBe(false);
     expect(opts.compare).toBe(false);
+    expect(opts.help).toBe(false);
   });
 
   it('parses --json', () => {
@@ -96,6 +97,10 @@ describe('parseArgs', () => {
 
   it('parses --compare', () => {
     expect(parseArgs(['--compare']).compare).toBe(true);
+  });
+
+  it('parses --help', () => {
+    expect(parseArgs(['--help']).help).toBe(true);
   });
 
   it('parses both flags together', () => {
@@ -192,8 +197,8 @@ describe('formatReport', () => {
     expect(output).toContain('LinearB 2025');
     expect(output).toContain('Comparability note');
     expect(output).toContain('24/7');
-    expect(output).toContain('26.0h'); // elite threshold
-    expect(output).toContain('7.0d'); // 168h median
+    expect(output).toContain('13.0h'); // elite threshold (pickup + review sub-phases)
+    expect(output).toContain('4.0d'); // 96h median (PR-in-review period)
   });
 
   it('omits external reference section without --compare', () => {
@@ -288,11 +293,13 @@ describe('formatReport', () => {
 
 describe('LINEAR_B_2025', () => {
   it('has expected structure', () => {
-    expect(LINEAR_B_2025.eliteThresholdHours).toBe(26);
-    expect(LINEAR_B_2025.medianHours).toBe(168);
+    // PR creation-to-merge scope: pickup (<7h) + review (<6h) = 13h elite, ~4d/96h median
+    expect(LINEAR_B_2025.eliteThresholdHours).toBe(13);
+    expect(LINEAR_B_2025.medianHours).toBe(96);
     expect(LINEAR_B_2025.year).toBe(2025);
     expect(LINEAR_B_2025.sourceUrl).toContain('linearb.io');
     expect(LINEAR_B_2025.sampleSize).toContain('6.1M');
     expect(LINEAR_B_2025.caveat).toContain('24/7');
+    expect(LINEAR_B_2025.source).toContain('Pickup + Review');
   });
 });
