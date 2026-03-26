@@ -2349,9 +2349,10 @@ function makeHealthReport(
     generatedAt: '2026-03-14T00:00:00.000Z',
     dataWindowDays: 30,
     metrics: {
-      prCycleTime: { p50: 12, p95: 48, sampleSize: 10 },
-      reviewLatency: { p50: 6, p95: 24, sampleSize: 10 },
-      mergeLatency: { p50: 2, p95: 8, sampleSize: 10 },
+      // p50/p95 are in minutes (HealthReport contract); Hours fields divide by 60
+      prCycleTime: { p50: 720, p95: 2880, sampleSize: 10 }, // 12h, 48h
+      reviewLatency: { p50: 360, p95: 1440, sampleSize: 10 }, // 6h, 24h
+      mergeLatency: { p50: 120, p95: 480, sampleSize: 10 }, // 2h, 8h
       mergeBacklogDepth: { depth: 3, eldestApprovedHours: 72 },
       roleDiversity: {
         uniqueRoles: 4,
