@@ -96,6 +96,8 @@ interface CliOptions {
   json: boolean;
 }
 
+type RunCommand = (args: string[]) => string;
+
 export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     repo: DEFAULT_REPO,
@@ -385,6 +387,12 @@ function loadPullRequests(repo: string, limit: number): PullRequestNode[] {
   return parsed;
 }
 
+function runGhCommand(args: string[]): string {
+  return execFileSync('gh', args, {
+    encoding: 'utf8',
+  });
+}
+
 function getIssueKey(issue: IssueNode, defaultRepo: string): string {
   const fromUrl = parseIssueRefFromUrl(issue.url);
   if (fromUrl) {
@@ -423,34 +431,57 @@ function parseIssueRefFromUrl(
   }
 }
 
-function resolveIssueStates(
+function getKnownIssueState(issue: IssueNode): string | null {
+  const normalized = issue.state?.trim().toUpperCase();
+  if (normalized === 'OPEN' || normalized === 'CLOSED') {
+    return normalized;
+  }
+  return null;
+}
+
+export function resolveIssueStates(
   repo: string,
-  prs: PullRequestNode[]
+  prs: PullRequestNode[],
+  runCommand: RunCommand = runGhCommand
 ): Map<string, string> {
-  const issueKeys = Array.from(
-    new Set(
-      prs.flatMap((pr) =>
-        (pr.closingIssuesReferences ?? []).map((issue) =>
-          getIssueKey(issue, repo)
-        )
-      )
-    )
-  );
   const states = new Map<string, string>();
+  const unresolved = new Map<
+    string,
+    {
+      repo: string;
+      number: string;
+    }
+  >();
 
-  for (const issueKey of issueKeys) {
-    const hashIndex = issueKey.lastIndexOf('#');
-    const issueRepo = issueKey.slice(0, hashIndex);
-    const issueNumber = issueKey.slice(hashIndex + 1);
+  for (const pr of prs) {
+    for (const issue of pr.closingIssuesReferences ?? []) {
+      const key = getIssueKey(issue, repo);
+      if (states.has(key) || unresolved.has(key)) {
+        continue;
+      }
 
+      const knownState = getKnownIssueState(issue);
+      if (knownState) {
+        states.set(key, knownState);
+        continue;
+      }
+
+      const hashIndex = key.lastIndexOf('#');
+      unresolved.set(key, {
+        repo: key.slice(0, hashIndex),
+        number: key.slice(hashIndex + 1),
+      });
+    }
+  }
+
+  for (const [issueKey, issueRef] of unresolved) {
     try {
-      const state = execFileSync(
-        'gh',
-        ['api', `repos/${issueRepo}/issues/${issueNumber}`, '--jq', '.state'],
-        {
-          encoding: 'utf8',
-        }
-      )
+      const state = runCommand([
+        'api',
+        `repos/${issueRef.repo}/issues/${issueRef.number}`,
+        '--jq',
+        '.state',
+      ])
         .trim()
         .toUpperCase();
       states.set(issueKey, state);

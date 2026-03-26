@@ -11,6 +11,7 @@ import {
   normalizeMergeStateStatus,
   parseArgs,
   printHumanReport,
+  resolveIssueStates,
 } from '../fast-track-candidates';
 
 const ALLOWED_PREFIXES = [
@@ -554,6 +555,68 @@ describe('getWorkflowApprovalBlocker', () => {
         statusCheckRollup: [{ status: 'COMPLETED', conclusion: 'SUCCESS' }],
       })
     ).toBeNull();
+  });
+});
+
+describe('resolveIssueStates', () => {
+  it('reuses direct issue states from the PR payload without extra gh calls', () => {
+    const runCommand = vi.fn();
+
+    const states = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 200,
+          title: 'fix: avoid extra lookups',
+          url: 'https://example.test/pr/200',
+          closingIssuesReferences: [
+            { number: 307, state: 'OPEN' },
+            {
+              number: 445,
+              state: 'CLOSED',
+              url: 'https://github.com/hivemoot/hivemoot/issues/445',
+            },
+          ],
+        },
+      ],
+      runCommand
+    );
+
+    expect(states.get('hivemoot/colony#307')).toBe('OPEN');
+    expect(states.get('hivemoot/hivemoot#445')).toBe('CLOSED');
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it('only queries gh for linked issues whose state is missing', () => {
+    const runCommand = vi.fn((args: string[]) => {
+      expect(args).toEqual([
+        'api',
+        'repos/hivemoot/colony/issues/308',
+        '--jq',
+        '.state',
+      ]);
+      return 'open\n';
+    });
+
+    const states = resolveIssueStates(
+      'hivemoot/colony',
+      [
+        {
+          number: 201,
+          title: 'fix: query missing states only',
+          url: 'https://example.test/pr/201',
+          closingIssuesReferences: [
+            { number: 307, state: 'OPEN' },
+            { number: 308 },
+          ],
+        },
+      ],
+      runCommand
+    );
+
+    expect(states.get('hivemoot/colony#307')).toBe('OPEN');
+    expect(states.get('hivemoot/colony#308')).toBe('OPEN');
+    expect(runCommand).toHaveBeenCalledTimes(1);
   });
 });
 
