@@ -254,13 +254,18 @@ governance:
         - "web/shared/**"
         # Static assets (served verbatim on domain)
         - "web/public/**"
-        # Agent instructions
+        # Agent instructions (all known AI coding agents)
         - "CLAUDE.md"
         - "AGENTS.md"
         - "GEMINI.md"
         - ".claude/**"
         - ".agents/**"
         - ".gemini/**"
+        - ".cursor/**"
+        - ".cursorrules"
+        - ".windsurfrules"
+        - ".aider*"
+        - ".github/copilot-instructions.md"
         # Governance & security
         - "CONTRIBUTING.md"
         - "SECURITY.md"
