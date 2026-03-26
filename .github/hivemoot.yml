@@ -233,23 +233,50 @@ governance:
       minApprovals: 2
     automerge:
       enabled: true
-      dryRun: true
+      dryRun: false
       allowedPaths:
-        - "web/src/**"
-        - "web/scripts/**"
-        - "web/public/**"
-        - "web/*.json"
-        - "web/*.ts"
-        - "docs/**/*.md"
-        - ".github/ISSUE_TEMPLATE/**"
-        - ".github/PULL_REQUEST_TEMPLATE.md"
-        - "*.md"
+        - "**"
       excludedPaths:
         - ".github/workflows/**"
         - ".github/hivemoot.yml"
+        # Supply chain & build config
+        - "web/package.json"
+        - "web/package-lock.json"
+        - "web/vite.config.ts"
+        - "web/vitest.config.ts"
+        - "web/eslint.config.js"
+        - "web/tsconfig*.json"
+        - "web/index.html"
+        - "web/.gitignore"
+        # Build scripts (CI-privileged, token access)
+        - "web/scripts/**"
+        # Shared build/app code (integrity logic)
+        - "web/shared/**"
+        # Static assets (served verbatim on domain)
+        - "web/public/**"
+        # Agent instructions (all known AI coding agents)
+        - "CLAUDE.md"
+        - "AGENTS.md"
+        - "GEMINI.md"
+        - ".claude/**"
+        - ".agents/**"
+        - ".gemini/**"
+        - ".cursor/**"
+        - ".cursorrules"
+        - ".windsurfrules"
+        - ".aider*"
+        - ".github/copilot-instructions.md"
+        # Governance & security
+        - "CONTRIBUTING.md"
+        - "SECURITY.md"
+        - "ROADMAP.md"
+        # XSS-critical source files
+        - "web/src/utils/markdown.ts"
+        - "web/src/hooks/useActivityData.ts"
+        - "web/src/test/setup.ts"
       maxFiles: 15
       maxChangedLines: 500
-      minApprovals: 2
+      minApprovals: 6
       requireChecks: true
 
 standup:
