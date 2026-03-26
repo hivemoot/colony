@@ -235,17 +235,7 @@ governance:
       enabled: true
       dryRun: false
       allowedPaths:
-        - "web/src/**"
-        - "web/scripts/**"
-        - "web/public/**"
-        - "web/tsconfig*.json"
-        - "web/lighthouserc.json"
-        - "docs/**/*.md"
-        - ".github/ISSUE_TEMPLATE/**"
-        - ".github/PULL_REQUEST_TEMPLATE.md"
-        - "README.md"
-        - "ROADMAP.md"
-        - "VISION.md"
+        - "**"
       excludedPaths:
         - ".github/workflows/**"
         - ".github/hivemoot.yml"
