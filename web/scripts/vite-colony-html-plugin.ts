@@ -51,8 +51,12 @@ export function transformHtml(html: string, config: ColonyConfig): string {
   const siteUrlWithSlash = config.siteUrl + '/';
   const ogImageUrl = `${config.siteUrl}/og-image.png`;
   const pageTitle = `${config.siteTitle} | ${config.orgName}`;
+  const faviconHref = `${config.basePath}favicon.ico`;
+  const appleTouchIconHref = `${config.basePath}apple-touch-icon.png`;
 
   return html
+    .replace(/__COLONY_FAVICON_HREF__/g, faviconHref)
+    .replace(/__COLONY_APPLE_TOUCH_ICON_HREF__/g, appleTouchIconHref)
     .replace(/__COLONY_CANONICAL_URL__/g, siteUrlWithSlash)
     .replace(/__COLONY_MANIFEST_HREF__/g, 'manifest.webmanifest')
     .replace(

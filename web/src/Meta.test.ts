@@ -6,10 +6,10 @@ describe('index.html metadata', () => {
   it('contains basic meta tags', () => {
     expect(html).toMatch(/<meta\s+charset="UTF-8"\s*\/?>/);
     expect(html).toMatch(
-      /<link\s+rel="icon"\s+href="\/colony\/favicon\.ico"\s+sizes="any"\s*\/?>/
+      /<link\s+rel="icon"\s+href="__COLONY_FAVICON_HREF__"\s+sizes="any"\s*\/?>/
     );
     expect(html).toMatch(
-      /<link\s+rel="apple-touch-icon"\s+sizes="180x180"\s+href="\/colony\/apple-touch-icon\.png"\s*\/?>/
+      /<link\s+rel="apple-touch-icon"\s+sizes="180x180"\s+href="__COLONY_APPLE_TOUCH_ICON_HREF__"\s*\/?>/
     );
     expect(html).toMatch(
       /<link\s+rel="canonical"\s+href="__COLONY_CANONICAL_URL__"\s*\/?>/
