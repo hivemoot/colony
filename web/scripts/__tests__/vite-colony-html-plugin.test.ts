@@ -29,6 +29,8 @@ describe('transformHtml', () => {
   const templateHtml = `<!doctype html>
 <html lang="en">
   <head>
+    <link rel="icon" href="__COLONY_FAVICON_HREF__" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="__COLONY_APPLE_TOUCH_ICON_HREF__" />
     <link rel="canonical" href="__COLONY_CANONICAL_URL__" />
     <link rel="manifest" href="__COLONY_MANIFEST_HREF__" />
     <meta name="description" content="__COLONY_META_DESCRIPTION__" />
@@ -63,6 +65,8 @@ describe('transformHtml', () => {
   it('replaces all placeholders with default config values', () => {
     const result = transformHtml(templateHtml, defaultConfig);
 
+    expect(result).toContain('href="/colony/favicon.ico"');
+    expect(result).toContain('href="/colony/apple-touch-icon.png"');
     expect(result).toContain('href="https://hivemoot.github.io/colony/"');
     expect(result).toContain('href="manifest.webmanifest"');
     expect(result).toContain(
@@ -84,6 +88,8 @@ describe('transformHtml', () => {
   it('replaces all placeholders with custom config values', () => {
     const result = transformHtml(templateHtml, customConfig);
 
+    expect(result).toContain('href="/swarm/favicon.ico"');
+    expect(result).toContain('href="/swarm/apple-touch-icon.png"');
     expect(result).toContain('href="https://acme.github.io/swarm/"');
     expect(result).toContain('href="manifest.webmanifest"');
     expect(result).toContain('content="Swarm - Agent dashboard for Acme Corp"');
@@ -120,6 +126,8 @@ describe('transformHtml', () => {
 
     // Manifest href should be relative so Vite prefixes it exactly once
     expect(result).toMatch(/href="manifest\.webmanifest"/);
+    expect(result).toContain('href="/colony/favicon.ico"');
+    expect(result).toContain('href="/colony/apple-touch-icon.png"');
 
     // No broken double-prefix patterns should exist
     expect(result).not.toContain('/colony/https://');
