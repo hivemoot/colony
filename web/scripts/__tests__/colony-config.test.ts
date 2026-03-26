@@ -55,6 +55,46 @@ describe('normalizeAbsoluteHttpUrl', () => {
   it('rejects malformed URLs', () => {
     expect(normalizeAbsoluteHttpUrl('not-a-url')).toBe('');
   });
+
+  it('supports stricter public HTTPS normalization when requested', () => {
+    expect(
+      normalizeAbsoluteHttpUrl('https://example.com/path/?utm=1#frag', {
+        requireHttps: true,
+        rejectLocalHosts: true,
+      })
+    ).toBe('https://example.com/path');
+  });
+
+  it('rejects non-https URLs when HTTPS is required', () => {
+    expect(
+      normalizeAbsoluteHttpUrl('http://example.com/path', {
+        requireHttps: true,
+      })
+    ).toBe('');
+  });
+
+  it('rejects localhost and IP literals when local hosts are blocked', () => {
+    expect(
+      normalizeAbsoluteHttpUrl('https://localhost:4173', {
+        rejectLocalHosts: true,
+      })
+    ).toBe('');
+    expect(
+      normalizeAbsoluteHttpUrl('https://dev.localhost/dashboard', {
+        rejectLocalHosts: true,
+      })
+    ).toBe('');
+    expect(
+      normalizeAbsoluteHttpUrl('https://127.0.0.1:8443', {
+        rejectLocalHosts: true,
+      })
+    ).toBe('');
+    expect(
+      normalizeAbsoluteHttpUrl('https://[::1]/', {
+        rejectLocalHosts: true,
+      })
+    ).toBe('');
+  });
 });
 
 describe('resolveDeployedUrl', () => {
@@ -96,6 +136,18 @@ describe('resolveDeployedUrl', () => {
     expect(resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'not-a-url' })).toBe(
       DEFAULT_DEPLOYED_BASE_URL
     );
+  });
+
+  it('falls back to default for insecure or local-only deployed URLs', () => {
+    expect(
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'http://example.com/app' })
+    ).toBe(DEFAULT_DEPLOYED_BASE_URL);
+    expect(
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'https://localhost:4173' })
+    ).toBe(DEFAULT_DEPLOYED_BASE_URL);
+    expect(
+      resolveDeployedUrl({ COLONY_DEPLOYED_URL: 'https://127.0.0.1:4173' })
+    ).toBe(DEFAULT_DEPLOYED_BASE_URL);
   });
 });
 
@@ -192,16 +244,25 @@ describe('resolveSiteUrl', () => {
     );
   });
 
+  it('falls back to default for insecure http URLs', () => {
+    expect(resolveSiteUrl({ COLONY_SITE_URL: 'http://example.com' })).toBe(
+      'https://hivemoot.github.io/colony'
+    );
+  });
+
   it('falls back to default for credential-bearing URL', () => {
     expect(
       resolveSiteUrl({ COLONY_SITE_URL: 'https://user:pass@example.com/app' })
     ).toBe('https://hivemoot.github.io/colony');
   });
 
-  it('accepts http:// URLs', () => {
-    expect(resolveSiteUrl({ COLONY_SITE_URL: 'http://localhost:3000' })).toBe(
-      'http://localhost:3000'
+  it('falls back to default for localhost and IP literal URLs', () => {
+    expect(resolveSiteUrl({ COLONY_SITE_URL: 'https://localhost:3000' })).toBe(
+      'https://hivemoot.github.io/colony'
     );
+    expect(
+      resolveSiteUrl({ COLONY_SITE_URL: 'https://127.0.0.1:3000/app' })
+    ).toBe('https://hivemoot.github.io/colony');
   });
 });
 

@@ -8,6 +8,8 @@
  * Phase 2 of template parameterization (proposal #284).
  */
 
+import { isIP } from 'node:net';
+
 const DEFAULT_SITE_TITLE = 'Colony';
 const DEFAULT_ORG_NAME = 'Hivemoot';
 const DEFAULT_SITE_URL = 'https://hivemoot.github.io/colony';
@@ -35,7 +37,15 @@ export interface ColonyConfig {
   basePath: string;
 }
 
-export function normalizeAbsoluteHttpUrl(rawValue: string | undefined): string {
+interface NormalizeAbsoluteUrlOptions {
+  requireHttps?: boolean;
+  rejectLocalHosts?: boolean;
+}
+
+export function normalizeAbsoluteHttpUrl(
+  rawValue: string | undefined,
+  options: NormalizeAbsoluteUrlOptions = {}
+): string {
   const raw = rawValue?.trim();
   if (!raw) {
     return '';
@@ -43,12 +53,29 @@ export function normalizeAbsoluteHttpUrl(rawValue: string | undefined): string {
 
   try {
     const parsed = new URL(raw);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    const allowedProtocols = options.requireHttps
+      ? ['https:']
+      : ['http:', 'https:'];
+    if (!allowedProtocols.includes(parsed.protocol)) {
       return '';
     }
 
     if (parsed.username || parsed.password) {
       return '';
+    }
+
+    if (options.rejectLocalHosts) {
+      const normalizedHostname = parsed.hostname
+        .toLowerCase()
+        .replace(/^\[|\]$/g, '')
+        .replace(/\.$/, '');
+      if (
+        normalizedHostname === 'localhost' ||
+        normalizedHostname.endsWith('.localhost') ||
+        isIP(normalizedHostname) !== 0
+      ) {
+        return '';
+      }
     }
 
     parsed.search = '';
@@ -81,12 +108,16 @@ export function resolveOrgName(
 
 /**
  * Resolve the deployed site URL from COLONY_SITE_URL.
- * Validates as absolute HTTP(S) URL. Falls back to the Hivemoot Colony URL.
+ * Validates as an absolute public HTTPS URL. Falls back to the Hivemoot Colony
+ * URL.
  */
 export function resolveSiteUrl(
   env: Record<string, string | undefined> = process.env
 ): string {
-  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_SITE_URL);
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_SITE_URL, {
+    requireHttps: true,
+    rejectLocalHosts: true,
+  });
   return normalized || DEFAULT_SITE_URL;
 }
 
@@ -152,12 +183,16 @@ export function resolveBasePath(
  * Resolve the deployed base URL from COLONY_DEPLOYED_URL.
  * Used by static page generation scripts (static-pages.ts, generate-sitemap.ts)
  * to determine the site root for canonical links and sitemap entries.
- * Falls back to DEFAULT_DEPLOYED_BASE_URL.
+ * Validates as an absolute public HTTPS URL and falls back to
+ * DEFAULT_DEPLOYED_BASE_URL.
  */
 export function resolveDeployedUrl(
   env: Record<string, string | undefined> = process.env
 ): string {
-  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_DEPLOYED_URL);
+  const normalized = normalizeAbsoluteHttpUrl(env.COLONY_DEPLOYED_URL, {
+    requireHttps: true,
+    rejectLocalHosts: true,
+  });
   return normalized || DEFAULT_DEPLOYED_BASE_URL;
 }
 
