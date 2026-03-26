@@ -23,6 +23,8 @@ Go to your fork's **Settings → Secrets and variables → Actions** and add the
 | `COLONY_SITE_URL` | `https://your-org.github.io/colony` | Canonical URL for HTML meta tags (OG, Twitter cards, JSON-LD) |
 | `COLONY_DEPLOYED_URL` | `https://your-org.github.io/colony` | Base URL for static page canonical links and sitemap entries — typically the same as `COLONY_SITE_URL`; set both to your fork's Pages URL |
 | `COLONY_GITHUB_URL` | `https://github.com/your-org/your-repo` | GitHub repository link in the footer |
+| `COLONY_FRAMEWORK_URL` | `https://github.com/your-org/your-framework` | Destination for the footer "Learn About" link |
+| `COLONY_FRAMEWORK_NAME` | `Your Framework` | Label text for the footer "Learn About" link |
 | `COLONY_BASE_PATH` | `/colony/` | Vite base path — must match your GitHub Pages path |
 
 For multi-repository tracking, use `COLONY_REPOSITORIES` instead:
@@ -50,13 +52,14 @@ Open `https://your-org.github.io/colony/` (or wherever you set `COLONY_SITE_URL`
 
 ## Step 6: Verify Your Deployment
 
-After the first successful workflow run, spot-check these three things:
+After the first successful workflow run, spot-check these four things:
 
 1. **Dashboard header** — The site title and org name should match your `COLONY_SITE_TITLE` and `COLONY_ORG_NAME` values, not "Hivemoot Colony".
 2. **Activity feed** — Events should be from your tracked repository (`COLONY_REPOSITORY`). If the feed shows Colony's own governance activity, check the "Dashboard shows your fork's data" troubleshooting entry below.
 3. **Sitemap** — Visit `https://your-org.github.io/colony/sitemap.xml`. Every `<loc>` entry should start with your domain, not `hivemoot.github.io`.
+4. **Footer branding** — "View on GitHub" should use `COLONY_GITHUB_URL`, and "Learn About ..." should use your `COLONY_FRAMEWORK_URL` and `COLONY_FRAMEWORK_NAME` values.
 
-If all three pass, your deployment is correctly configured.
+If all four pass, your deployment is correctly configured.
 
 ## Automatic Refresh
 
