@@ -38,8 +38,28 @@ interface CliOptions {
   json: boolean;
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  return { json: argv.includes('--json') };
+function printHelp(): void {
+  console.log('Usage: npm run check-visibility -- [--json]');
+}
+
+export function parseArgs(argv: string[]): CliOptions {
+  let json = false;
+
+  for (const arg of argv) {
+    if (arg === '--json') {
+      json = true;
+      continue;
+    }
+
+    if (arg === '--help') {
+      printHelp();
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown argument "${arg}". Expected --json.`);
+  }
+
+  return { json };
 }
 
 export function resolveVisibilityUserAgent(
@@ -822,9 +842,5 @@ function isDirectExecution(): boolean {
 }
 
 if (isDirectExecution()) {
-  if (process.argv.includes('--help')) {
-    console.log('Usage: npm run check-visibility');
-    process.exit(0);
-  }
   void main();
 }

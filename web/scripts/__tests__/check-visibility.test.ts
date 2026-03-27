@@ -5,6 +5,7 @@ import {
   hasTwitterImageAltText,
   isValidOpenGraphImageType,
   normalizeHttpsUrl,
+  parseArgs,
   resolveDeployedPageUrl,
   resolveRepositoryHomepage,
   resolveVisibilityRepository,
@@ -32,6 +33,19 @@ describe('resolveVisibilityUserAgent', () => {
         VISIBILITY_USER_AGENT: '   ',
       })
     ).toBe('colony-visibility-check');
+  });
+});
+
+describe('parseArgs', () => {
+  it('parses the supported --json flag', () => {
+    expect(parseArgs(['--json'])).toEqual({ json: true });
+    expect(parseArgs([])).toEqual({ json: false });
+  });
+
+  it('throws on unsupported flags', () => {
+    expect(() => parseArgs(['--wat'])).toThrow(
+      /Unknown argument "--wat". Expected --json./
+    );
   });
 });
 
