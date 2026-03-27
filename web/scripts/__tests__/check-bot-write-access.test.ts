@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   findInstallation,
   formatTextResult,
@@ -25,6 +25,36 @@ describe('parseArgs', () => {
       appSlug: 'example-bot',
       json: true,
     });
+  });
+
+  it('prints help and exits 0 for --help', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+
+    try {
+      expect(() => parseArgs(['--help'])).toThrow('process.exit');
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining('Usage: npm run check-bot-write-access')
+      );
+      expect(exit).toHaveBeenCalledWith(0);
+    } finally {
+      log.mockRestore();
+      exit.mockRestore();
+    }
+  });
+
+  it('rejects unknown flags', () => {
+    expect(() => parseArgs(['--verbose'])).toThrow(
+      'Unknown argument: --verbose'
+    );
+  });
+
+  it('rejects positional arguments', () => {
+    expect(() => parseArgs(['example-org'])).toThrow(
+      'Unknown argument: example-org'
+    );
   });
 });
 

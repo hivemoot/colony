@@ -65,6 +65,8 @@ export function parseArgs(argv: string[]): CliOptions {
       printHelp();
       process.exit(0);
     }
+
+    throw new Error(`Unknown argument: ${arg}`);
   }
 
   return options;
@@ -249,5 +251,11 @@ const isMainModule =
   process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    process.exit(1);
+  }
 }
