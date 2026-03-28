@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import {
   resolveRepository,
   resolveRequiredDiscoverabilityTopics,
+  resolveGitHubToken,
+  hasGitHubToken,
   resolveRepositories,
   resolveRepositoryHomepage,
   updateSitemapLastmod,
@@ -19,6 +21,7 @@ import {
   extractGovernanceIncidents,
   deduplicateAgents,
   extractPhaseTransitions,
+  fetchPhaseTransitions,
   filterAndMapProposals,
   enrichPullRequestsWithApprovalTimes,
   type GitHubCommit,
@@ -94,6 +97,41 @@ describe('resolveRepository', () => {
   it('should fall back to defaults when COLONY_REPOSITORY is blank', () => {
     const result = resolveRepository({ COLONY_REPOSITORY: '   ' });
     expect(result).toEqual({ owner: 'hivemoot', repo: 'colony' });
+  });
+});
+
+describe('resolveGitHubToken', () => {
+  it('returns GITHUB_TOKEN when it is set', () => {
+    expect(resolveGitHubToken({ GITHUB_TOKEN: 'github-token' })).toBe(
+      'github-token'
+    );
+  });
+
+  it('returns GH_TOKEN when GITHUB_TOKEN is not set', () => {
+    expect(resolveGitHubToken({ GH_TOKEN: 'gh-token' })).toBe('gh-token');
+  });
+
+  it('prefers GITHUB_TOKEN when both tokens are set', () => {
+    expect(
+      resolveGitHubToken({
+        GITHUB_TOKEN: 'github-token',
+        GH_TOKEN: 'gh-token',
+      })
+    ).toBe('github-token');
+  });
+
+  it('returns undefined when neither token is set', () => {
+    expect(resolveGitHubToken({})).toBeUndefined();
+  });
+});
+
+describe('hasGitHubToken', () => {
+  it('returns true when either token is configured', () => {
+    expect(hasGitHubToken({ GH_TOKEN: 'gh-token' })).toBe(true);
+  });
+
+  it('returns false when neither token is configured', () => {
+    expect(hasGitHubToken({})).toBe(false);
   });
 });
 
@@ -279,6 +317,29 @@ describe('mapCommits', () => {
     const result = mapCommits(raw);
 
     expect(result.commits[0]).not.toHaveProperty('repo');
+  });
+});
+
+describe('fetchPhaseTransitions', () => {
+  it('skips timeline fetches entirely when no token is configured', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const proposals = [
+      {
+        number: 42,
+        title: 'Proposal',
+        phase: 'discussion',
+        author: 'hivemoot-nurse',
+        createdAt: '2026-03-01T00:00:00Z',
+        commentCount: 0,
+      },
+    ];
+
+    await fetchPhaseTransitions('hivemoot', 'colony', proposals, {});
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(proposals[0].phaseTransitions).toBeUndefined();
   });
 });
 

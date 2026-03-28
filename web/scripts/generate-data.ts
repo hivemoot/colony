@@ -191,7 +191,7 @@ export async function fetchJson<T>(endpoint: string): Promise<T> {
   };
 
   // Use GITHUB_TOKEN/GH_TOKEN if available (CI or local environment)
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  const token = resolveGitHubToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -205,6 +205,18 @@ export async function fetchJson<T>(endpoint: string): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export function resolveGitHubToken(
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  return env.GITHUB_TOKEN ?? env.GH_TOKEN;
+}
+
+export function hasGitHubToken(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return Boolean(resolveGitHubToken(env));
 }
 
 export function resolveRepository(env = process.env): {
@@ -691,11 +703,16 @@ export function extractPhaseTransitions(
     );
 }
 
-async function fetchPhaseTransitions(
+export async function fetchPhaseTransitions(
   owner: string,
   repo: string,
-  proposals: Proposal[]
+  proposals: Proposal[],
+  env: NodeJS.ProcessEnv = process.env
 ): Promise<void> {
+  if (!hasGitHubToken(env)) {
+    return;
+  }
+
   await Promise.all(
     proposals.map(async (proposal) => {
       try {
@@ -2093,6 +2110,13 @@ function toRepoTag(repo: { owner: string; name: string }): string {
 
 async function main(): Promise<void> {
   try {
+    const hasGitHubTokenConfigured = hasGitHubToken();
+    if (!hasGitHubTokenConfigured) {
+      console.warn(
+        '[generate-data] No GITHUB_TOKEN or GH_TOKEN set; timeline fetch will be skipped and generated data will be partial. Set GITHUB_TOKEN or GH_TOKEN for complete output.'
+      );
+    }
+
     const data = await generateActivityData();
 
     // Ensure output directory exists
@@ -2128,9 +2152,9 @@ async function main(): Promise<void> {
     );
     const permissionGaps: string[] = [];
 
-    if (!process.env.GITHUB_TOKEN && !process.env.GH_TOKEN) {
+    if (!hasGitHubTokenConfigured) {
       permissionGaps.push(
-        'Generated without GITHUB_TOKEN/GH_TOKEN; API responses may be rate-limited.'
+        'Generated without GITHUB_TOKEN/GH_TOKEN; timeline fetch skipped and generated data may be partial.'
       );
     }
 
