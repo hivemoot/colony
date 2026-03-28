@@ -207,7 +207,9 @@ export async function fetchJson<T>(endpoint: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function resolveGitHubToken(env: NodeJS.ProcessEnv = process.env): string | undefined {
+export function resolveGitHubToken(
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
   return env.GITHUB_TOKEN ?? env.GH_TOKEN;
 }
 
