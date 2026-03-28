@@ -93,8 +93,8 @@ describe('static-page-search stale-results protection', () => {
   function mountAndLoad(basePath = '/colony/'): SearchInternals {
     mountSearchDom(basePath);
     const internals = loadSearchScript();
-    expect(internals).toBeDefined();
-    return internals!;
+    if (!internals) throw new Error('Search internals not initialized');
+    return internals;
   }
 
   it('increments activeSearch when input is cleared, invalidating in-flight searches', () => {
@@ -141,8 +141,12 @@ describe('static-page-search stale-results protection', () => {
     const input = document.getElementById(
       'archive-search-input'
     ) as HTMLInputElement;
-    const status = document.getElementById('archive-search-status')!;
-    const results = document.getElementById('archive-search-results')!;
+    const status = document.getElementById(
+      'archive-search-status'
+    ) as HTMLElement;
+    const results = document.getElementById(
+      'archive-search-results'
+    ) as HTMLElement;
 
     // Seed visible state that a stale search might have left behind.
     results.innerHTML = '<li>stale result</li>';
@@ -160,8 +164,12 @@ describe('static-page-search stale-results protection', () => {
     const input = document.getElementById(
       'archive-search-input'
     ) as HTMLInputElement;
-    const status = document.getElementById('archive-search-status')!;
-    const results = document.getElementById('archive-search-results')!;
+    const status = document.getElementById(
+      'archive-search-status'
+    ) as HTMLElement;
+    const results = document.getElementById(
+      'archive-search-results'
+    ) as HTMLElement;
 
     results.innerHTML = '<li>stale result</li>';
 
