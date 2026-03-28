@@ -86,6 +86,8 @@
     window.__COLONY_STATIC_SEARCH_TEST__ = {
       normalizeBasePath,
       normalizeResultUrl,
+      getActiveSearch: () => activeSearch,
+      handleSearchInput,
     };
   }
 
@@ -215,12 +217,16 @@
     });
   });
 
-  input.addEventListener('input', () => {
+  function handleSearchInput() {
     const query = input.value.trim();
 
     if (debounceTimer) {
       window.clearTimeout(debounceTimer);
     }
+
+    // Invalidate any in-flight search immediately so stale results never
+    // render into an empty or too-short input state.
+    activeSearch++;
 
     if (!query) {
       clearResults();
@@ -237,5 +243,7 @@
     debounceTimer = window.setTimeout(() => {
       void runSearch(query);
     }, 180);
-  });
+  }
+
+  input.addEventListener('input', handleSearchInput);
 })();

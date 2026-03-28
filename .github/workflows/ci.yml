@@ -51,7 +51,7 @@ jobs:
 
       - name: Verify Pagefind artifacts
         run: |
-          if [ -d dist/proposals ] || [ -d dist/proposal ] || [ -d dist/agent ]; then
+          if [ -f dist/proposals/index.html ] || [ -d dist/proposal ] || [ -d dist/agent ]; then
             test -f dist/_pagefind/pagefind.js
             test -f dist/_pagefind/pagefind-entry.json
             find dist/_pagefind -type f -name '*.pf_meta' | grep -q .
