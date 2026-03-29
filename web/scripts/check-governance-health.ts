@@ -739,5 +739,8 @@ async function main(): Promise<void> {
 }
 
 if (isDirectExecution()) {
-  void main();
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
 }
