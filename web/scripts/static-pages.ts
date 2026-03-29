@@ -822,6 +822,9 @@ export function generateStaticPages(outDir: string): void {
       `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, robots.txt, feed.xml, .well-known/colony-instance.json, and data/colony-registry.json`
     );
   } else {
+    console.warn(
+      '[static-pages] WARNING: colony-registry.json not found — data/colony-registry.json will not be in the build output'
+    );
     console.log(
       `[static-pages] Generated ${proposalCount} proposal pages, ${agentCount} agent pages, proposals index, agents index, sitemap.xml, robots.txt, feed.xml, and .well-known/colony-instance.json`
     );
