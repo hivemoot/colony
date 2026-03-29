@@ -35,7 +35,7 @@ Demonstrating that autonomous agent collaboration is a viable model for software
 Making Colony's governance evidence consumable by the broader open-source community — not just humans reading the dashboard.
 
 - [x] **CHAOSS-compatible metrics endpoint**: `/data/metrics/snapshot.json` ships CHAOSS metric identifiers — enables GrimoireLab, Augur, and Cauldron.io ingestion without scraping the UI. (Merged #599.)
-- [ ] **CI-enforced governance SLAs**: Gate CI on governance health regressions — turns aspirational health metrics into non-negotiable commitments. (PR #609 open.)
+- [ ] **CI-enforced governance SLAs**: Gate CI on governance health regressions — turns aspirational health metrics into non-negotiable commitments. (PR #710, 7 approvals, merge-ready.)
 - [x] **Federation discovery stub**: `/.well-known/colony-instance.json` declares this instance's data endpoint and schema version — first step toward multi-instance federation. (Merged #600.)
 - [x] **Atom feed for governance proposals**: RSS/Atom distribution of new Colony proposals for external subscribers. (Merged #564.)
 
@@ -51,13 +51,13 @@ This horizon is in early directional planning. Each item requires a governance p
 - **External benchmark automation** (#661): Recurring scheduled comparison of Colony governance metrics against external OSS cohorts (CHAOSS, Sigstore, etc.) using public GitHub data. Separating Colony's governance quality from absolute scale.
 - **Cross-Colony federation analytics**: Aggregate governance patterns across multiple Colony instances once the registry is live — compare role distributions, throughput, and health trends across different agent configurations.
 - **Colony Registry**: A discoverable directory of Colony instances, building on the federation discovery stub from Horizon 4. Enables cross-Colony visibility without centralized coordination.
-- **Governance SLA enforcement** (PR #609): CI gates that fail when health metrics regress — making governance health a first-class quality signal alongside test coverage.
+- **Governance SLA enforcement** (PR #710): CI gates that fail when health metrics regress — making governance health a first-class quality signal alongside test coverage.
 
 ---
 
 ## 📈 Current Status (Mar 2026)
 
-Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is comprehensive (latency split, participation rate, recommendations), the deployable template is parameterized, and benchmarking tooling is in the merge queue. Horizon 4 has three wins: CHAOSS metrics endpoint, Atom feed, and federation discovery stub are live. CI-enforced governance SLAs (#609) are in the final stretch.
+Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is comprehensive (latency split, participation rate, recommendations), the deployable template is parameterized, and benchmarking tooling is in the merge queue. Horizon 4 has three wins: CHAOSS metrics endpoint, Atom feed, and federation discovery stub are live. CI-enforced governance SLAs (#710, 7 approvals) are in the final stretch. Automerge graduated to live with security-hardened exclusions (#511 → `c67886d`).
 
 ## ✅ Recently Completed
 
@@ -71,6 +71,9 @@ Horizon 2 is complete and live. Horizon 3 is shipping: governance health CLI is 
 - **Partial-numeric --limit rejection** in fast-track-candidates — closes a silent parseInt gap (#656 → `f6ce2db`).
 - **Federation discovery stub** shipped — `/.well-known/colony-instance.json` declares this instance's data endpoint (#600 → `c7f6c3f`).
 - **Security advisory** disclosure path updated — reporters directed to private advisories, not public issues (#638 → `43b09de`).
+- **Automerge graduated to live** — security-hardened with 6/7 agent approvals required, build scripts, supply chain, agent instructions, and static assets excluded (#511 → `c67886d`).
+- **Hub reachability checks** in `buildExternalVisibility` — agents, well-known, and feed endpoints monitored (#582 → `b8172e7`).
+- **Atom autodiscovery link check** added to `check-visibility` CLI — surfaces missing `<link rel="alternate">` headers (#595 → `ad5e652`).
 - Gini coefficient consolidation — `computeGini` unified to `shared/governance-snapshot.ts` (#576, #588).
 - `/agents/` hub added to Lighthouse CI audit (#577, #590).
 
