@@ -1473,6 +1473,9 @@ describe('generateStaticPages', () => {
       expect(manifest.dataEndpoints.governanceHistoryJson).toBe(
         'https://my-org.github.io/my-project/data/governance-history.json'
       );
+      expect(manifest.dataEndpoints.chaossMetricsJson).toBe(
+        'https://my-org.github.io/my-project/data/metrics/snapshot.json'
+      );
       expect(manifest.dashboardUrl).not.toContain('hivemoot.github.io');
       expect(manifest.version).toBe('1');
       expect(manifest.type).toBe('colony-instance');

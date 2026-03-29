@@ -794,6 +794,7 @@ export function generateStaticPages(outDir: string): void {
     dataEndpoints: {
       activityJson: `${BASE_URL}/data/activity.json`,
       governanceHistoryJson: `${BASE_URL}/data/governance-history.json`,
+      chaossMetricsJson: `${BASE_URL}/data/metrics/snapshot.json`,
     },
     sourceRepository: 'https://github.com/hivemoot/colony',
     framework: 'https://github.com/hivemoot/hivemoot',
