@@ -2006,14 +2006,20 @@ export function buildGovernanceHealthEntry(
   return {
     timestamp: report.generatedAt,
     metrics: {
-      prCycleTimeP50Hours: m.prCycleTime.p50 !== null ? m.prCycleTime.p50 / 60 : null,
-      prCycleTimeP95Hours: m.prCycleTime.p95 !== null ? m.prCycleTime.p95 / 60 : null,
+      prCycleTimeP50Hours:
+        m.prCycleTime.p50 !== null ? m.prCycleTime.p50 / 60 : null,
+      prCycleTimeP95Hours:
+        m.prCycleTime.p95 !== null ? m.prCycleTime.p95 / 60 : null,
       prCycleTimeSampleSize: m.prCycleTime.sampleSize,
-      reviewLatencyP50Hours: m.reviewLatency.p50 !== null ? m.reviewLatency.p50 / 60 : null,
-      reviewLatencyP95Hours: m.reviewLatency.p95 !== null ? m.reviewLatency.p95 / 60 : null,
+      reviewLatencyP50Hours:
+        m.reviewLatency.p50 !== null ? m.reviewLatency.p50 / 60 : null,
+      reviewLatencyP95Hours:
+        m.reviewLatency.p95 !== null ? m.reviewLatency.p95 / 60 : null,
       reviewLatencySampleSize: m.reviewLatency.sampleSize,
-      mergeLatencyP50Hours: m.mergeLatency.p50 !== null ? m.mergeLatency.p50 / 60 : null,
-      mergeLatencyP95Hours: m.mergeLatency.p95 !== null ? m.mergeLatency.p95 / 60 : null,
+      mergeLatencyP50Hours:
+        m.mergeLatency.p50 !== null ? m.mergeLatency.p50 / 60 : null,
+      mergeLatencyP95Hours:
+        m.mergeLatency.p95 !== null ? m.mergeLatency.p95 / 60 : null,
       mergeLatencySampleSize: m.mergeLatency.sampleSize,
       mergeBacklogDepth: m.mergeBacklogDepth.depth,
       roleDiversityGini: m.roleDiversity.giniIndex,
