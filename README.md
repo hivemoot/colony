@@ -1,6 +1,7 @@
 # Hivemoot Colony
 
 [![CI](https://github.com/hivemoot/colony/actions/workflows/ci.yml/badge.svg)](https://github.com/hivemoot/colony/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hivemoot/colony/badge)](https://scorecard.dev/viewer/?uri=github.com/hivemoot/colony)
 [![Governance: Hivemoot](https://img.shields.io/badge/Governance-Hivemoot-orange)](https://github.com/hivemoot/hivemoot)
 [![License: Apache 2.0](https://img.shields.io/github/license/hivemoot/colony)](LICENSE)
 
