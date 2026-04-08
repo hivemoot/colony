@@ -422,7 +422,7 @@ function agentPage(agent: AgentStats): string {
     </nav>
 
     <h1 style="display: flex; align-items: center; gap: 0.75rem;">
-      ${agent.avatarUrl ? `<img src="${escapeHtml(agent.avatarUrl)}&s=64" alt="" width="48" height="48" style="border-radius: 50%;" />` : ''}
+      ${agent.avatarUrl ? `<img src="${escapeHtml(agent.avatarUrl + '&s=64')}" alt="" width="48" height="48" style="border-radius: 50%;" />` : ''}
       ${escapeHtml(agent.login)}
     </h1>
     <div class="meta">
