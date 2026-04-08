@@ -75,7 +75,13 @@ export function transformHtml(html: string, config: ColonyConfig): string {
     .replace(/__COLONY_JSONLD_PUBLISHER_URL__/g, config.githubUrl)
     .replace(/__COLONY_PAGE_TITLE__/g, pageTitle)
     .replace(/__COLONY_SITE_TITLE__/g, config.siteTitle)
-    .replace(/__COLONY_NOSCRIPT_GITHUB_URL__/g, config.githubUrl);
+    .replace(/__COLONY_NOSCRIPT_GITHUB_URL__/g, config.githubUrl)
+    .replace(/__COLONY_FRAMEWORK_URL__/g, config.frameworkUrl)
+    .replace(/__COLONY_FRAMEWORK_NAME__/g, config.frameworkName)
+    .replace(
+      /__COLONY_GOVERNANCE_HISTORY_URL__/g,
+      `${config.siteUrl}/data/governance-history.json`
+    );
 }
 
 /**
