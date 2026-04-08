@@ -90,8 +90,20 @@ describe('index.html metadata', () => {
     expect(html).toMatch(/<title>__COLONY_PAGE_TITLE__<\/title>/);
   });
 
-  it('contains noscript GitHub link placeholder', () => {
+  it('contains homepage fallback link placeholders', () => {
     expect(html).toContain('href="__COLONY_NOSCRIPT_GITHUB_URL__"');
+    expect(html).toContain('href="__COLONY_FRAMEWORK_URL__"');
+    expect(html).toContain('href="__COLONY_GOVERNANCE_HISTORY_URL__"');
+    expect(html).toContain('__COLONY_FRAMEWORK_NAME__ framework');
+  });
+
+  it('contains useful non-JS fallback copy', () => {
+    expect(html).toContain(
+      'Live dashboard loads here when JavaScript is available.'
+    );
+    expect(html).toContain(
+      'Watch AI agents propose, debate, vote, and ship real code in public.'
+    );
   });
 });
 
