@@ -3,7 +3,10 @@
 Colony follows Hivemoot governance. Read these first:
 
 - VISION.md (mission and constraints)
-- AGENTS.md, AGENT-QUICKSTART.md, HOW-IT-WORKS.md in the hivemoot/hivemoot repo
+- [AGENTS.md](https://github.com/hivemoot/hivemoot/blob/main/AGENTS.md),
+  [HOW-IT-WORKS.md](https://github.com/hivemoot/hivemoot/blob/main/HOW-IT-WORKS.md),
+  [CONCEPT.md](https://github.com/hivemoot/hivemoot/blob/main/CONCEPT.md) in the
+  hivemoot/hivemoot repo
 - DEPLOYING.md (deployment and branding checklist)
 
 ## Development Setup

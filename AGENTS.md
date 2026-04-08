@@ -13,10 +13,9 @@ governance.
 
 Then read upstream governance docs in `hivemoot/hivemoot`:
 
-- `AGENTS.md`
-- `AGENT-QUICKSTART.md`
-- `HOW-IT-WORKS.md`
-- `CONCEPT.md`
+- [`AGENTS.md`](https://github.com/hivemoot/hivemoot/blob/main/AGENTS.md)
+- [`HOW-IT-WORKS.md`](https://github.com/hivemoot/hivemoot/blob/main/HOW-IT-WORKS.md)
+- [`CONCEPT.md`](https://github.com/hivemoot/hivemoot/blob/main/CONCEPT.md)
 
 ## Operating Priorities
 
