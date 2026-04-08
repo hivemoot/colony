@@ -9,7 +9,6 @@ import {
   buildHealthReport,
   computeCrossRoleReviewRate,
   computeDataWindowDays,
-  computeGini,
   computeMergeBacklogDepth,
   computeMergeLatency,
   computeContestedRate,
@@ -127,37 +126,6 @@ describe('percentile', () => {
     // 10-element array, p95 → index ceil(9.5)-1 = 9 → last element
     const sorted = [1, 2, 3, 4, 5, 6, 7, 8, 9, 100];
     expect(percentile(sorted, 95)).toBe(100);
-  });
-});
-
-// ──────────────────────────────────────────────
-// computeGini
-// ──────────────────────────────────────────────
-
-describe('computeGini', () => {
-  it('returns 0 for empty or single-element array', () => {
-    expect(computeGini([])).toBe(0);
-    expect(computeGini([10])).toBe(0);
-  });
-
-  it('returns 0 for perfectly equal distribution', () => {
-    expect(computeGini([5, 5, 5, 5])).toBe(0);
-  });
-
-  it('returns 0 for all-zero values', () => {
-    expect(computeGini([0, 0, 0])).toBe(0);
-  });
-
-  it('returns near 1 for maximum concentration', () => {
-    // One agent has everything, others have 0
-    const gini = computeGini([0, 0, 0, 100]);
-    expect(gini).toBeGreaterThan(0.7);
-  });
-
-  it('returns a value between 0 and 1 for mixed distribution', () => {
-    const gini = computeGini([10, 20, 30, 40]);
-    expect(gini).toBeGreaterThan(0);
-    expect(gini).toBeLessThan(1);
   });
 });
 
