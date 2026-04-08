@@ -49,6 +49,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Governance health (fixture validation)
+        run: npm run check-governance-health
+        env:
+          ACTIVITY_FILE: scripts/__fixtures__/governance-health-activity.json
+
       - name: Visibility guardrail (non-blocking)
         run: npm run check-visibility
         continue-on-error: true
