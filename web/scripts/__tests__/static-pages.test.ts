@@ -322,6 +322,7 @@ describe('generateStaticPages', () => {
       agentStats: [
         {
           login: 'test-agent',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/1234?v=4',
           commits: 5,
           pullRequestsMerged: 3,
           issuesOpened: 2,
@@ -346,6 +347,12 @@ describe('generateStaticPages', () => {
     expect(html).toContain('test-agent | Colony Agents');
     expect(html).toContain('/agent/test-agent/');
     expect(html).toContain('twitter:card');
+    expect(html).toContain(
+      'src="https://avatars.githubusercontent.com/u/1234?v=4&amp;s=64"'
+    );
+    expect(html).not.toContain(
+      'src="https://avatars.githubusercontent.com/u/1234?v=4&s=64"'
+    );
   });
 
   it('handles proposals without votes or transitions', () => {
