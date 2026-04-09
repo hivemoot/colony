@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   ActivityData,
   Comment,
@@ -20,6 +20,7 @@ import {
   extractRole,
   hadQuorumFailure,
   inferEligibleVoterCount,
+  parseArgs,
   percentile,
   resolveActivityFile,
 } from '../check-governance-health';
@@ -86,6 +87,52 @@ function minimalData(overrides: Partial<ActivityData> = {}): ActivityData {
     ...overrides,
   };
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function stubProcessExit(): ReturnType<typeof vi.spyOn> {
+  return vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    throw new Error(`process.exit:${code ?? 0}`);
+  }) as typeof process.exit);
+}
+
+// ──────────────────────────────────────────────
+// parseArgs
+// ──────────────────────────────────────────────
+
+describe('parseArgs', () => {
+  it('defaults to text output', () => {
+    expect(parseArgs([])).toEqual({ json: false });
+  });
+
+  it('enables json output with --json', () => {
+    expect(parseArgs(['--json'])).toEqual({ json: true });
+  });
+
+  it('prints help and exits 0 for --help', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = stubProcessExit();
+
+    expect(() => parseArgs(['--help'])).toThrow('process.exit:0');
+    expect(logSpy).toHaveBeenCalledWith(
+      'Usage: npm run check-governance-health -- [--json]'
+    );
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it('rejects unknown flags', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = stubProcessExit();
+
+    expect(() => parseArgs(['--jsom'])).toThrow('process.exit:1');
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Unknown argument "--jsom". Expected --json or --help.'
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+});
 
 // ──────────────────────────────────────────────
 // extractRole
