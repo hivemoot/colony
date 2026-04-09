@@ -826,5 +826,8 @@ if (isDirectExecution()) {
     console.log('Usage: npm run check-visibility');
     process.exit(0);
   }
-  void main();
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
 }
