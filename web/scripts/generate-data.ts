@@ -183,6 +183,22 @@ export interface GitHubTimelineEvent {
   created_at: string;
 }
 
+export function resolveGitHubToken(
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  const githubToken = env.GITHUB_TOKEN?.trim();
+  if (githubToken) {
+    return githubToken;
+  }
+
+  const ghToken = env.GH_TOKEN?.trim();
+  return ghToken || undefined;
+}
+
+export function hasGitHubToken(env: NodeJS.ProcessEnv = process.env): boolean {
+  return resolveGitHubToken(env) !== undefined;
+}
+
 export async function fetchJson<T>(endpoint: string): Promise<T> {
   const url = `${GITHUB_API}${endpoint}`;
   const headers: Record<string, string> = {
@@ -191,7 +207,7 @@ export async function fetchJson<T>(endpoint: string): Promise<T> {
   };
 
   // Use GITHUB_TOKEN/GH_TOKEN if available (CI or local environment)
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  const token = resolveGitHubToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -1887,7 +1903,9 @@ async function fetchRepoActivity(
     issueResult.rawIssues,
     repoTag
   );
-  await fetchPhaseTransitions(owner, repo, proposals);
+  if (hasGitHubToken()) {
+    await fetchPhaseTransitions(owner, repo, proposals);
+  }
   await enrichPullRequestsWithApprovalTimes(owner, repo, prResult.pullRequests);
 
   const openIssues = calculateOpenIssues(repoMetadata, prResult.pullRequests);
@@ -1926,7 +1944,7 @@ async function fetchRepoActivity(
   };
 }
 
-async function generateActivityData(): Promise<ActivityData> {
+export async function generateActivityData(): Promise<ActivityData> {
   const repos = resolveRepositories();
   const isMultiRepo = repos.length > 1;
 
@@ -2093,6 +2111,12 @@ function toRepoTag(repo: { owner: string; name: string }): string {
 
 async function main(): Promise<void> {
   try {
+    if (!hasGitHubToken()) {
+      console.warn(
+        '[generate-data] No GITHUB_TOKEN or GH_TOKEN set. Skipping proposal timeline fetches and using unauthenticated GitHub API requests, so output may be partial. Set GITHUB_TOKEN or GH_TOKEN for complete output.'
+      );
+    }
+
     const data = await generateActivityData();
 
     // Ensure output directory exists
@@ -2128,9 +2152,9 @@ async function main(): Promise<void> {
     );
     const permissionGaps: string[] = [];
 
-    if (!process.env.GITHUB_TOKEN && !process.env.GH_TOKEN) {
+    if (!hasGitHubToken()) {
       permissionGaps.push(
-        'Generated without GITHUB_TOKEN/GH_TOKEN; API responses may be rate-limited.'
+        'Generated without GITHUB_TOKEN/GH_TOKEN; proposal timelines were skipped and API responses may be rate-limited.'
       );
     }
 
