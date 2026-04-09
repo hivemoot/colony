@@ -202,7 +202,7 @@ describe('resolveRepositories', () => {
 });
 
 describe('generateActivityData', () => {
-  it('skips proposal timeline fetches when no GitHub token is configured', async () => {
+  it('skips proposal metadata fetches when no GitHub token is configured', async () => {
     const originalGithubRepository = process.env.GITHUB_REPOSITORY;
     const originalGithubToken = process.env.GITHUB_TOKEN;
     const originalGhToken = process.env.GH_TOKEN;
@@ -262,7 +262,7 @@ describe('generateActivityData', () => {
                 body: 'Make something visible.',
                 state: 'open',
                 state_reason: null,
-                labels: [{ name: 'hivemoot:discussion' }],
+                labels: [{ name: 'hivemoot:ready-to-implement' }],
                 created_at: '2026-02-10T00:00:00Z',
                 closed_at: null,
                 user: { login: 'hivemoot-builder' },
@@ -298,8 +298,13 @@ describe('generateActivityData', () => {
 
       expect(data.proposals).toHaveLength(1);
       expect(data.proposals[0]?.phaseTransitions).toBeUndefined();
+      expect(data.proposals[0]?.votesSummary).toBeUndefined();
       expect(fetchMock).not.toHaveBeenCalledWith(
         expect.stringContaining('/issues/42/timeline?per_page=100'),
+        expect.anything()
+      );
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        expect.stringContaining('/issues/42/comments'),
         expect.anything()
       );
       expect(
@@ -311,6 +316,17 @@ describe('generateActivityData', () => {
                 ? input.toString()
                 : input.url;
           return url.includes('/issues/42/timeline?per_page=100');
+        })
+      ).toBe(false);
+      expect(
+        fetchMock.mock.calls.some(([input]) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : input.url;
+          return url.includes('/issues/42/comments');
         })
       ).toBe(false);
     } finally {

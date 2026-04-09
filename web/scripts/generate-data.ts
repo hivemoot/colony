@@ -638,6 +638,7 @@ async function fetchProposals(
   repoTag?: string
 ): Promise<Proposal[]> {
   const proposals = filterAndMapProposals(rawIssues, repoTag);
+  const canEnrichProposalMetadata = hasGitHubToken();
 
   // Fetch votes for all proposals that have been through a voting round.
   // The Queen's voting comment persists after phase transitions, so we can
@@ -654,33 +655,36 @@ async function fetchProposals(
     votablePhases.includes(p.phase)
   );
 
-  await Promise.all(
-    votingProposals.map(async (proposal) => {
-      try {
-        const comments = await fetchJson<GitHubComment[]>(
-          `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
-        );
-        const votingComment = comments.find(
-          (c) =>
-            (c.user.login === 'hivemoot[bot]' || c.user.login === 'hivemoot') &&
-            (c.body.includes('React to THIS comment to vote') ||
-              (c.body.includes('hivemoot-metadata') &&
-                c.body.includes('"type":"voting"')))
-        );
-        if (votingComment && votingComment.reactions) {
-          proposal.votesSummary = {
-            thumbsUp: votingComment.reactions['+1'] || 0,
-            thumbsDown: votingComment.reactions['-1'] || 0,
-          };
+  if (canEnrichProposalMetadata) {
+    await Promise.all(
+      votingProposals.map(async (proposal) => {
+        try {
+          const comments = await fetchJson<GitHubComment[]>(
+            `/repos/${owner}/${repo}/issues/${proposal.number}/comments`
+          );
+          const votingComment = comments.find(
+            (c) =>
+              (c.user.login === 'hivemoot[bot]' ||
+                c.user.login === 'hivemoot') &&
+              (c.body.includes('React to THIS comment to vote') ||
+                (c.body.includes('hivemoot-metadata') &&
+                  c.body.includes('"type":"voting"')))
+          );
+          if (votingComment && votingComment.reactions) {
+            proposal.votesSummary = {
+              thumbsUp: votingComment.reactions['+1'] || 0,
+              thumbsDown: votingComment.reactions['-1'] || 0,
+            };
+          }
+        } catch (e) {
+          console.warn(
+            `Failed to fetch reactions for issue #${proposal.number}`,
+            e
+          );
         }
-      } catch (e) {
-        console.warn(
-          `Failed to fetch reactions for issue #${proposal.number}`,
-          e
-        );
-      }
-    })
-  );
+      })
+    );
+  }
 
   return proposals.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -2113,7 +2117,7 @@ async function main(): Promise<void> {
   try {
     if (!hasGitHubToken()) {
       console.warn(
-        '[generate-data] No GITHUB_TOKEN or GH_TOKEN set. Skipping proposal timeline fetches and using unauthenticated GitHub API requests, so output may be partial. Set GITHUB_TOKEN or GH_TOKEN for complete output.'
+        '[generate-data] No GITHUB_TOKEN or GH_TOKEN set. Skipping proposal timeline and voting-comment fetches and using unauthenticated GitHub API requests, so output may be partial. Set GITHUB_TOKEN or GH_TOKEN for complete output.'
       );
     }
 
@@ -2154,7 +2158,7 @@ async function main(): Promise<void> {
 
     if (!hasGitHubToken()) {
       permissionGaps.push(
-        'Generated without GITHUB_TOKEN/GH_TOKEN; proposal timelines were skipped and API responses may be rate-limited.'
+        'Generated without GITHUB_TOKEN/GH_TOKEN; proposal timelines and voting comments were skipped and API responses may be rate-limited.'
       );
     }
 
