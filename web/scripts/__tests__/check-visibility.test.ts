@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   buildRepositoryApiUrl,
@@ -248,5 +250,30 @@ describe('VisibilityReport', () => {
       ok: false,
       details: 'sitemap.xml not found',
     });
+  });
+});
+
+describe('direct execution', () => {
+  it('prints a readable error and exits non-zero when main rejects', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        resolve(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs'),
+        resolve(process.cwd(), 'scripts', 'check-visibility.ts'),
+      ],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          COLONY_REPOSITORY: 'invalid',
+        },
+        encoding: 'utf-8',
+      }
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'Invalid repository "invalid". Expected format "owner/repo".'
+    );
   });
 });
