@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   resolveRepository,
+  resolveGitHubToken,
+  hasGitHubToken,
   resolveRequiredDiscoverabilityTopics,
   resolveRepositories,
   resolveRepositoryHomepage,
@@ -20,6 +22,7 @@ import {
   deduplicateAgents,
   extractPhaseTransitions,
   filterAndMapProposals,
+  generateActivityData,
   enrichPullRequestsWithApprovalTimes,
   type GitHubCommit,
   type GitHubEvent,
@@ -97,6 +100,32 @@ describe('resolveRepository', () => {
   });
 });
 
+describe('resolveGitHubToken', () => {
+  it('prefers GITHUB_TOKEN over GH_TOKEN', () => {
+    expect(
+      resolveGitHubToken({
+        GITHUB_TOKEN: 'github-token',
+        GH_TOKEN: 'gh-token',
+      } as NodeJS.ProcessEnv)
+    ).toBe('github-token');
+  });
+
+  it('falls back to GH_TOKEN and ignores blank values', () => {
+    expect(
+      resolveGitHubToken({
+        GITHUB_TOKEN: '   ',
+        GH_TOKEN: '  gh-token  ',
+      } as NodeJS.ProcessEnv)
+    ).toBe('gh-token');
+    expect(
+      hasGitHubToken({
+        GITHUB_TOKEN: ' ',
+        GH_TOKEN: '\n',
+      } as NodeJS.ProcessEnv)
+    ).toBe(false);
+  });
+});
+
 describe('resolveRepositories', () => {
   it('should fall back to single repo when COLONY_REPOSITORIES is not set', () => {
     const result = resolveRepositories({});
@@ -169,6 +198,156 @@ describe('resolveRepositories', () => {
       { owner: 'hivemoot', repo: 'colony' },
       { owner: 'hivemoot', repo: 'hivemoot' },
     ]);
+  });
+});
+
+describe('generateActivityData', () => {
+  it('skips proposal metadata fetches when no GitHub token is configured', async () => {
+    const originalGithubRepository = process.env.GITHUB_REPOSITORY;
+    const originalGithubToken = process.env.GITHUB_TOKEN;
+    const originalGhToken = process.env.GH_TOKEN;
+
+    delete process.env.GITHUB_REPOSITORY;
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GH_TOKEN;
+
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+
+        if (!url.startsWith('https://api.github.com')) {
+          return new Response('', { status: 404 });
+        }
+
+        const endpoint = url.replace('https://api.github.com', '');
+
+        if (endpoint === '/repos/hivemoot/colony') {
+          return new Response(
+            JSON.stringify({
+              stargazers_count: 1,
+              forks_count: 1,
+              open_issues_count: 1,
+              subscribers_count: 1,
+              homepage: null,
+              description:
+                'Open-source dashboard for autonomous agent governance',
+              topics: REQUIRED_DISCOVERABILITY_TOPICS,
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        if (endpoint === '/repos/hivemoot/colony/commits?per_page=50') {
+          return new Response(JSON.stringify([]), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        if (
+          endpoint ===
+          '/repos/hivemoot/colony/issues?state=open&per_page=100&page=1'
+        ) {
+          return new Response(
+            JSON.stringify([
+              {
+                number: 42,
+                title: 'Proposal',
+                body: 'Make something visible.',
+                state: 'open',
+                state_reason: null,
+                labels: [{ name: 'hivemoot:ready-to-implement' }],
+                created_at: '2026-02-10T00:00:00Z',
+                closed_at: null,
+                user: { login: 'hivemoot-builder' },
+                comments: 0,
+              },
+            ]),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+
+        if (
+          endpoint.startsWith('/repos/hivemoot/colony/issues?state=open') ||
+          endpoint.startsWith('/repos/hivemoot/colony/issues?state=closed') ||
+          endpoint === '/repos/hivemoot/colony/pulls?state=open&per_page=50' ||
+          endpoint ===
+            '/repos/hivemoot/colony/pulls?state=closed&per_page=50' ||
+          endpoint === '/repos/hivemoot/colony/events?per_page=100'
+        ) {
+          return new Response(JSON.stringify([]), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      });
+
+    try {
+      const data = await generateActivityData();
+
+      expect(data.proposals).toHaveLength(1);
+      expect(data.proposals[0]?.phaseTransitions).toBeUndefined();
+      expect(data.proposals[0]?.votesSummary).toBeUndefined();
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        expect.stringContaining('/issues/42/timeline?per_page=100'),
+        expect.anything()
+      );
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        expect.stringContaining('/issues/42/comments'),
+        expect.anything()
+      );
+      expect(
+        fetchMock.mock.calls.some(([input]) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : input.url;
+          return url.includes('/issues/42/timeline?per_page=100');
+        })
+      ).toBe(false);
+      expect(
+        fetchMock.mock.calls.some(([input]) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : input.url;
+          return url.includes('/issues/42/comments');
+        })
+      ).toBe(false);
+    } finally {
+      if (originalGithubRepository === undefined) {
+        delete process.env.GITHUB_REPOSITORY;
+      } else {
+        process.env.GITHUB_REPOSITORY = originalGithubRepository;
+      }
+
+      if (originalGithubToken === undefined) {
+        delete process.env.GITHUB_TOKEN;
+      } else {
+        process.env.GITHUB_TOKEN = originalGithubToken;
+      }
+
+      if (originalGhToken === undefined) {
+        delete process.env.GH_TOKEN;
+      } else {
+        process.env.GH_TOKEN = originalGhToken;
+      }
+    }
   });
 });
 
