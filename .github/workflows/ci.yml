@@ -31,6 +31,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency audit (production, high+)
+        # Audits production dependencies only (--omit=dev). Colony ships a static
+        # site; devDep CVEs in build tooling do not affect the deployed artifact.
+        # Blocks on HIGH and CRITICAL severity vulnerabilities.
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Lint
         run: npm run lint
 
